@@ -1,0 +1,204 @@
+
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+typedef struct node* Node;
+typedef struct node* Stack;
+typedef struct node* Continuation;
+typedef void (*Function)(Continuation, Stack);
+
+struct node {
+    union {
+        int      current;
+        Function call;
+    };
+    struct node* next;
+};
+
+struct continuation {
+    Function     call;
+    Continuation next;
+};
+
+static void check_frame(int top, const char* in, Stack stack, int argc) {
+    int here = (int)(__builtin_frame_address(0));
+    printf("%s at %d\n", in, here - top);
+}
+
+static inline int fetch(Stack stack, int index) {
+    if (!stack) return 0;
+    if (1 > index) return stack->current;
+    return fetch(stack->next, --index);
+}
+
+static inline Stack tail(Stack stack, int index) {
+    if (!stack) return (Stack)0;
+    if (1 == index) return stack->next;
+    if (1 > index)  return stack;
+    return tail(stack->next, --index);
+}
+
+static inline Stack push(Stack stack, int value) {
+    register Stack result = (Stack) malloc(sizeof(struct node));
+    result->current = value;
+    result->next    = stack;
+    return result;
+}
+
+static inline void print_stack(Stack stack) {
+    if (!stack) {
+        printf("-\n");
+    } else {
+        printf("%d ", stack->current);
+        print_stack(stack->next);
+    }
+}
+
+#define NEXT          next->call(next->next, stack); return
+#define ARG(_NAME_)   register int _NAME_ = fetch(_top_, 0); _top_ = tail(_top_, 1)
+#define PUSH(_VALUE_) stack = push(stack, _VALUE_)
+
+#define DECLARE(_NAME_, _ARGC_, _DROP_)               \
+    static void _NAME_ (Continuation next, Stack stack) {       \
+    register Stack _top_  = stack;                              \
+    register Stack _rest_ = tail(stack, _ARGC_);                \
+    stack = tail(stack, _DROP_);                                \
+    {
+#define END                                     \
+    }                                           \
+        NEXT;                                   \
+}
+
+DECLARE(test, 2, 0)
+ARG(one);
+ARG(two);
+PUSH(1);
+PUSH(one + two);
+print_stack(stack);
+END
+
+DECLARE(print, 1, 1)
+    ARG(one);
+printf("top is %d\n", one);
+END
+
+DECLARE(tpause, 1, 1)
+    ARG(value);
+printf("pause %d\n", value);
+sleep(value);
+END
+
+static struct node do_pause = { (int)  &tpause, (Node)0 };
+static struct node do_print = { (int ) &print,  &do_pause };
+static struct node do_test  = { (int)  &test,   &do_print };
+
+#ifndef NOMAIN
+
+typedef unsigned long long HashCode;
+
+static HashCode hash_ajust(unsigned int size, HashCode hash) {
+    unsigned int adjust = size % sizeof(HashCode);
+
+    if (0 == adjust) return hash;
+
+    union {
+        HashCode hash;
+        char map[sizeof(HashCode)];
+    } input, output;
+
+    input.hash  = hash;
+    output.hash = 0;
+
+    for (int from=0; from < sizeof(HashCode); ++from) {
+        int to = from + adjust;
+        if (to < sizeof(HashCode)) {
+            output.map[to] = input.map[from];
+        } else {
+            to -= sizeof(HashCode);
+            output.map[to] = input.map[from];
+        }
+    }
+
+    return output.hash;
+}
+
+static HashCode hash_full(const char* value) {
+    HashCode result = 0;
+
+    union {
+        HashCode result;
+        char map[sizeof(HashCode)];
+    } buffer;
+
+
+    while (*value) {
+        for (int inx = 0; inx < sizeof(HashCode); ++inx) {
+            if (!*value) {
+                buffer.map[inx] = 0;
+            } else {
+                buffer.map[inx] = *value++;
+            }
+        }
+       result ^= buffer.result;
+    }
+
+    return result;
+}
+
+static HashCode concat_hash(const char* head, const char* tail) {
+    unsigned int  hlen  = strlen(head);
+    unsigned int  tlen  = strlen(tail);
+    HashCode hhash = hash_full(head);
+    HashCode thash = hash_full(tail);
+
+    char buffer[2028];
+
+    strcat(strcpy(buffer, head), tail);
+
+    unsigned int  flen  = strlen(buffer);
+    HashCode fhash = hash_full(buffer);
+
+    if (flen != (hlen + tlen)) printf("lengths mismatch between '%s' + '%s' -> '%s'\n", head, tail, buffer);
+
+    HashCode chash = hhash ^ hash_ajust(hlen, thash);
+
+    if (fhash != chash) printf("computed hash mismatch between\n");
+
+    printf("['%s'] %llu +' %llu -> %llu -- %d\n",
+           head, hhash, thash, chash,
+           sizeof(HashCode));
+
+    return chash;
+}
+
+int main(int argc, char *argv[]) {
+
+    char list[1024];
+
+    for (int inx = 0; inx < 100; ++inx) {
+        int chr = (((int)'!' + inx) % 128);
+        if (!isprint(chr)) {
+            chr = ' ';
+        }
+        list[inx]   = chr;
+        list[inx+1] = 0;
+        concat_hash(list,list);
+    }
+
+    int          marker = (int)(__builtin_frame_address(0));
+    Continuation next   = &do_test;
+    Stack        stack  = (Stack)0;
+
+    stack = push(stack, 2);
+    stack = push(stack, 3);
+
+    do_pause.next = &do_test;
+
+    NEXT 0;
+}
+
+#endif
+
