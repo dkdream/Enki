@@ -118,7 +118,7 @@ typedef union node        Node;
 typedef union node_target Target;
 
 typedef unsigned long long HashCode;
-typedef unsigned int       Size;
+typedef unsigned long      Size;
 
 #define NIL       ((Node)((Reference)0))
 #define NIL_CODE  ((Code)((Reference)0))
@@ -200,8 +200,13 @@ extern bool isType(Node node, const EA_Type type);
 extern const char *nodeTypename(Node node);
 extern bool node_Live(Node node);
 
+extern bool node_Darken(const Reference node);
 extern bool node_ExternalInit(const EA_Type, struct gc_header *);
-extern bool node_Allocate(struct gc_treadmill *space, EA_Type type, Size extend, Target);
+extern bool node_Allocate(struct gc_treadmill *space,
+                          bool atom,
+                          Size size_in_char,
+                          Size prefix_in_char,
+                          Target);
 
 /* */
 extern void startEnkiLibrary();

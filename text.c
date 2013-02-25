@@ -7,6 +7,7 @@
  **/
 #include "text.h"
 #include "symbol.h"
+#include "treadmill.h"
 
 /* */
 #include <string.h>
@@ -77,7 +78,12 @@ extern bool text_Create(CuData value, Text *target) {
     const HashCode hashcode = hash_full(value);
     const int         cells = size / sizeof(const unsigned long);
 
-    if (!node_Allocate(_zero_space, nt_text, sizeof(unsigned long) * cells, target)) return false;
+    if (!node_Allocate(_zero_space,
+                       true,
+                       asSize(sizeof(struct text), sizeof(unsigned long) * cells),
+                       0,
+                       target))
+        return false;
 
     Text result = *target;
 
@@ -113,7 +119,11 @@ extern bool text_Append(Text head, Text tail, Text *target) {
     const HashCode hashcode = head->hashcode ^ hash_ajust(head->size, tail->hashcode);
     const int         cells = size / sizeof(const unsigned long);
 
-    if (!node_Allocate(_zero_space, nt_text, sizeof(unsigned long) * cells, target)) return false;
+    if (!node_Allocate(_zero_space,
+                       true,
+                       asSize(sizeof(struct text), sizeof(unsigned long) * cells),
+                       0,
+                       target)) return false;
 
     Text result = *target;
 

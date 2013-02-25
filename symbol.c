@@ -74,10 +74,6 @@ extern void check_SymbolTable__(const char* filename, unsigned line) {
         for ( ; group; group = group->after) {
             Symbol test = (Symbol) asReference(group);
 
-            if (group->kind != nt_symbol) {
-                VM_ERROR("MEMORY OVERWRITE ERROR!!!");
-            }
-
             printf("   symbol %s\n", symbol_Text(test));
         }
     }
@@ -120,10 +116,6 @@ extern bool symbol_Create(CuData value, Symbol *target) {
     Header group = _global_symboltable->row[row].first;
 
     for ( ; group; group = group->after) {
-        if (group->kind != nt_symbol) {
-            VM_ERROR("MEMORY OVERWRITE ERROR!!!");
-        }
-
         Symbol test = (Symbol) asReference(group);
 
         if (test->size != size)         continue;
@@ -155,7 +147,6 @@ extern bool symbol_Create(CuData value, Symbol *target) {
 
     if (!entry) return false;
 
-    entry->kind   = nt_symbol;
     entry->after  = _global_symboltable->row[row].first;
 
     Symbol result = (*target) = (Symbol)asReference(entry);

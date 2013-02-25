@@ -8,6 +8,7 @@
 #include "hash.h"
 #include "symbol.h"
 #include "node.h"
+#include "treadmill.h"
 
 /* */
 #include <error.h>
@@ -15,7 +16,12 @@
 /* */
 
 static inline bool entry_Create(Symbol symbol, Node value, Hash_entry next, Hash_entry* target) {
-    if (!node_Allocate(_zero_space, nt_hash_entry, 0, target)) return false;
+    if (!node_Allocate(_zero_space,
+                       false,
+                       sizeof(struct hash_entry),
+                       0,
+                       target))
+        return false;
 
     Hash_entry result = *target;
 
@@ -29,7 +35,11 @@ static inline bool entry_Create(Symbol symbol, Node value, Hash_entry next, Hash
 #define Hash_Block_Size 10
 
 static inline bool hash_block_Create(struct hash_block **target) {
-    if (!node_Allocate(_zero_space, nt_hash_block, sizeof(Hash_entry) * Hash_Block_Size, target)) return false;
+    if (!node_Allocate(_zero_space,
+                       false,
+                       asSize(sizeof(struct hash_block), sizeof(Hash_entry) * Hash_Block_Size),
+                       0,
+                       target)) return false;
 
     struct hash_block *result = *target;
 
@@ -39,7 +49,12 @@ static inline bool hash_block_Create(struct hash_block **target) {
 }
 
 extern bool hash_Create(unsigned size, Hash *target) {
-    if (!node_Allocate(_zero_space, nt_hash, 0, target)) return false;
+    if (!node_Allocate(_zero_space,
+                       false,
+                       sizeof(struct hash),
+                       0,
+                       target))
+        return false;
 
     Hash result = *target;
 

@@ -19,7 +19,12 @@
 /* */
 static inline bool cell_Create(Node first, Set_cell rest, Set_cell* target) {
     if (isNil(first)) return false;
-    if (!node_Allocate(_zero_space, nt_set_cell, 0, target)) return false;
+    if (!node_Allocate(_zero_space,
+                       false,
+                       sizeof(struct set_cell),
+                       0,
+                       target))
+        return false;
 
     Set_cell result = *target;
 
@@ -68,24 +73,16 @@ static inline bool cell_Next(Set_cell current, Set_cell* target) {
 }
 
 static inline bool set_block_Create(const Space space, struct set_block **target) {
-    if (!node_Allocate(space, nt_set_block, sizeof(Set_cell) * SET_BLOCK_SIZE, target)) return false;
+    if (!node_Allocate(space,
+                       false,
+                       asSize(sizeof(struct set_block), sizeof(Set_cell) * SET_BLOCK_SIZE),
+                       0,
+                       target))
+        return false;
 
     struct set_block *result = *target;
 
     result->size = SET_BLOCK_SIZE;
-
-    return true;
-}
-
-extern bool set_CreateIn(const Space space, unsigned size, enum node_type type, Set *target) {
-    if (!node_Allocate(space, nt_set, 0, target)) return false;
-
-    Set result = *target;
-
-    if (!set_block_Create(space, &result->first)) return false;
-
-    result->type     = type;
-    result->fullsize = SET_BLOCK_SIZE;
 
     return true;
 }
@@ -329,6 +326,24 @@ extern bool set_Intersection(Set result, Set source) {
             }
         }
     }
+
+    return true;
+}
+
+extern bool set_Create(unsigned size, enum node_type type, Set *target) {
+    if (!node_Allocate(_zero_space,
+                       false,
+                       sizeof(struct set),
+                       0,
+                       target))
+        return false;
+
+    Set result = *target;
+
+    if (!set_block_Create(_zero_space, &result->first)) return false;
+
+    result->type     = type;
+    result->fullsize = SET_BLOCK_SIZE;
 
     return true;
 }

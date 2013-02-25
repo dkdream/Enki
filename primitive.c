@@ -6,11 +6,18 @@
  **    <routine-list-end>
  **/
 #include "primitive.h"
+#include "treadmill.h"
 
 extern bool primitive_Create(Symbol label, Operator function, unsigned int extend, Primitive *target) {
     if (!function) return false;
     if (!label)    return false;
-    if (!node_Allocate(_zero_space, nt_primitive, sizeof(unsigned char) * extend, target)) return false;
+
+    if (!node_Allocate(_zero_space,
+                       true,
+                       asSize(sizeof(struct primitive), sizeof(unsigned char) * extend),
+                       0,
+                       target))
+        return false;
 
     Primitive result = *target;
 

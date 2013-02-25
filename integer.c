@@ -9,7 +9,12 @@
 #include "integer.h"
 
 extern bool integer_Create(long value, Integer *target) {
-    if (!node_Allocate(_zero_space, nt_integer, 0, target)) return 0;
+    if (!node_Allocate(_zero_space,
+                       true,
+                       sizeof(struct integer),
+                       0,
+                       target))
+        return 0;
 
     Integer result = *target;
 

@@ -104,7 +104,7 @@ struct gc_header {
             enum gc_color color  : 2;
             unsigned int  atom   : 1; // is this a tuple of values
             unsigned int  inside : 1; // is this inside a space (managed)
-            unsigned int  kind   : 8; // is this a kind of c-object (symbol,string,...)
+            unsigned int  prefix : 1; // the first slot is a pointer atomic data. (implies !atom)
         } __attribute__((__packed__));
     } __attribute__((__packed__));
 
@@ -134,10 +134,6 @@ extern bool space_Scan(const Space, unsigned int);
 extern bool clink_Init(Clink *link, unsigned size, Reference* array);
 extern bool clink_Drop(Clink *link);
 
-extern bool node_ExternalInit(const EA_Type, const Header);
-extern bool node_Allocate(Space space, EA_Type type, Size extend, Target);
-extern bool node_Darken(const Reference node);
-
 extern inline Reference asReference(Header header) __attribute__((always_inline));
 extern inline Reference asReference(Header header) {
     if (!header) return (Reference)0;
@@ -150,9 +146,17 @@ extern inline Header asHeader(Reference value) {
     return (((Header)value) - 1);
 }
 
+extern inline unsigned long asSize(unsigned base_sizeof, unsigned extend_sizeof)  __attribute__((always_inline));
+extern inline unsigned long asSize(unsigned base_sizeof, unsigned extend_sizeof) {
+    return base_sizeof + extend_sizeof;
+}
+
 extern inline unsigned long toCount(unsigned long size_in_chars) __attribute__((always_inline));
 extern inline unsigned long toCount(unsigned long size_in_chars) {
-    return size_in_chars / POINTER_SIZE;
+    unsigned long fullcount = size_in_chars;
+    fullcount += (POINTER_SIZE - 1);
+    fullcount /= POINTER_SIZE;
+    return fullcount;
 }
 
 extern inline unsigned long toSize(unsigned long size_in_pointers) __attribute__((always_inline));
@@ -162,11 +166,8 @@ extern inline unsigned long toSize(unsigned long size_in_pointers) {
 
 extern inline Header fresh_atom(unsigned long size_in_chars) __attribute__((always_inline));
 extern inline Header fresh_atom(unsigned long size_in_chars) {
-    unsigned long fullcount = size_in_chars;
-    fullcount += (POINTER_SIZE - 1);
-    fullcount /= POINTER_SIZE;
-
-    unsigned long fullsize = (fullcount * POINTER_SIZE);
+    unsigned long fullcount = toCount(size_in_chars);
+    unsigned long fullsize  = toSize(fullcount);
     fullsize += sizeof(struct gc_header);
 
     Header header = (Header) malloc(fullsize);
@@ -177,30 +178,41 @@ extern inline Header fresh_atom(unsigned long size_in_chars) {
     header->color  = nc_unknown;
     header->atom   = 1;
     header->inside = 0;
-    header->kind   = 0;
+    header->prefix = 0;
     header->space  = 0;
     header->before = header->after = 0;
 
     return asReference(header);
 }
 
-extern inline Header fresh_tuple(unsigned long size_in_pointers) __attribute__((always_inline));
-extern inline Header fresh_tuple(unsigned long size_in_pointers) {
+extern inline Header fresh_tuple(unsigned long, unsigned long) __attribute__((always_inline));
+extern inline Header fresh_tuple(unsigned long size_in_pointers,
+                                 unsigned long prefix_in_chars)
+{
+    bool prefix = (0 < prefix_in_chars);
     unsigned long fullcount = size_in_pointers;
-    unsigned long fullsize  = (fullcount * POINTER_SIZE);
+    unsigned long fullsize  = toSize(fullcount);
     fullsize += sizeof(struct gc_header);
 
-    Header header = (Header) malloc(fullsize);
+    if (prefix) {
+        fullsize += POINTER_SIZE;
+        fullsize += prefix_in_chars;
+    }
 
-    memset(header, 0, fullsize);
+    Header header = (Header) malloc(fullsize);
 
     header->count  = fullcount;
     header->color  = nc_unknown;
     header->atom   = 0;
     header->inside = 0;
-    header->kind   = 0;
+    header->prefix = (prefix ? 1 : 0);
     header->space  = 0;
     header->before = header->after = 0;
+
+    if (prefix) {
+        Reference *slots = asReference(header);
+        slots[0] = (slots + (fullcount + 1));
+    }
 
     return header;
 }

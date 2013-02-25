@@ -8,7 +8,11 @@
 #include "count.h"
 
 extern bool count_Create(unsigned int value, Count *target) {
-    if (!node_Allocate(_zero_space, nt_count, 0, target)) return false;
+    if (!node_Allocate(_zero_space,
+                       true,
+                       sizeof(struct count),
+                       0,
+                       target)) return false;
 
     Count result = (*target);
 

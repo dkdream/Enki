@@ -5,10 +5,6 @@
  **
  ** Purpose
  **   a non-gc hash, this is used by
- **   the parser to store
- **     o. (symbol -> enum)    maps
- **     o. (symbol -> context) maps
- **     o. (symbol -> offset)  maps
  **/
 #include "ea_symbol.h"
 

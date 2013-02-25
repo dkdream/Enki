@@ -109,7 +109,7 @@ extern inline bool initialize_StartNode(const Space space, const Header node) {
     node->color  = nc_orange;
     node->atom   = 1;
     node->inside = 0;
-    node->kind   = nc_unknown;
+    node->prefix = 0;
     node->space  = space;
     node->before = node->after = 0;
 
@@ -250,11 +250,11 @@ extern bool darken_Node(const Node node) {
     return true;
 }
 
-extern bool scan_Node(const Node node, const bool depth) __attribute__((always_inline));
-extern bool scan_Node(const Node node, const bool depth) {
+extern bool scan_Node(const Node node) __attribute__((always_inline));
+extern bool scan_Node(const Node node) {
     if (!node.reference) return false;
 
-    const Header reference = node.reference;
+    const Header reference = asHeader(node.reference);
     const Space  space     = reference->space;
 
     if (!space) return true;
@@ -269,6 +269,28 @@ extern bool scan_Node(const Node node, const bool depth) {
         return false;
     }
 
+    if (reference->atom) return true;
+
+    Reference *slot = (Reference *)node.reference;
+
+    if (1 > reference->count) return true;
+
+    VM_DEBUG(5, "scan begin (0x%p)", slot);
+    if (reference->prefix) {
+        int inx;
+        for (inx = 1; inx < reference->count; ++inx) {
+            if (!darken_Node(slot[inx])) return false;
+        }
+    } else {
+        int inx;
+        for (inx = 0; inx < reference->count; ++inx) {
+            if (!darken_Node(slot[inx])) return false;
+        }
+    }
+    VM_DEBUG(5, "scan end (0x%p)", slot);
+    return true;
+
+#if 0
     bool scan_hash() {
         Hash value = node.hash;
         VM_DEBUG(5, "scan begin (%s)", nodeTypename(node));
@@ -358,6 +380,7 @@ extern bool scan_Node(const Node node, const bool depth) {
 
     VM_ERROR("Invalid Type %u", (unsigned) hasType(reference));
     return false;
+#endif
 }
 
 extern bool node_Darken(Node node) {
@@ -371,7 +394,7 @@ extern bool node_ExternalInit(const EA_Type type, const Header result) {
     result->color  = nc_unknown;
     result->atom   = 1;
     result->inside = 0;
-    result->kind   = type;
+    result->prefix = 0;
     result->space  = 0;
     result->before = result->after = 0;
 
@@ -385,8 +408,9 @@ static inline bool space_CanFlip(const Space space) {
 }
 
 extern bool node_Allocate(const Space space,
-                          enum node_type type,
-                          unsigned int extend,
+                          bool atom,
+                          Size size_in_char,
+                          Size prefix_in_char,
                           Target target)
 {
     if (!target.reference) return false;
@@ -405,92 +429,23 @@ extern bool node_Allocate(const Space space,
         }
     }
 
-    unsigned base = 0;
-
-    switch (type) {
-    case nt_unknown:
-        VM_ERROR("can not allocate an unknown type");
-        return false;
-        /*********************************/
-    case nt_count:         base = sizeof(struct count);         break;
-    case nt_hash:          base = sizeof(struct hash);          break;
-    case nt_hash_block:    base = sizeof(struct hash_block);    break;
-    case nt_hash_entry:    base = sizeof(struct hash_entry);    break;
-    case nt_input:         base = sizeof(struct input);         break;
-    case nt_integer:       base = sizeof(struct integer);       break;
-    case nt_output:        base = sizeof(struct output);        break;
-    case nt_pair:          base = sizeof(struct pair);          break;
-    case nt_primitive:     base = sizeof(struct primitive);     break;
-    case nt_set:           base = sizeof(struct set);           break;
-    case nt_set_block:     base = sizeof(struct set_block);     break;
-    case nt_set_cell:      base = sizeof(struct set_cell);      break;
-    case nt_symbol:        base = sizeof(struct symbol);        break;
-    case nt_text:          base = sizeof(struct text);          break;
-
-        /*********************************/
+    if (0 < prefix_in_char) {
+        if (atom) {
+            VM_ERROR("unable to allocate an prefixed atomic node");
+            return false;
+        }
     }
 
-    if (0 == base) {
-        VM_ERROR("Invalid Type %u", (unsigned) type);
-        return false;
-    }
-
-    bool variable = true;
-
-    switch (type) {
-    case nt_unknown:       variable = true; break;
-        /*********************************/
-    case nt_count:         variable = false; break;
-    case nt_hash:          variable = true;  break; // need to make fix sized
-    case nt_hash_block:    variable = true;  break; // need to make fix sized
-    case nt_hash_entry:    variable = false; break;
-    case nt_input:         variable = false; break;
-    case nt_integer:       variable = false; break;
-    case nt_output:        variable = false; break;
-    case nt_pair:          variable = false; break;
-    case nt_primitive:     variable = true;  break; // can never be fix size
-    case nt_set:           variable = true;  break; // need to make fix sized
-    case nt_set_block:     variable = true;  break; // need to make fix sized
-    case nt_set_cell:      variable = false; break;
-    case nt_symbol:        variable = true;  break; // can never be fix size
-    case nt_text:          variable = true;  break; // can never be fix size
-    }
-
-    bool atom = false;
-
-    switch (type) {
-    case nt_unknown:       atom = false; break;
-        /*********************************/
-    case nt_count:         atom = true;  break;
-    case nt_hash:          atom = false; break;
-    case nt_hash_block:    atom = false; break;
-    case nt_hash_entry:    atom = false; break;
-    case nt_input:         atom = true;  break;
-    case nt_integer:       atom = true;  break;
-    case nt_output:        atom = true;  break;
-    case nt_pair:          atom = false; break;
-    case nt_primitive:     atom = true;  break;
-    case nt_set:           atom = false; break;
-    case nt_set_block:     atom = false; break;
-    case nt_set_cell:      atom = false; break;
-    case nt_symbol:        atom = true;  break;
-    case nt_text:          atom = true;  break;
-    }
-
-    const unsigned int fullsize = base + extend;
-
-    const Header header = fresh_atom(fullsize);
-
+    const Header    header = fresh_tuple(toCount(size_in_char), prefix_in_char);
     const Reference result = (*target.reference) = asReference(header);
 
-    VM_DEBUG(4, "allocating node 0x%p of type \'%s\' and size %d from space 0x%p",
+    VM_DEBUG(4, "allocating node 0x%p of size %d from space 0x%p",
              result,
-             node_type_Name(type),
-             fullsize,
+             size_in_char,
              space);
 
     header->atom  = (atom ? 1 : 0);
-    header->kind  = type;
+    //    header->kind  = type;
 
     if (!space) return true;
 
@@ -568,7 +523,7 @@ extern bool space_Scan(const Space space, unsigned int upto) {
 
         space->scan = scan->before;
 
-        if (!scan_Node(scan, true)) {
+        if (!scan_Node(scan)) {
             VM_ERROR("unable to scan node (%s) 0x%p", nodeTypename(scan), scan);
             return false;
         }
@@ -739,57 +694,6 @@ extern bool clink_Drop(Clink *link) {
 
     return true;
 }
-
-#if 0
-// roots are added/removed using Clink(s)
-extern bool space_AddRoot(const Space space, Node node) {
-    if (!space) return false;
-    if (!node.reference) return false;
-
-    if (isType(node, nt_extended)) {
-        Extended  value = node.extended;
-        Scanner scanner = extended_Scanner(value->type);
-        if (!scanner) {
-            VM_ERROR("unable to scanner an unregistered extended type: %s(0x%p) hashcode %lld",
-                     symbol_Text(value->type),
-                     value,
-                     value->type->hashcode);
-            return false;
-        }
-    }
-
-    Quote root = &space->start_root;
-
-    if (isNil(root->value)) {
-        Set rootSet; // this is safe because without a root set, scan is disabled
-        // this need to be in this space not zero_space
-        if (!set_CreateIn(space, 30, nt_unknown, &rootSet)) {
-            VM_ERROR("unable to allocate root set for 0x%p", space);
-        }
-        root->value = (Node)rootSet;
-    }
-
-    VM_DEBUG(5, "adding root 0x%p to 0x%p", node.reference, space);
-
-    return set_Add(root->value.set, node);
-}
-
-extern bool space_RemoveRoot(const Space space, Node node) {
-    if (!space)          return false;
-    if (!node.reference) return false;
-
-    const Quote root = &space->start_root;
-
-    if (isNil(root->value)) {
-        VM_DEBUG(5, "no root set for 0x%p", space);
-        return false;
-    }
-
-    VM_DEBUG(5, "removing root 0x%pb from 0x%p", node.reference, space);
-
-    return set_Remove(root->value.set, node);
-}
-#endif
 
 /*****************
  ** end of file **
