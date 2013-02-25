@@ -175,6 +175,12 @@ extern void node_Print(FILE* output, Node node) {
                 node.reference,
                 node.output->output);
         return;
+
+    case nt_pair:
+        fprintf(output, "pair(0x%p (0x%p, 0x%p))",
+                node.reference,
+                node.pair->car.reference,
+                node.pair->cdr.reference);
     }
 
     fprintf(output, "type[%d](0x%p)",
@@ -194,6 +200,7 @@ const char* node_type_Name(enum node_type type)
     case nt_input:         return "input";
     case nt_integer:       return "integer";
     case nt_output:        return "output";
+    case nt_pair:          return "pair";
     case nt_primitive:     return "primitive";
     case nt_set:           return "set";
     case nt_set_block:     return "set_block";
@@ -218,12 +225,13 @@ unsigned int node_type_FixSize(enum node_type type)
     case nt_input:         base = sizeof(struct input);         break;
     case nt_integer:       base = sizeof(struct integer);       break;
     case nt_output:        base = sizeof(struct output);        break;
+    case nt_pair:          base = sizeof(struct pair);          break;
     case nt_primitive:     base = sizeof(struct primitive);     break;
     case nt_set:           base = sizeof(struct set);           break;
     case nt_set_block:     base = sizeof(struct set_block);     break;
     case nt_set_cell:      base = sizeof(struct set_cell);      break;
     case nt_symbol:        base = sizeof(struct symbol);        break;
-    case nt_text:          base = sizeof(struct text);        break;
+    case nt_text:          base = sizeof(struct text);          break;
     }
 
     return base;
@@ -339,6 +347,13 @@ extern void node_PrintFul(FILE* output, Node node) {
                 node.reference,
                 node.output->output);
         return;
+
+    case nt_pair:
+        fprintf(output, "pair(0x%p (0x%p, 0x%p))",
+                node.reference,
+                node.pair->car.reference,
+                node.pair->cdr.reference);
+
     }
 
     fprintf(output, "type[%d](0x%p)",
@@ -461,6 +476,12 @@ extern void node_PrintTree(FILE* output, unsigned level, Node node) {
                 node.reference,
                 node.output->output);
         return;
+
+    case nt_pair:
+        fprintf(output, "pair(0x%p (0x%p, 0x%p))",
+                node.reference,
+                node.pair->car.reference,
+                node.pair->cdr.reference);
     }
 
     fprintf(output, "type[%d](0x%p)",

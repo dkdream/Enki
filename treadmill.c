@@ -255,7 +255,7 @@ extern bool scan_Node(const Node node, const bool depth) {
     if (!node.reference) return false;
 
     const Header reference = node.reference;
-    const Space     space     = reference->space;
+    const Space  space     = reference->space;
 
     if (!space) return true;
 
@@ -293,6 +293,14 @@ extern bool scan_Node(const Node node, const bool depth) {
         if (!darken_Node(value->next))   return false;
         if (!darken_Node(value->symbol)) return false;
         if (!darken_Node(value->value))  return false;
+        VM_DEBUG(5, "scan end (%s)", nodeTypename(node));
+        return true;
+    };
+    bool scan_pair() {
+        Pair value = node.pair;
+        VM_DEBUG(5, "scan begin (%s)", nodeTypename(node));
+        if (!darken_Node(value->car)) return false;
+        if (!darken_Node(value->cdr)) return false;
         VM_DEBUG(5, "scan end (%s)", nodeTypename(node));
         return true;
     };
@@ -335,6 +343,7 @@ extern bool scan_Node(const Node node, const bool depth) {
     case nt_input:         return true;
     case nt_integer:       return true;
     case nt_output:        return true;
+    case nt_pair:          return scan_pair();
     case nt_primitive:     return true;
     case nt_set:           return scan_set();
     case nt_set_block:     return scan_set_block();
@@ -410,6 +419,7 @@ extern bool node_Allocate(const Space space,
     case nt_input:         base = sizeof(struct input);         break;
     case nt_integer:       base = sizeof(struct integer);       break;
     case nt_output:        base = sizeof(struct output);        break;
+    case nt_pair:          base = sizeof(struct pair);          break;
     case nt_primitive:     base = sizeof(struct primitive);     break;
     case nt_set:           base = sizeof(struct set);           break;
     case nt_set_block:     base = sizeof(struct set_block);     break;
@@ -437,12 +447,34 @@ extern bool node_Allocate(const Space space,
     case nt_input:         variable = false; break;
     case nt_integer:       variable = false; break;
     case nt_output:        variable = false; break;
+    case nt_pair:          variable = false; break;
     case nt_primitive:     variable = true;  break; // can never be fix size
     case nt_set:           variable = true;  break; // need to make fix sized
     case nt_set_block:     variable = true;  break; // need to make fix sized
     case nt_set_cell:      variable = false; break;
     case nt_symbol:        variable = true;  break; // can never be fix size
     case nt_text:          variable = true;  break; // can never be fix size
+    }
+
+    bool atom = false;
+
+    switch (type) {
+    case nt_unknown:       atom = false; break;
+        /*********************************/
+    case nt_count:         atom = true;  break;
+    case nt_hash:          atom = false; break;
+    case nt_hash_block:    atom = false; break;
+    case nt_hash_entry:    atom = false; break;
+    case nt_input:         atom = true;  break;
+    case nt_integer:       atom = true;  break;
+    case nt_output:        atom = true;  break;
+    case nt_pair:          atom = false; break;
+    case nt_primitive:     atom = true;  break;
+    case nt_set:           atom = false; break;
+    case nt_set_block:     atom = false; break;
+    case nt_set_cell:      atom = false; break;
+    case nt_symbol:        atom = true;  break;
+    case nt_text:          atom = true;  break;
     }
 
     const unsigned int fullsize = base + extend;
@@ -457,12 +489,14 @@ extern bool node_Allocate(const Space space,
              fullsize,
              space);
 
+    header->atom  = (atom ? 1 : 0);
     header->kind  = type;
-    header->space = space;
 
     if (!space) return true;
 
-    header->color = space->visiable;
+    header->inside = 1;
+    header->color  = space->visiable;
+    header->space  = space;
 
     // insert into the black chain
     if (!insert_Before(space->free, result)) {

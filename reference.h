@@ -38,6 +38,7 @@ typedef enum node_type {
     nt_input,
     nt_integer,
     nt_output,
+    nt_pair,
     nt_primitive,
     nt_set,
     nt_set_block,
@@ -63,6 +64,7 @@ typedef struct hash_entry     *Hash_entry;
 typedef struct input          *Input;
 typedef struct integer        *Integer;
 typedef struct output         *Output;
+typedef struct pair           *Pair;
 typedef struct primitive      *Primitive;
 typedef struct set            *Set;
 typedef struct set_block      *Set_block;
@@ -82,6 +84,7 @@ union node {
     Input         input;
     Integer       integer;
     Output        output;
+    Pair          pair;
     Primitive     primitive;
     Set           set;
     Set_block     set_block;
@@ -101,6 +104,7 @@ union node_target {
     Input         *input;
     Integer       *integer;
     Output        *output;
+    Pair          *pair;
     Primitive     *primitive;
     Set           *set;
     Set_block     *set_block;

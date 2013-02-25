@@ -131,11 +131,6 @@ extern bool space_Init(const Space); // this will erase the contents of the spac
 extern bool space_Flip(const Space);
 extern bool space_Scan(const Space, unsigned int);
 
-#if 0 // roots are added/removed using Clink(s)
-extern bool space_AddRoot(const Space, Node);
-extern bool space_RemoveRoot(const Space, Node);
-#endif
-
 extern bool clink_Init(Clink *link, unsigned size, Reference* array);
 extern bool clink_Drop(Clink *link);
 
