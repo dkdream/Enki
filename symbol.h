@@ -13,6 +13,7 @@
  **
  **/
 #include "reference.h"
+#include "text_buffer.h"
 
 struct symbol {
     // size in char
@@ -22,7 +23,7 @@ struct symbol {
 };
 
 extern Symbol _empty_symbol;
-extern bool symbol_Create(const char* name, Symbol*);
+extern bool symbol_Create(TextBuffer value, Symbol*);
 extern void check_SymbolTable__(const char*, unsigned);
 
 /* macros */

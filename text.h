@@ -7,6 +7,7 @@
  **   -- <desc>
  **/
 #include "reference.h"
+#include "text_buffer.h"
 
 /* */
 struct text {
@@ -16,7 +17,7 @@ struct text {
     unsigned long value[1];
 };
 
-extern bool text_Create(const char* name, Text*);
+extern bool text_Create(TextBuffer value, Text*);
 extern bool text_Append(Text, Text, Text*);
 
 /* macros */

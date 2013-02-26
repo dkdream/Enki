@@ -8,6 +8,7 @@
 
 #include "all_types.inc"
 #include "treadmill.h"
+#include "text_buffer.h"
 
 /* */
 #include <string.h>
@@ -38,62 +39,6 @@ extern Node s_quote;
 extern Node s_unquote;
 extern Node s_unquote_splicing;
 #endif
-
-struct buffer
-{
-    char *buffer;
-    int   size;
-    int   position;
-};
-
-#define BUFFER_INITIALISER { 0, 0, 0 }
-
-static void buffer_reset(struct buffer *b) {
-    b->position= 0;
-}
-
-static void buffer_append(struct buffer *b, int c)
-{
-    if (b->position == b->size) {
-        if (b->buffer) {
-            b->buffer = realloc(b->buffer, b->size *= 2);
-        } else {
-            b->buffer = malloc(b->size = 32);
-        }
-    }
-
-    b->buffer[b->position++]= c;
-}
-
-#if 0
-static void buffer_add(struct buffer *b, const char * string)
-{
-    if (!string) return;
-    int len = strlen(string);
-
-    if (0 >  len) return;
-    if (0 == len) return;
-
-    while ((b->position + len + 2) >  b->size) {
-        if (b->buffer) {
-            b->buffer = realloc(b->buffer, b->size *= 2);
-        } else {
-            b->buffer = malloc(b->size = 32);
-        }
-    }
-
-    for ( ; 0 < len; --len) {
-        b->buffer[b->position++] = *(string++);
-    }
-}
-#endif
-
-static char *buffer_contents(struct buffer *b)
-{
-    buffer_append(b, 0);
-    b->position--;
-    return b->buffer;
-}
 
 #define CHAR_PRINT    (1<<0)
 #define CHAR_BLANK    (1<<1)
@@ -420,7 +365,7 @@ static bool readCode(FILE *fp, Target result)
 
 static bool readString(FILE *fp, int end, Target result)
 {
-    static struct buffer buf = BUFFER_INITIALISER;
+    static TextBuffer buf = BUFFER_INITIALISER;
     buffer_reset(&buf);
 
     for (;;) {
@@ -434,7 +379,7 @@ static bool readString(FILE *fp, int end, Target result)
         buffer_append(&buf, chr);
     }
 
-    return text_Create(buffer_contents(&buf), result.text);
+    return text_Create(buf, result.text);
 
     failure:
     fatal("EOF in string literal");
@@ -445,7 +390,7 @@ static bool readInteger(FILE *fp, int first, Target result)
 {
     int chr = first;
 
-    static struct buffer buf= BUFFER_INITIALISER;
+    static TextBuffer buf= BUFFER_INITIALISER;
     buffer_reset(&buf);
 
     do {
@@ -488,7 +433,7 @@ static bool readSymbol(FILE *fp, int first, Target result)
 {
     int chr = first;
 
-    static struct buffer buf = BUFFER_INITIALISER;
+    static TextBuffer buf = BUFFER_INITIALISER;
     buffer_reset(&buf);
 
     if (!isLetter(chr)) goto failure;
@@ -500,7 +445,7 @@ static bool readSymbol(FILE *fp, int first, Target result)
 
     ungetc(chr, fp);
 
-    return symbol_Create(buffer_contents(&buf), result.symbol);
+    return symbol_Create(buf, result.symbol);
 
     failure:
     fatal(isPrint(chr) ? "illegal character: 0x%02x '%c'" : "illegal character: 0x%02x", chr, chr);

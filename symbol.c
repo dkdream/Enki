@@ -14,13 +14,6 @@
 #include <stdio.h>
 
 /* */
-struct cu_data {
-    unsigned    length;
-    const char* start;
-};
-
-typedef struct cu_data CuData;
-
 Symbol _empty_symbol = (Symbol)0;
 
 struct _internal_SymbolRow {
@@ -82,11 +75,11 @@ extern void check_SymbolTable__(const char* filename, unsigned line) {
 }
 
 
-static inline HashCode hash_full(CuData value) {
+static inline HashCode hash_full(TextBuffer value) {
     HashCode result = 5381;
 
-    unsigned int length = value.length;
-    const char*  begin  = value.start;
+    unsigned int length = value.position;
+    const char*  begin  = value.buffer;
 
     for ( ; length-- ; ) {
         int val = begin[length];
@@ -96,18 +89,18 @@ static inline HashCode hash_full(CuData value) {
     return result;
 }
 
-static inline bool do_symbol_create(CuData value, Symbol *target) {
-    if (!value.start) {
+extern bool symbol_Create(TextBuffer value, Symbol *target) {
+    if (!value.buffer) {
         *target = _empty_symbol;
         return true;
     }
 
-    if (0 == value.length) {
+    if (0 == value.position) {
         *target = _empty_symbol;
         return true;
     }
 
-    unsigned int size = value.length;
+    unsigned int size = value.position;
     HashCode hashcode = hash_full(value);
 
     const int       row = hashcode % _global_symboltable->size;
@@ -124,7 +117,7 @@ static inline bool do_symbol_create(CuData value, Symbol *target) {
 
         const unsigned long *checking = test->value;
         const unsigned long *end      = checking + cells;
-        const unsigned long *source   = (const unsigned long *) value.start;
+        const unsigned long *source   = (const unsigned long *) value.buffer;
 
         while (checking < end) {
             if (*checking++ != *source++) goto next;
@@ -155,17 +148,11 @@ static inline bool do_symbol_create(CuData value, Symbol *target) {
     result->size     = size;
     result->hashcode = hashcode;
 
-    memcpy(result->value, value.start, size);
+    memcpy(result->value, value.buffer, size);
 
     _global_symboltable->row[row].first = entry;
 
     return true;
-}
-
-extern bool symbol_Create(const char* text, Symbol *target) {
-    const unsigned size = (text ? strlen(text) : 0);
-    CuData        value = { size, text };
-    return do_symbol_create(value, target);
 }
 
 /*****************

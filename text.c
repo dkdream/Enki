@@ -12,14 +12,6 @@
 /* */
 #include <string.h>
 
-/* */
-struct cu_data {
-    unsigned    length;
-    const char* start;
-};
-
-typedef struct cu_data CuData;
-
 /*
  * the hash code is computed but xor-ing the longs together
  * but a text may not fill the last long so when to text
@@ -59,11 +51,11 @@ static inline HashCode hash_ajust(unsigned int size, HashCode hash) {
     return output.hash;
 }
 
-static inline HashCode hash_full(CuData value) {
+static inline HashCode hash_full(TextBuffer value) {
     HashCode result = 5381;
 
-    unsigned int length = value.length;
-    const char*  begin  = value.start;
+    unsigned int length = value.position;
+    const char*  begin  = value.buffer;
 
     for ( ; length-- ; ) {
         int val = begin[length];
@@ -73,8 +65,8 @@ static inline HashCode hash_full(CuData value) {
     return result;
 }
 
-static inline bool do_text_create(CuData value, Text *target) {
-    const unsigned     size = value.length;
+extern inline bool text_Create(TextBuffer value, Text *target) {
+    const unsigned     size = value.position;
     const HashCode hashcode = hash_full(value);
     const int         cells = size / sizeof(const unsigned long);
 
@@ -90,15 +82,9 @@ static inline bool do_text_create(CuData value, Text *target) {
     result->size     = size;
     result->hashcode = hashcode;
 
-    memcpy(result->value, value.start, size);
+    memcpy(result->value, value.buffer, size);
 
     return result;
-}
-
-extern bool text_Create(const char* text, Text *target) {
-    const unsigned size = (text ? strlen(text) : 0);
-    CuData        value = { size, text };
-    return do_text_create(value, target);
 }
 
 extern bool text_Append(Text head, Text tail, Text *target) {
@@ -107,7 +93,8 @@ extern bool text_Append(Text head, Text tail, Text *target) {
             *target = tail;
             return true;
         }
-        return text_Create((const char*) 0, target);
+        TextBuffer value = BUFFER_INITIALISER;
+        return text_Create(value, target);
     }
 
     if (!tail) {
