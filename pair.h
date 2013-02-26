@@ -13,6 +13,9 @@ struct pair {
     Node cdr;
 };
 
+extern bool pair_SetCar(Pair, const Node car);
+extern bool pair_SetCdr(Pair, const Node cdr);
+
 extern inline bool pair_Create(const Node car, const Node cdr, Pair* target)  __attribute__((always_inline));
 extern inline bool pair_Create(const Node car, const Node cdr, Pair* target) {
     if (!node_Allocate(_zero_space,

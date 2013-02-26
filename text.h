@@ -16,7 +16,7 @@ struct text {
     unsigned long value[1];
 };
 
-extern bool text_Make(const char* name, Text*);
+extern bool text_Create(const char* name, Text*);
 extern bool text_Append(Text, Text, Text*);
 
 /* macros */

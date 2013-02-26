@@ -139,6 +139,12 @@ extern Primitive    _depth;
 extern Primitive    _contract;
 extern Primitive    _drop;
 
+extern Symbol s_dot;
+extern Symbol s_quasiquote;
+extern Symbol s_quote;
+extern Symbol s_unquote;
+extern Symbol s_unquote_splicing;
+
 extern const char*  node_type_Name(EA_Type type);
 extern unsigned int node_type_FixSize(EA_Type type);
 extern void debug_Message(const char *filename, unsigned int linenum, bool newline, const char *format, ...);

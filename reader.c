@@ -14,34 +14,36 @@
 #include <stdbool.h>
 #include <error.h>
 
-extern void fatal(char *cstr, ...);// __attribute__ ((noreturn)(format (printf, 1, 2)));
+extern void fatal(const char *cstr, ...);// __attribute__ ((noreturn)(format (printf, 1, 2)));
 
 #define GC_PROTECT(var)
 #define GC_UNPROTECT(var)
 
+#if 0
 #define NODE(val) ((Node)((Reference)(val)))
 
 // make symbol
 extern Node intern(char *cstr);
 // constructors
-extern Node newPair(Node, Node);
-extern Node newString(char *cstr);
-extern Node newLong(long val);
+extern Pair    newPair(Node, Node);
+extern String  newString(char *cstr);
+extern Integer newLong(long val);
 
-extern Node setCdr(Node, Node); //== (setCdr(pair,node); return node)
-extern Node setCar(Node, Node); //== (setCar(pair,node); return node)
+extern Node setCdr(Pair, Node); //== (setCdr(pair,node); return node)
+extern Node setCar(Pair, Node); //== (setCar(pair,node); return node)
 
 extern Node s_dot;
 extern Node s_quasiquote;
 extern Node s_quote;
 extern Node s_unquote;
 extern Node s_unquote_splicing;
+#endif
 
 struct buffer
 {
     char *buffer;
-    int    size;
-    int    position;
+    int   size;
+    int   position;
 };
 
 #define BUFFER_INITIALISER { 0, 0, 0 }
@@ -237,61 +239,7 @@ static inline int isDigit10(int c) { return 0 <= c && c <= 127 && (CHAR_DIGIT10 
 static inline int isDigit16(int c) { return 0 <= c && c <= 127 && (CHAR_DIGIT16  & chartab[c]); }
 static inline int isLetter(int c)  { return 0 <= c && c <= 127 && (CHAR_LETTER   & chartab[c]); }
 
-static inline bool isEof(Node value) {
-    return value.reference == (Reference)EOF;
-}
-
-
-static Node read(FILE *fp);
-
-static Node readList(FILE *fp, int delim)
-{
-    Node head = NIL;
-    Node tail = head;
-    Node obj  = NIL;
-
-    GC_PROTECT(head);
-    GC_PROTECT(obj);
-
-    obj = read(fp);
-
-    if (isEof(obj)) goto eof;
-
-    head = tail = newPair(obj, NIL);
-
-    for (;;) {
-        obj= read(fp);
-
-        if (isEof(obj)) goto eof;
-
-        if (isIdentical(obj, s_dot)) {
-            obj = read(fp);
-
-            if (isEof(obj))      fatal("missing item after .");
-
-            tail = setCdr(tail, obj);
-            obj  = read(fp);
-
-            if (isEof(obj))      fatal("extra item after .");
-
-            goto eof;
-        } else {
-            obj  = newPair(obj, NIL);
-            tail = setCdr(tail, obj);
-        }
-    }
-
- eof:;
-    int c = getc(fp);
-    if (c != delim) fatal("EOF while reading list");
-
-    GC_UNPROTECT(obj);
-    GC_UNPROTECT(head);
-
-    return head;
-}
-
-static int digitValue(int c)
+static inline int digitValue(int c)
 {
     switch (c) {
     case '0' ... '9':  return c - '0';
@@ -302,7 +250,7 @@ static int digitValue(int c)
     return 0;
 }
 
-static int isHexadecimal(int c)
+static inline int isHexadecimal(int c)
 {
     switch (c) {
     case '0' ... '9':
@@ -313,171 +261,310 @@ static int isHexadecimal(int c)
     return 0;
 }
 
-static int isOctal(int c)
+static inline int isOctal(int c)
 {
     return '0' <= c && c <= '7';
 }
 
-static int readChar(int c, FILE *fp)
+static inline bool matchChar(FILE *fp, int match)
 {
-    if ('\\' == c) {
-        c= getc(fp);
-        switch (c) {
-        case 'a':   return '\a';
-        case 'b':   return '\b';
-        case 'f':   return '\f';
-        case 'n':   return '\n';
-        case 'r':   return '\r';
-        case 't':   return '\t';
-        case 'v':   return '\v';
-        case '\'':  return '\'';
-        case 'u': {
-            int a= getc(fp),
-                b= getc(fp),
-                c= getc(fp),
-                d= getc(fp);
-            return (digitValue(a) << 24)
-                + (digitValue(b) << 16)
-                + (digitValue(c) << 8)
-                + digitValue(d);
-        }
-        case 'x': {
-            int x= 0;
-            if (isHexadecimal(c= getc(fp))) {
-                x= digitValue(c);
-                if (isHexadecimal(c= getc(fp))) {
-                    x= x * 16 + digitValue(c);
-                    c= getc(fp);
-                }
-            }
-            ungetc(c, fp);
-            return x;
-        }
-        case '0' ... '7': {
-            int x= digitValue(c);
-            if (isOctal(c= getc(fp))) {
-                x= x * 8 + digitValue(c);
-                if (isOctal(c= getc(fp))) {
-                    x= x * 8 + digitValue(c);
-                    c= getc(fp);
-                }
-            }
-            ungetc(c, fp);
-            return x;
-        }
-        default:
-            if (isAlpha(c) || isDigit10(c)) fatal("illegal character escape: \\%c", c);
-            return c;
-        }
-    }
-    return c;
+    int chr = getc(fp);
+    if (match == chr) return true;
+    ungetc(chr, fp);
 }
 
-static Node read(FILE *fp)
+static int readChar(int chr, FILE *fp)
+{
+    if ('\\' != chr) return chr;
+
+    chr = getc(fp);
+
+    switch (chr) {
+    case 'a':   return '\a';
+    case 'b':   return '\b';
+    case 'f':   return '\f';
+    case 'n':   return '\n';
+    case 'r':   return '\r';
+    case 't':   return '\t';
+    case 'v':   return '\v';
+    case '\'':  return '\'';
+
+    case 'u': {
+        int ahr = getc(fp),
+            bhr = getc(fp),
+            chr = getc(fp),
+            dhr = getc(fp);
+        return (digitValue(ahr) << 24)
+            + (digitValue(bhr) << 16)
+            + (digitValue(chr) << 8)
+            + digitValue(dhr);
+    }
+
+    case 'x': {
+        if (!isHexadecimal(chr = getc(fp))) {
+            ungetc(chr, fp);
+            return 0;
+        }
+
+        int value = digitValue(chr);
+
+        if (!isHexadecimal(chr = getc(fp))) {
+            ungetc(chr, fp);
+            return value;
+        }
+
+        return value * 16 + digitValue(chr);
+    }
+
+    case '0' ... '7': {
+        int value = digitValue(chr);
+        if (!isOctal(chr = getc(fp))) {
+            ungetc(chr, fp);
+            return value;
+        }
+
+        value = value * 8 + digitValue(chr);
+
+        if (!isOctal(chr = getc(fp))) {
+            ungetc(chr, fp);
+            return value;
+        }
+        return value * 8 + digitValue(chr);
+    }
+
+    default:
+        if (isAlpha(chr))   fatal("illegal character escape: \\%c", chr);
+        if (isDigit10(chr)) fatal("illegal character escape: \\%c", chr);
+        return chr;
+    }
+}
+
+static bool read(FILE *fp, Target result);
+static bool readList(FILE *fp, int delim, Target result);
+static bool readCode(FILE *fp, Target result);
+static bool readInteger(FILE *fp, int first, Target result);
+static bool readString(FILE *fp, int end, Target result);
+static bool readQuote(FILE *fp, Node symbol, Target result);
+static bool readSymbol(FILE *fp, int first, Target result);
+static bool readComment(FILE *fp);
+
+static bool readList(FILE *fp, int delim, Target result)
+{
+    const char *error = 0;
+    Pair  head = 0;
+    Pair  tail = head;
+    Node  hold = NIL;
+
+    GC_PROTECT(head);
+    GC_PROTECT(hold);
+
+    if (!read(fp, &(hold.reference))) goto eof;
+
+    if (!pair_Create(hold, NIL, &head)) goto failure;
+
+    tail = head;
+
+    for (;;) {
+        if (!read(fp, &(hold.reference))) goto eof;
+
+        if (!isIdentical(hold.symbol, s_dot)) {
+            if (!pair_Create(hold, NIL, &(hold.pair))) goto failure;
+            if (!pair_SetCdr(tail, hold)) goto failure;
+            tail = hold.pair;
+            continue;
+        }
+
+        if (!read(fp, &(hold.reference))) {
+            error = "missing item after .";
+            goto failure;
+        }
+
+        if (!pair_SetCdr(tail, hold)) goto failure;
+
+        if (!read(fp, &(hold.reference))) goto eof;
+
+        error = "extra item after .";
+        goto failure;
+    }
+
+    eof:
+    if (!matchChar(fp, delim)) {
+        error = "EOF while reading list";
+        goto failure;
+    }
+
+    GC_UNPROTECT(hold);
+    GC_UNPROTECT(head);
+    return true;
+
+    failure:
+    if (!error) {
+        fatal(error);
+    }
+
+    GC_UNPROTECT(hold);
+    GC_UNPROTECT(head);
+    return false;
+}
+
+static bool readCode(FILE *fp, Target result)
+{
+    int chr = getc(fp);
+
+    if (EOF == chr) return false;
+
+    chr = readChar(chr, fp);
+
+    return integer_Create(chr, result.integer);
+}
+
+static bool readString(FILE *fp, int end, Target result)
+{
+    static struct buffer buf = BUFFER_INITIALISER;
+    buffer_reset(&buf);
+
+    for (;;) {
+        int chr = getc(fp);
+
+        if (end == chr) break;
+        if (EOF == chr) goto failure;
+
+        chr = readChar(chr, fp);
+
+        buffer_append(&buf, chr);
+    }
+
+    return text_Create(buffer_contents(&buf), result.text);
+
+    failure:
+    fatal("EOF in string literal");
+    return false;
+}
+
+static bool readInteger(FILE *fp, int first, Target result)
+{
+    int chr = first;
+
+    static struct buffer buf= BUFFER_INITIALISER;
+    buffer_reset(&buf);
+
+    do {
+        buffer_append(&buf, chr);
+        chr = getc(fp);
+    } while (isDigit10(chr));
+
+    if (('x' == chr) && (1 == buf.position)) {
+        do {
+            buffer_append(&buf, chr);
+            chr = getc(fp);
+        } while (isDigit16(chr));
+    }
+
+    ungetc(chr, fp);
+
+    long value = strtoul(buffer_contents(&buf), 0, 0);
+
+    return integer_Create(value, result.integer);
+}
+
+static bool readQuote(FILE *fp, Node symbol, Target result)
+{
+    Target hold;
+    GC_PROTECT(hold.reference);
+
+    if (!read(fp, hold)) goto failure;
+    if (!pair_Create(hold.reference, NIL, hold.pair)) goto failure;
+    if (!pair_Create(symbol, hold.reference, result.pair)) goto failure;
+
+    GC_UNPROTECT(hold.reference);
+    return true;
+
+    failure:
+    GC_UNPROTECT(hold.reference);
+    return false;
+}
+
+static bool readSymbol(FILE *fp, int first, Target result)
+{
+    int chr = first;
+
+    static struct buffer buf = BUFFER_INITIALISER;
+    buffer_reset(&buf);
+
+    if (!isLetter(chr)) goto failure;
+
+    while (isLetter(chr) || isDigit10(chr)) {
+        buffer_append(&buf, chr);
+        chr = getc(fp);
+    }
+
+    ungetc(chr, fp);
+
+    return symbol_Create(buffer_contents(&buf), result.symbol);
+
+    failure:
+    fatal(isPrint(chr) ? "illegal character: 0x%02x '%c'" : "illegal character: 0x%02x", chr, chr);
+    return false;
+}
+
+static bool readComment(FILE *fp)
 {
     for (;;) {
-        int c= getc(fp);
-        switch (c) {
-        case EOF: {
-            return NODE(EOF);
-        }
-        case '\t':  case '\n':  case '\r':  case ' ' : {
+        int chr = getc(fp);
+        if ('\n' == chr || '\r' == chr || EOF == chr) break;
+    }
+    return true;
+}
+
+static bool read(FILE *fp, Target result)
+{
+    for (;;) {
+        int chr = getc(fp);
+        switch (chr) {
+        case EOF:  return false;
+        case '\t': continue;
+        case '\n': continue;
+        case '\r': continue;
+        case ' ' : continue;
+        case '"':  return readString(fp, '"', result);
+        case '?':  return readCode(fp, result);
+        case '\'': return readQuote(fp, s_quote, result);
+        case '`':  return readQuote(fp, s_quasiquote, result);
+        case '(':  return readList(fp, ')', result);
+        case '[':  return readList(fp, ']', result);
+        case '{':  return readList(fp, '}', result);
+
+        case ';':  {
+            readComment(fp);
             continue;
         }
-        case ';': {
-            for (;;) {
-                c= getc(fp);
-                if ('\n' == c || '\r' == c || EOF == c) break;
-            }
-            continue;
+
+        case '0' ... '9': {
+            return readInteger(fp, chr, result);
         }
-        case '"': {
-            static struct buffer buf= BUFFER_INITIALISER;
-            buffer_reset(&buf);
-            for (;;) {
-                c= getc(fp);
-                if ('"' == c) break;
-                c= readChar(c, fp);
-                if (EOF == c)         fatal("EOF in string literal");
-                buffer_append(&buf, c);
-            }
-            Node obj= newString(buffer_contents(&buf));
-            //buffer_free(&buf);
-            return obj;
-        }
-        case '?': {
-            return newLong(readChar(getc(fp), fp));
-        }
-        case '\'': {
-            Node obj= read(fp);
-            GC_PROTECT(obj);
-            obj= newPair(obj, NIL);
-            obj= newPair(s_quote, obj);
-            GC_UNPROTECT(obj);
-            return obj;
-        }
-        case '`': {
-            Node obj= read(fp);
-            GC_PROTECT(obj);
-            obj= newPair(obj, NIL);
-            obj= newPair(s_quasiquote, obj);
-            GC_UNPROTECT(obj);
-            return obj;
-        }
+
         case ',': {
-            Node sym= s_unquote;
-            c= getc(fp);
-            if ('@' == c) sym= s_unquote_splicing;
-            else          ungetc(c, fp);
-            Node obj= read(fp);
-            GC_PROTECT(obj);
-            obj= newPair(obj, NIL);
-            obj= newPair(sym, obj);
-            GC_UNPROTECT(obj);
-            return obj;
-        }
-        case '0' ... '9':
-        doDigits:   {
-                static struct buffer buf= BUFFER_INITIALISER;
-                buffer_reset(&buf);
-                do {
-                    buffer_append(&buf, c);
-                    c= getc(fp);
-                } while (isDigit10(c));
-                if (('x' == c) && (1 == buf.position))
-                    do {
-                        buffer_append(&buf, c);
-                        c= getc(fp);
-                    } while (isDigit16(c));
-                ungetc(c, fp);
-                Node obj= newLong(strtoul(buffer_contents(&buf), 0, 0));
-                //buffer_free(&buf);
-                return obj;
+            if (matchChar(fp, '@')) {
+                return readQuote(fp, s_unquote_splicing, result);
+            } else {
+                return readQuote(fp, s_unquote, result);
             }
-        case '(': return readList(fp, ')');      case ')': ungetc(c, fp);  return NODE(EOF);
-        case '[': return readList(fp, ']');      case ']': ungetc(c, fp);  return NODE(EOF);
-        case '{': return readList(fp, '}');      case '}': ungetc(c, fp);  return NODE(EOF);
+        }
+
+        case '}':
+        case ']':
+        case ')': {
+            ungetc(chr, fp);
+            return false;
+        }
+
         case '-': {
-            int d= getc(fp);
-            ungetc(d, fp);
-            if (isDigit10(d)) goto doDigits;
-            /* fall through... */
+            int dhr = getc(fp); ungetc(dhr, fp);
+            if (isDigit10(dhr)) return readInteger(fp, chr, result);
+            else return readSymbol(fp, chr, result);
         }
-        default: {
-            if (isLetter(c)) {
-                static struct buffer buf= BUFFER_INITIALISER;
-                buffer_reset(&buf);
-                while (isLetter(c) || isDigit10(c)) {
-                    buffer_append(&buf, c);
-                    c= getc(fp);
-                }
-                ungetc(c, fp);
-                Node obj= intern(buffer_contents(&buf));
-                //buffer_free(&buf);
-                return obj;
-            }
-            fatal(isPrint(c) ? "illegal character: 0x%02x '%c'" : "illegal character: 0x%02x", c, c);
-        }
+
+        default: return readSymbol(fp, chr, result);
         }
     }
 }

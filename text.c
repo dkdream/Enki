@@ -73,7 +73,7 @@ static inline HashCode hash_full(CuData value) {
     return result;
 }
 
-extern bool text_Create(CuData value, Text *target) {
+static inline bool do_text_create(CuData value, Text *target) {
     const unsigned     size = value.length;
     const HashCode hashcode = hash_full(value);
     const int         cells = size / sizeof(const unsigned long);
@@ -95,10 +95,10 @@ extern bool text_Create(CuData value, Text *target) {
     return result;
 }
 
-extern bool text_Make(const char* text, Text *target) {
+extern bool text_Create(const char* text, Text *target) {
     const unsigned size = (text ? strlen(text) : 0);
     CuData        value = { size, text };
-    return text_Create(value, target);
+    return do_text_create(value, target);
 }
 
 extern bool text_Append(Text head, Text tail, Text *target) {
@@ -107,7 +107,7 @@ extern bool text_Append(Text head, Text tail, Text *target) {
             *target = tail;
             return true;
         }
-        return text_Make((const char*) 0, target);
+        return text_Create((const char*) 0, target);
     }
 
     if (!tail) {

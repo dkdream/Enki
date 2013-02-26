@@ -96,14 +96,15 @@ static inline HashCode hash_full(CuData value) {
     return result;
 }
 
-extern bool symbol_Create(CuData value, Symbol *target) {
+static inline bool do_symbol_create(CuData value, Symbol *target) {
     if (!value.start) {
         *target = _empty_symbol;
         return true;
     }
+
     if (0 == value.length) {
-         *target = _empty_symbol;
-         return true;
+        *target = _empty_symbol;
+        return true;
     }
 
     unsigned int size = value.length;
@@ -161,10 +162,10 @@ extern bool symbol_Create(CuData value, Symbol *target) {
     return true;
 }
 
-extern bool symbol_Make(const char* text, Symbol *target) {
+extern bool symbol_Create(const char* text, Symbol *target) {
     const unsigned size = (text ? strlen(text) : 0);
     CuData        value = { size, text };
-    return symbol_Create(value, target);
+    return do_symbol_create(value, target);
 }
 
 /*****************

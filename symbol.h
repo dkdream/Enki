@@ -22,7 +22,7 @@ struct symbol {
 };
 
 extern Symbol _empty_symbol;
-extern bool symbol_Make(const char* name, Symbol*);
+extern bool symbol_Create(const char* name, Symbol*);
 extern void check_SymbolTable__(const char*, unsigned);
 
 /* macros */
