@@ -30,7 +30,7 @@ int main(int argc, char **argv)
 
         printf("read 0x%p\n", target);
 
-        if (!prettyPrint(stdout, 4, target)) {
+        if (!prettyPrint(stdout, 0, target)) {
             printf("Error pretty printing target\n");
         }
     }

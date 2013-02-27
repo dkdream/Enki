@@ -433,18 +433,18 @@ static bool readInteger(FILE *fp, int first, Target result)
 
 static bool readQuote(FILE *fp, Node symbol, Target result)
 {
-    Target hold;
-    GC_PROTECT(hold.reference);
+    Node hold;
+    GC_PROTECT(hold);
 
-    if (!read(fp, hold)) goto failure;
-    if (!pair_Create(hold.reference, NIL, hold.pair)) goto failure;
-    if (!pair_Create(symbol, hold.reference, result.pair)) goto failure;
+    if (!read(fp, &(hold.reference))) goto failure;
+    if (!pair_Create(hold, NIL, &hold.pair)) goto failure;
+    if (!pair_Create(symbol, hold, result.pair)) goto failure;
 
-    GC_UNPROTECT(hold.reference);
+    GC_UNPROTECT(hold);
     return true;
 
     failure:
-    GC_UNPROTECT(hold.reference);
+    GC_UNPROTECT(hold);
     return false;
 }
 

@@ -15,6 +15,50 @@
 #include <stdbool.h>
 #include <error.h>
 
+static inline void echo_string(FILE* output, const char* text) {
+    if (!text) return;
+
+    while (*text) {
+        int value = *text++;
+        switch (value) {
+        case '\a':
+            fprintf(output, "\\a");
+            continue;
+        case '\b':
+            fprintf(output, "\\b");
+            continue;
+        case '\f':
+            fprintf(output, "\\f");
+            continue;
+        case '\n':
+            fprintf(output, "\\n");
+            continue;
+        case '\r':
+            fprintf(output, "\\r");
+            continue;
+        case '\t':
+            fprintf(output, "\\t");
+            continue;
+        case '\v':
+            fprintf(output, "\\v");
+            continue;
+        case '\'':
+            fprintf(output, "\\'");
+            continue;
+        default: break;
+        }
+        if (0x20 > value) {
+            fprintf(output, "\\%x", value);
+            continue;
+        }
+        if (0x7e < value) {
+            fprintf(output, "\\%x", value);
+            continue;
+        }
+        fprintf(output, "%c", value);
+    }
+}
+
 extern bool print(FILE* output, Node node) {
     if (!output) return false;
 
@@ -114,13 +158,15 @@ extern bool prettyPrint(FILE* output, unsigned level, Node node) {
         return true;
 
     case nt_symbol:
-        fprintf(output, "symbol(%s)",
-                (const char *) node.symbol->value);
+        fprintf(output, "symbol(%llx,", node.symbol->hashcode);
+        echo_string(output, (const char *) node.symbol->value);
+        fprintf(output, ")");
         return true;
 
     case nt_text:
-        fprintf(output, "text(%s)",
-                (const char *) node.text->value);
+        fprintf(output, "text(%llx,\"", node.text->hashcode);
+        echo_string(output, (const char *) node.text->value);
+        fprintf(output, "\")");
         return true;
 
     case nt_integer:
