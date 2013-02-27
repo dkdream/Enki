@@ -27,11 +27,11 @@ int main(int argc, char **argv)
     Reference target;
 
     while (read(data, &target)) {
-        printf("read 0x%p\n", target);
+        dump(stdout, target);
+        printf("\n");
         prettyPrint(stdout, target);
+        printf("\n\n");
     }
-
-    printf("\n");
 
     stopEnkiLibrary();
     return 0;

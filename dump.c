@@ -124,31 +124,12 @@ extern bool print(FILE* output, Node node) {
             node.reference);
     return true;
 }
-
-extern bool dump(FILE* output, unsigned level, Node node) {
+extern bool dump(FILE* output, Node node) {
     if (!output) return false;
 
     if (!node.reference) {
         fprintf(output, "nil");
         return true;
-    }
-
-    void indent(unsigned to) {
-        unsigned count = 0;
-        for ( ; count < to ; ++count ) {
-            fprintf(output, "   ");
-        }
-    }
-    void open() {
-        fprintf(output, "(");
-    }
-    void sub_tree(Node value) {
-        fprintf(output, "\n");
-        indent(level+1);
-        dump(output, level+1, value);
-    }
-    void close() {
-        fprintf(output, ")");
     }
 
     switch (getKind(node)) {
@@ -202,14 +183,46 @@ extern bool dump(FILE* output, unsigned level, Node node) {
                 node.reference,
                 node.pair->car.reference,
                 node.pair->cdr.reference);
-        sub_tree(node.pair->car);
-        sub_tree(node.pair->cdr);
         return true;
     }
 
     fprintf(output, "type[%d](%p)",
             getKind(node),
             node.reference);
+    return true;
+}
+
+extern bool dumpTree(FILE* output, unsigned level, Node node) {
+    if (!output) return false;
+
+    if (!node.reference) {
+        fprintf(output, "nil");
+        return true;
+    }
+
+    void indent(unsigned to) {
+        unsigned count = 0;
+        for ( ; count < to ; ++count ) {
+            fprintf(output, "   ");
+        }
+    }
+    void sub_tree(Node value) {
+        fprintf(output, "\n");
+        indent(level+1);
+        dumpTree(output, level+1, value);
+    }
+
+    switch (getKind(node)) {
+    default:
+        return dump(output, node);
+
+    case nt_pair:
+        if (!dump(output,node)) return false;
+        sub_tree(node.pair->car);
+        sub_tree(node.pair->cdr);
+        return true;
+    }
+
     return true;
 }
 
@@ -325,4 +338,5 @@ extern void prettyPrint(FILE* output, Node node) {
     }
 
     prettyPrint_intern(node, 0);
+
 }

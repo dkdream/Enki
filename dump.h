@@ -10,7 +10,8 @@
 #include <stdio.h>
 
 extern bool print(FILE *fp, Node result);
-extern bool dump(FILE *fp, unsigned indent, Node result);
+extern bool dump(FILE *fp, Node result);
+extern bool dumpTree(FILE *fp, unsigned indent, Node result);
 extern void prettyPrint(FILE *fp, Node result);
 
 /***************************
