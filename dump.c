@@ -101,7 +101,7 @@ extern bool prettyPrint(FILE* output, unsigned level, Node node) {
     void sub_tree(Node value) {
         fprintf(output, "\n");
         indent(level+1);
-        node_PrintTree(output, level+1, value);
+        prettyPrint(output, level+1, value);
     }
     void close() {
         fprintf(output, ")");
