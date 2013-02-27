@@ -25,7 +25,7 @@ extern bool print(FILE* output, Node node) {
 
     switch (getKind(node)) {
     case nt_unknown:
-        fprintf(output, "unknown(0x%p)",
+        fprintf(output, "unknown(%p)",
                 node.reference);
         return true;
 
@@ -50,32 +50,32 @@ extern bool print(FILE* output, Node node) {
         return true;
 
     case nt_primitive:
-        fprintf(output, "%s(0x%p %u)",
+        fprintf(output, "%s(%p %u)",
                 (const char *) node.primitive->label->value,
                 node.reference,
                 node.primitive->size);
         return true;
 
     case nt_input:
-        fprintf(output, "input(0x%p %u)",
+        fprintf(output, "input(%p %u)",
                 node.reference,
                 node.input->input);
         return true;
 
     case nt_output:
-        fprintf(output, "output(0x%p %u)",
+        fprintf(output, "output(%p %u)",
                 node.reference,
                 node.output->output);
         return true;
 
     case nt_pair:
-        fprintf(output, "pair(0x%p (0x%p, 0x%p))",
+        fprintf(output, "pair(%p (%p, %p))",
                 node.reference,
                 node.pair->car.reference,
                 node.pair->cdr.reference);
     }
 
-    fprintf(output, "type[%d](0x%p)",
+    fprintf(output, "type[%d](%p)",
             getKind(node),
             node.reference);
     return true;
@@ -109,7 +109,7 @@ extern bool prettyPrint(FILE* output, unsigned level, Node node) {
 
     switch (getKind(node)) {
     case nt_unknown:
-        fprintf(output, "unknown(0x%p)",
+        fprintf(output, "unknown(%p)",
                 node.reference);
         return true;
 
@@ -134,25 +134,25 @@ extern bool prettyPrint(FILE* output, unsigned level, Node node) {
         return true;
 
     case nt_primitive:
-        fprintf(output, "primitive(0x%p %u)",
+        fprintf(output, "primitive(%p %u)",
                 node.reference,
                 node.primitive->size);
         return true;
 
     case nt_input:
-        fprintf(output, "input(0x%p %u)",
+        fprintf(output, "input(%p %u)",
                 node.reference,
                 node.input->input);
         return true;
 
     case nt_output:
-        fprintf(output, "output(0x%p %u)",
+        fprintf(output, "output(%p %u)",
                 node.reference,
                 node.output->output);
         return true;
 
     case nt_pair:
-        fprintf(output, "pair(0x%p (0x%p, 0x%p))",
+        fprintf(output, "pair(%p (%p, %p))",
                 node.reference,
                 node.pair->car.reference,
                 node.pair->cdr.reference);
@@ -161,7 +161,7 @@ extern bool prettyPrint(FILE* output, unsigned level, Node node) {
         return true;
     }
 
-    fprintf(output, "type[%d](0x%p)",
+    fprintf(output, "type[%d](%p)",
             getKind(node),
             node.reference);
     return true;

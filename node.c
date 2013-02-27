@@ -92,7 +92,7 @@ extern void node_Print(FILE* output, Node node) {
 
     switch (getKind(node)) {
     case nt_unknown:
-        fprintf(output, "unknown(0x%p)",
+        fprintf(output, "unknown(%p)",
                 node.reference);
         return;
 
@@ -117,74 +117,74 @@ extern void node_Print(FILE* output, Node node) {
         return;
 
     case nt_primitive:
-        fprintf(output, "%s(0x%p %u)",
+        fprintf(output, "%s(%p %u)",
                 (const char *) node.primitive->label->value,
                 node.reference,
                 node.primitive->size);
         return;
 
     case nt_input:
-        fprintf(output, "input(0x%p %u)",
+        fprintf(output, "input(%p %u)",
                 node.reference,
                 node.input->input);
         return;
 
     case nt_output:
-        fprintf(output, "output(0x%p %u)",
+        fprintf(output, "output(%p %u)",
                 node.reference,
                 node.output->output);
         return;
 
     case nt_pair:
-        fprintf(output, "pair(0x%p (0x%p, 0x%p))",
+        fprintf(output, "pair(%p (%p, %p))",
                 node.reference,
                 node.pair->car.reference,
                 node.pair->cdr.reference);
 
 #if 0
     case nt_set_cell:
-        fprintf(output, "cell(0x%p (0x%p, 0x%p))",
+        fprintf(output, "cell(%p (%p, %p))",
                 node.reference,
                 node.set_cell->first.reference,
                 node.set_cell->rest);
         return;
 
     case nt_set_block:
-        fprintf(output, "set_block(0x%p (%u, 0x%p))",
+        fprintf(output, "set_block(%p (%u, %p))",
                 node.reference,
                 node.set_block->size,
                 node.set_block->next);
         return;
 
     case nt_set:
-        fprintf(output, "set(0x%p %u)",
+        fprintf(output, "set(%p %u)",
                 node.reference,
                 node.set->fullsize);
         return;
 
     case nt_hash_entry:
-        fprintf(output, "entry(0x%p (%s, 0x%p))",
+        fprintf(output, "entry(%p (%s, %p))",
                 node.reference,
                 (const char *) node.hash_entry->symbol->value,
                 node.hash_entry->value.reference);
         return;
 
     case nt_hash_block:
-        fprintf(output, "hash_block(0x%p (%u, 0x%p))",
+        fprintf(output, "hash_block(%p (%u, %p))",
                 node.reference,
                 node.hash_block->size,
                 node.hash_block->next);
         return;
 
     case nt_hash:
-        fprintf(output, "hash(0x%p %u)",
+        fprintf(output, "hash(%p %u)",
                 node.reference,
                 node.hash->fullsize);
         return;
 #endif
     }
 
-    fprintf(output, "type[%d](0x%p)",
+    fprintf(output, "type[%d](%p)",
             getKind(node),
             node.reference);
     return;
@@ -235,7 +235,7 @@ extern void node_PrintFul(FILE* output, Node node) {
 
     switch (getKind(node)) {
     case nt_unknown:
-        fprintf(output, "unknown(0x%p)",
+        fprintf(output, "unknown(%p)",
                 node.reference);
         return;
 
@@ -260,25 +260,25 @@ extern void node_PrintFul(FILE* output, Node node) {
         return;
 
     case nt_primitive:
-        fprintf(output, "primitive(0x%p %u)",
+        fprintf(output, "primitive(%p %u)",
                 node.reference,
                 node.primitive->size);
         return;
 
     case nt_input:
-        fprintf(output, "input(0x%p %u)",
+        fprintf(output, "input(%p %u)",
                 node.reference,
                 node.input->input);
         return;
 
     case nt_output:
-        fprintf(output, "output(0x%p %u)",
+        fprintf(output, "output(%p %u)",
                 node.reference,
                 node.output->output);
         return;
 
     case nt_pair:
-        fprintf(output, "pair(0x%p (0x%p, 0x%p))",
+        fprintf(output, "pair(%p (%p, %p))",
                 node.reference,
                 node.pair->car.reference,
                 node.pair->cdr.reference);
@@ -297,7 +297,7 @@ extern void node_PrintFul(FILE* output, Node node) {
         return;
 
     case nt_hash_block:
-        fprintf(output, "hash_block(0x%p (%u, 0x%p))",
+        fprintf(output, "hash_block(%p (%u, %p))",
                 node.reference,
                 node.hash_block->size,
                 node.hash_block->next);
@@ -324,7 +324,7 @@ extern void node_PrintFul(FILE* output, Node node) {
         return;
 
     case nt_set_block:
-        fprintf(output, "set_block(0x%p (%u, 0x%p))",
+        fprintf(output, "set_block(%p (%u, %p))",
                 node.reference,
                 node.set_block->size,
                 node.set_block->next);
@@ -336,7 +336,7 @@ extern void node_PrintFul(FILE* output, Node node) {
 #endif
     }
 
-    fprintf(output, "type[%d](0x%p)",
+    fprintf(output, "type[%d](%p)",
             getKind(node),
             node.reference);
     return;
@@ -369,7 +369,7 @@ extern void node_PrintTree(FILE* output, unsigned level, Node node) {
 
     switch (getKind(node)) {
     case nt_unknown:
-        fprintf(output, "unknown(0x%p)",
+        fprintf(output, "unknown(%p)",
                 node.reference);
         return;
 
@@ -394,25 +394,25 @@ extern void node_PrintTree(FILE* output, unsigned level, Node node) {
         return;
 
     case nt_primitive:
-        fprintf(output, "primitive(0x%p %u)",
+        fprintf(output, "primitive(%p %u)",
                 node.reference,
                 node.primitive->size);
         return;
 
     case nt_input:
-        fprintf(output, "input(0x%p %u)",
+        fprintf(output, "input(%p %u)",
                 node.reference,
                 node.input->input);
         return;
 
     case nt_output:
-        fprintf(output, "output(0x%p %u)",
+        fprintf(output, "output(%p %u)",
                 node.reference,
                 node.output->output);
         return;
 
     case nt_pair:
-        fprintf(output, "pair(0x%p (0x%p, 0x%p))",
+        fprintf(output, "pair(%p (%p, %p))",
                 node.reference,
                 node.pair->car.reference,
                 node.pair->cdr.reference);
@@ -431,7 +431,7 @@ extern void node_PrintTree(FILE* output, unsigned level, Node node) {
         return;
 
     case nt_hash_block:
-        fprintf(output, "hash_block(0x%p (%u, 0x%p))",
+        fprintf(output, "hash_block(%p (%u, %p))",
                 node.reference,
                 node.hash_block->size,
                 node.hash_block->next);
@@ -454,7 +454,7 @@ extern void node_PrintTree(FILE* output, unsigned level, Node node) {
         return;
 
     case nt_set_block:
-        fprintf(output, "set_block(0x%p (%u, 0x%p))",
+        fprintf(output, "set_block(%p (%u, %p))",
                 node.reference,
                 node.set_block->size,
                 node.set_block->next);
@@ -466,7 +466,7 @@ extern void node_PrintTree(FILE* output, unsigned level, Node node) {
 #endif
     }
 
-    fprintf(output, "type[%d](0x%p)",
+    fprintf(output, "type[%d](%p)",
             getKind(node),
             node.reference);
     return;

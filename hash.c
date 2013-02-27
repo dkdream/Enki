@@ -13,8 +13,13 @@
 /* */
 #include <error.h>
 
-/* */
+#define Hash_Block_Size 10
 
+extern bool entry_Create(Symbol symbol, Node value, Hash_entry next, Hash_entry* target);
+extern bool hash_block_Create(struct hash_block **target);
+
+/* */
+#if 0
 static inline bool entry_Create(Symbol symbol, Node value, Hash_entry next, Hash_entry* target) {
     if (!node_Allocate(_zero_space,
                        false,
@@ -31,8 +36,6 @@ static inline bool entry_Create(Symbol symbol, Node value, Hash_entry next, Hash
 
     return true;
 }
-
-#define Hash_Block_Size 10
 
 static inline bool hash_block_Create(struct hash_block **target) {
     if (!node_Allocate(_zero_space,
@@ -65,6 +68,7 @@ extern bool hash_Create(unsigned size, Hash *target) {
 
     return true;
 }
+#endif
 
 extern bool hash_Find(Hash table, Symbol name, Node *target) {
     if (!table)              return false;

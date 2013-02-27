@@ -10,18 +10,32 @@
 #include "reader.h"
 #include "dump.h"
 
+#include <stdio.h>
+
 
 int main(int argc, char **argv)
 {
     startEnkiLibrary();
 
+    FILE* data = fopen("./test_reader.scm", "r");
+
+    if (!data) {
+        printf("unable to open file ./test_reader.scm");
+        return -1;
+    }
+
     Reference target;
 
-    while (read(stdin, &target)) {
-        if (prettyPrint(stdout, 4, target)) {
+    while (read(data, &target)) {
+
+        printf("read 0x%p\n", target);
+
+        if (!prettyPrint(stdout, 4, target)) {
             printf("Error pretty printing target\n");
         }
     }
+
+    printf("\n");
 
     stopEnkiLibrary();
     return 0;

@@ -210,7 +210,7 @@ extern inline Header fresh_atom(unsigned long size_in_chars) {
     header->space  = 0;
     header->before = header->after = 0;
 
-    return asReference(header);
+    return header;
 }
 
 extern inline Header fresh_tuple(unsigned long, unsigned long) __attribute__((always_inline));
@@ -256,7 +256,7 @@ extern inline bool darken_Node(const Node node) {
 
     if (value->color == space->visiable) return true;
 
-    VM_DEBUG(5, "darkening (%d) node 0x%p",
+    VM_DEBUG(5, "darkening (%d) node %p",
              getKind(node),
              node.reference);
 

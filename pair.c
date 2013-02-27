@@ -16,6 +16,7 @@ extern bool pair_SetCar(Pair pair, const Node car) {
 
     return true;
 }
+
 extern bool pair_SetCdr(Pair pair, const Node cdr) {
     if (!pair) return false;
     if (!darken_Node(cdr)) return false;
@@ -38,6 +39,7 @@ extern bool pair_Create(const Node car, const Node cdr, Pair* target) {
     if (!darken_Node(car)) return false;
     if (!darken_Node(cdr)) return false;
 
+    setKind(result, nt_pair);
     result->car = car;
     result->cdr = cdr;
 

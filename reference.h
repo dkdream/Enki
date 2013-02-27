@@ -80,19 +80,21 @@ union node {
     Reference     reference;
     /**/
     Count         count;
-    Hash          hash;
-    Hash_block    hash_block;
-    Hash_entry    hash_entry;
     Input         input;
     Integer       integer;
     Output        output;
     Pair          pair;
     Primitive     primitive;
+    Symbol        symbol;
+    Text          text;
+#if 0
+    Hash          hash;
+    Hash_block    hash_block;
+    Hash_entry    hash_entry;
     Set           set;
     Set_block     set_block;
     Set_cell      set_cell;
-    Symbol        symbol;
-    Text          text;
+#endif
     /**/
 }  __attribute__ ((__transparent_union__));
 
@@ -100,19 +102,21 @@ union node_target {
     Reference     *reference;
     /**/
     Count         *count;
-    Hash          *hash;
-    Hash_block    *hash_block;
-    Hash_entry    *hash_entry;
     Input         *input;
     Integer       *integer;
     Output        *output;
     Pair          *pair;
     Primitive     *primitive;
+    Symbol        *symbol;
+    Text          *text;
+#if 0
+    Hash          *hash;
+    Hash_block    *hash_block;
+    Hash_entry    *hash_entry;
     Set           *set;
     Set_block     *set_block;
     Set_cell      *set_cell;
-    Symbol        *symbol;
-    Text          *text;
+#endif
     /**/
 }  __attribute__ ((__transparent_union__));
 

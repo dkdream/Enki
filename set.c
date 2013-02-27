@@ -17,6 +17,11 @@
 #define SET_BLOCK_SIZE 10
 
 /* */
+
+extern bool cell_Create(Node first, Set_cell rest, Set_cell* target);
+extern bool set_block_Create(const Space space, struct set_block **target);
+
+#if 0
 static inline bool cell_Create(Node first, Set_cell rest, Set_cell* target) {
     if (isNil(first)) return false;
     if (!node_Allocate(_zero_space,
@@ -36,6 +41,40 @@ static inline bool cell_Create(Node first, Set_cell rest, Set_cell* target) {
 
     return true;
 }
+
+static inline bool set_block_Create(const Space space, struct set_block **target) {
+    if (!node_Allocate(space,
+                       false,
+                       asSize(sizeof(struct set_block), sizeof(Set_cell) * SET_BLOCK_SIZE),
+                       0,
+                       target))
+        return false;
+
+    struct set_block *result = *target;
+
+    result->size = SET_BLOCK_SIZE;
+
+    return true;
+}
+
+extern bool set_Create(unsigned size, enum node_type type, Set *target) {
+    if (!node_Allocate(_zero_space,
+                       false,
+                       sizeof(struct set),
+                       0,
+                       target))
+        return false;
+
+    Set result = *target;
+
+    if (!set_block_Create(_zero_space, &result->first)) return false;
+
+    result->type     = type;
+    result->fullsize = SET_BLOCK_SIZE;
+
+    return true;
+}
+#endif
 
 static inline bool cell_Count(Set_cell at, unsigned int *count) {
     if (!count) return false;
@@ -68,21 +107,6 @@ static inline bool cell_Next(Set_cell current, Set_cell* target) {
 
     darken_Node(current->rest);
     *target = current->rest;
-
-    return true;
-}
-
-static inline bool set_block_Create(const Space space, struct set_block **target) {
-    if (!node_Allocate(space,
-                       false,
-                       asSize(sizeof(struct set_block), sizeof(Set_cell) * SET_BLOCK_SIZE),
-                       0,
-                       target))
-        return false;
-
-    struct set_block *result = *target;
-
-    result->size = SET_BLOCK_SIZE;
 
     return true;
 }
@@ -326,24 +350,6 @@ extern bool set_Intersection(Set result, Set source) {
             }
         }
     }
-
-    return true;
-}
-
-extern bool set_Create(unsigned size, enum node_type type, Set *target) {
-    if (!node_Allocate(_zero_space,
-                       false,
-                       sizeof(struct set),
-                       0,
-                       target))
-        return false;
-
-    Set result = *target;
-
-    if (!set_block_Create(_zero_space, &result->first)) return false;
-
-    result->type     = type;
-    result->fullsize = SET_BLOCK_SIZE;
 
     return true;
 }

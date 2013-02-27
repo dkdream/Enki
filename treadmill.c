@@ -109,7 +109,7 @@ extern inline Color space_Hidden(const Space space) {
         return nc_blue;
 
     default:
-        VM_ERROR("Space (0x%p) has an invalid color\n", space);
+        VM_ERROR("Space (%p) has an invalid color\n", space);
     }
     return nc_unknown;
 }
@@ -117,8 +117,8 @@ extern inline Color space_Hidden(const Space space) {
 extern bool insert_After(const Header mark, const Header node) {
     if (!mark)        VM_ERROR("no mark");
     if (!node)        VM_ERROR("no node");
-    if (node->before) VM_ERROR("node 0x%p is not unlinked", node);
-    if (node->after)  VM_ERROR("node 0x%p is not unlinked", node);
+    if (node->before) VM_ERROR("node %p is not unlinked", node);
+    if (node->after)  VM_ERROR("node %p is not unlinked", node);
 
     const Header after  = mark->after;
 
@@ -134,8 +134,8 @@ extern bool insert_After(const Header mark, const Header node) {
 extern bool insert_Before(const Header mark, const Header node) {
     if (!mark)        VM_ERROR("no mark");
     if (!node)        VM_ERROR("no node");
-    if (node->before) VM_ERROR("node 0x%p is not unlinked", node);
-    if (node->after)  VM_ERROR("node 0x%p is not unlinked", node);
+    if (node->before) VM_ERROR("node %p is not unlinked", node);
+    if (node->after)  VM_ERROR("node %p is not unlinked", node);
 
     const Header before = mark->before;
 
@@ -181,13 +181,13 @@ extern bool scan_Node(const Node node) {
 
     if (!space) return true;
 
-    VM_DEBUG(5, "scanning (%d) node 0x%p in space 0x%p",
+    VM_DEBUG(5, "scanning (%d) node %p in space %p",
              getKind(node),
              reference,
              space);
 
     if (reference->color != space->visiable) {
-        VM_ERROR("scan error: scanning a clear or white node 0x%p", reference);
+        VM_ERROR("scan error: scanning a clear or white node %p", reference);
         return false;
     }
 
@@ -197,7 +197,7 @@ extern bool scan_Node(const Node node) {
 
     if (1 > reference->count) return true;
 
-    VM_DEBUG(5, "scan begin (0x%p)", slot);
+    VM_DEBUG(5, "scan begin (%p)", slot);
     if (reference->prefix) {
         int inx;
         for (inx = 1; inx < reference->count; ++inx) {
@@ -209,7 +209,7 @@ extern bool scan_Node(const Node node) {
             if (!darken_Node(slot[inx])) return false;
         }
     }
-    VM_DEBUG(5, "scan end (0x%p)", slot);
+    VM_DEBUG(5, "scan end (%p)", slot);
     return true;
 }
 
@@ -265,7 +265,7 @@ extern bool node_Allocate(const Space space,
     const Header    header = fresh_tuple(toCount(size_in_char), prefix_in_char);
     const Reference result = (*target.reference) = asReference(header);
 
-    VM_DEBUG(4, "allocating node 0x%p of size %d from space 0x%p",
+    VM_DEBUG(4, "allocating node %p of size %d from space %p",
              result,
              size_in_char,
              space);
@@ -281,7 +281,7 @@ extern bool node_Allocate(const Space space,
 
     // insert into the black chain
     if (!insert_Before(space->free, result)) {
-        VM_ERROR("unable to add to 0x%p to black list of 0x%p",
+        VM_ERROR("unable to add to %p to black list of %p",
                  result,
                  space);
         return false;
@@ -294,7 +294,7 @@ extern bool node_Allocate(const Space space,
 extern bool space_Init(const Space space) {
     if (!space) return false;
 
-    VM_DEBUG(5, "init space 0x%p", space);
+    VM_DEBUG(5, "init space %p", space);
 
     memset(space, 0, sizeof(struct gc_treadmill));
 
@@ -338,7 +338,7 @@ extern bool space_Init(const Space space) {
 extern bool space_Scan(const Space space, unsigned int upto) {
     if (!space) return false;
 
-    VM_DEBUG(5, "scan space 0x%p %u", space, upto);
+    VM_DEBUG(5, "scan space %p %u", space, upto);
 
     for ( ; 0 < upto ; --upto) {
         const Header scan = space->scan;
@@ -350,7 +350,7 @@ extern bool space_Scan(const Space space, unsigned int upto) {
         space->scan = scan->before;
 
         if (!scan_Node(scan)) {
-            VM_ERROR("unable to scan node (%d) 0x%p", getKind(scan), scan);
+            VM_ERROR("unable to scan node (%d) %p", getKind(scan), scan);
             return false;
         }
     }
@@ -366,7 +366,7 @@ extern bool space_Flip(const Space space) {
 
     if (scan != top) return true;
 
-    VM_DEBUG(5, "flip space 0x%p begin", space);
+    VM_DEBUG(5, "flip space %p begin", space);
 
     Header bottom = space->bottom;
     Header free   = space->free;
@@ -412,7 +412,7 @@ extern bool space_Flip(const Space space) {
 
     if (simple) {
         space->scan = root; // set the start of the new gray chain
-        VM_DEBUG(5, "flip space 0x%p end", space);
+        VM_DEBUG(5, "flip space %p end", space);
         return true;
     }
 
@@ -449,7 +449,7 @@ extern bool space_Flip(const Space space) {
     }
     /* CLINK_UNLOCK */
 
-    VM_DEBUG(5, "flip space 0x%p end", space);
+    VM_DEBUG(5, "flip space %p end", space);
     return true;
 }
 
