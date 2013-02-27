@@ -1,0 +1,29 @@
+/*-*- mode: c;-*-*/
+/***************************
+ **
+ ** Project: *current project*
+ **
+ ** Routine List:
+ **    <routine-list-end>
+ **/
+
+#include "reader.h"
+#include "dump.h"
+
+
+int main(int argc, char **argv)
+{
+    startEnkiLibrary();
+
+    Reference target;
+
+    while (read(stdin, &target)) {
+        if (prettyPrint(stdout, 4, target)) {
+            printf("Error pretty printing target\n");
+        }
+    }
+
+    stopEnkiLibrary();
+    return 0;
+}
+
