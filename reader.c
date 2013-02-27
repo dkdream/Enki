@@ -57,6 +57,7 @@ static void fatal(const char *reason, ...)
 #define CHAR_DIGIT10  (1<<3)
 #define CHAR_DIGIT16  (1<<4)
 #define CHAR_LETTER   (1<<5)
+#define CHAR_PREFIX   (1<<6)
 
 static char chartab[]= {
     /*  00 nul */   0,
@@ -105,7 +106,7 @@ static char chartab[]= {
     /*  2b  +  */   CHAR_PRINT | CHAR_LETTER,
     /*  2c  ,  */   CHAR_PRINT | CHAR_LETTER,
     /*  2d  -  */   CHAR_PRINT | CHAR_LETTER,
-    /*  2e  .  */   CHAR_PRINT | CHAR_LETTER,
+    /*  2e  .  */   CHAR_PRINT | CHAR_PREFIX,
     /*  2f  /  */   CHAR_PRINT | CHAR_LETTER,
     /*  30  0  */   CHAR_PRINT | CHAR_DIGIT10 | CHAR_DIGIT16,
     /*  31  1  */   CHAR_PRINT | CHAR_DIGIT10 | CHAR_DIGIT16,
@@ -194,6 +195,7 @@ static inline int isAlpha(int c)   { return 0 <= c && c <= 127 && (CHAR_ALPHA   
 static inline int isDigit10(int c) { return 0 <= c && c <= 127 && (CHAR_DIGIT10  & chartab[c]); }
 static inline int isDigit16(int c) { return 0 <= c && c <= 127 && (CHAR_DIGIT16  & chartab[c]); }
 static inline int isLetter(int c)  { return 0 <= c && c <= 127 && (CHAR_LETTER   & chartab[c]); }
+static inline int isPrefix(int c)  { return 0 <= c && c <= 127 && (CHAR_PREFIX   & chartab[c]); }
 
 static inline int digitValue(int c)
 {
@@ -449,11 +451,32 @@ static bool readSymbol(FILE *fp, int first, Target result)
     static TextBuffer buf = BUFFER_INITIALISER;
     buffer_reset(&buf);
 
-    if (!isLetter(chr)) goto failure;
+    if (!isLetter(chr)) {
+        if (!isPrefix(chr)) goto failure;
+        for (;;) {
+            buffer_append(&buf, chr);
+            chr = getc(fp);
+            if (!isPrefix(chr)) break;
+        }
+    }
 
     while (isLetter(chr) || isDigit10(chr)) {
         buffer_append(&buf, chr);
         chr = getc(fp);
+    }
+
+    if (isPrefix(chr)) {
+        Symbol    head;
+        Reference tail;
+        symbol_Create(buf, &head);
+
+        GC_PROTECT(head);
+
+        bool rtn = readSymbol(fp, chr, &tail);
+
+        if (!pair_Create(head, tail, result.pair)) goto failure;
+
+        return rtn;
     }
 
     ungetc(chr, fp);
