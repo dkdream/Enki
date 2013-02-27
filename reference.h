@@ -32,19 +32,21 @@
 typedef enum node_type {
     nt_unknown,
     nt_count,
-    nt_hash,
-    nt_hash_block,
-    nt_hash_entry,
     nt_input,
     nt_integer,
     nt_output,
     nt_pair,
     nt_primitive,
+    nt_symbol,
+    nt_text,
+#if 0
+    nt_hash,
+    nt_hash_block,
+    nt_hash_entry,
     nt_set,
     nt_set_block,
     nt_set_cell,
-    nt_symbol,
-    nt_text,
+#endif
 } EA_Type;
 
 typedef enum result_code {
@@ -192,27 +194,6 @@ extern inline bool isIdentical(const Node left, const Node right)  __attribute__
 extern inline bool isIdentical(const Node left, const Node right) {
     return (left.reference == right.reference);
 }
-
-extern EA_Type hasType(Node node);
-
-extern inline const char *nodeTypename(Node node) __attribute__((always_inline));
-extern inline const char *nodeTypename(Node node) {
-    if (0 == node.reference) return "nil";
-    return node_type_Name(hasType(node));
-}
-
-extern bool nullSpace(Node node);
-extern bool isType(Node node, const EA_Type type);
-extern const char *nodeTypename(Node node);
-extern bool node_Live(Node node);
-
-extern bool node_Darken(const Reference node);
-extern bool node_ExternalInit(const EA_Type, struct gc_header *);
-extern bool node_Allocate(struct gc_treadmill *space,
-                          bool atom,
-                          Size size_in_char,
-                          Size prefix_in_char,
-                          Target);
 
 /* */
 extern void startEnkiLibrary();

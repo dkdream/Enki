@@ -72,31 +72,12 @@
 #include <stdlib.h>
 
 /* */
-Space _zero_space = (Space)0;
-
-static struct gc_treadmill the_zero_space;
-
 static inline void fast_lock(int *address) {
     return;
 }
 
 static inline void fast_unlock(int *address) {
     return;
-}
-
-extern void init_zero_space() {
-    if (_zero_space) return;
-
-    VM_DEBUG(1, "init_zero_space");
-
-    if (!space_Init(&the_zero_space)) return;
-    _zero_space = &the_zero_space;
-}
-
-extern void final_zero_space() {
-    if (0 == _zero_space) return;
-
-    VM_DEBUG(1, "final_zero_space");
 }
 
 extern inline bool initialize_StartNode(const Space space, const Header) __attribute__((always_inline));
@@ -116,26 +97,24 @@ extern inline bool initialize_StartNode(const Space space, const Header node) {
     return true;
 }
 
-extern inline bool insert_Before(const Header, const Header) __attribute__((always_inline));
-extern inline bool insert_Before(const Header mark, const Header node) {
-    if (!mark)        VM_ERROR("no mark");
-    if (!node)        VM_ERROR("no node");
-    if (node->before) VM_ERROR("node 0x%p is not unlinked", node);
-    if (node->after)  VM_ERROR("node 0x%p is not unlinked", node);
+extern inline Color space_Hidden(const Space space) __attribute__((always_inline));
+extern inline Color space_Hidden(const Space space) {
+    if (!space) return nc_unknown;
 
-    const Header before = mark->before;
+    switch (space->visiable) {
+    case nc_blue:
+        return nc_orange;
 
-    node->before = before;
-    node->after  = mark;
+    case nc_orange:
+        return nc_blue;
 
-    mark->before  = node;
-    before->after = node;
-
-    return true;
+    default:
+        VM_ERROR("Space (0x%p) has an invalid color\n", space);
+    }
+    return nc_unknown;
 }
 
-extern inline bool insert_After(const Header, const Header) __attribute__((always_inline));
-extern inline bool insert_After(const Header mark, const Header node) {
+extern bool insert_After(const Header mark, const Header node) {
     if (!mark)        VM_ERROR("no mark");
     if (!node)        VM_ERROR("no node");
     if (node->before) VM_ERROR("node 0x%p is not unlinked", node);
@@ -152,8 +131,24 @@ extern inline bool insert_After(const Header mark, const Header node) {
     return true;
 }
 
-extern inline bool extract_Node(const Header) __attribute__((always_inline));
-extern inline bool extract_Node(const Header node) {
+extern bool insert_Before(const Header mark, const Header node) {
+    if (!mark)        VM_ERROR("no mark");
+    if (!node)        VM_ERROR("no node");
+    if (node->before) VM_ERROR("node 0x%p is not unlinked", node);
+    if (node->after)  VM_ERROR("node 0x%p is not unlinked", node);
+
+    const Header before = mark->before;
+
+    node->before = before;
+    node->after  = mark;
+
+    mark->before  = node;
+    before->after = node;
+
+    return true;
+}
+
+extern bool extract_From(const Header node) {
     if (!node) VM_ERROR("no node");
 
     if (!node->before) {
@@ -177,79 +172,6 @@ extern inline bool extract_Node(const Header node) {
     return true;
 }
 
-extern inline Color space_Hidden(const Space space) __attribute__((always_inline));
-extern inline Color space_Hidden(const Space space) {
-    if (!space) return nc_unknown;
-
-    switch (space->visiable) {
-    case nc_blue:
-        return nc_orange;
-
-    case nc_orange:
-        return nc_blue;
-
-    default:
-        VM_ERROR("Space (0x%p) has an invalid color\n", space);
-    }
-    return nc_unknown;
-}
-
-extern bool darken_Node(const Node node) __attribute__((always_inline));
-extern bool darken_Node(const Node node) {
-    if (!node.reference) return true;
-
-    const Header value = node.reference;
-    const Space     space = value->space;
-
-    if (!space) return true;
-
-    if (value->color == space->visiable) return true;
-
-    VM_DEBUG(5, "darkening (%s) node 0x%p",
-             nodeTypename(node),
-             node.reference);
-
-    const Header scan   = space->scan;
-    const Header top    = space->top;
-
-    if (value == scan) {
-        if (top != scan) {
-            VM_ERROR("%s", "found a clear/white node in the gray chain");
-            return false;
-        }
-    }
-
-    if (!extract_Node(value)) {
-        VM_ERROR("unable to extract the node from clear list");
-        return false;
-    }
-
-    if (top == scan) {
-        if (!insert_After(top, value)) {
-            VM_ERROR("unable to add the node to gray list");
-            return false;
-        }
-        value->color = space->visiable;
-        space->scan  = value;
-        return true;
-    }
-
-#ifndef OPTION_TWO
-        if (!insert_Before(scan, value)) {
-            VM_ERROR("unable to insert the node into gray list");
-            return false;
-        }
-#else
-        if (!insert_After(top, value)) {
-            VM_ERROR("unable to append the node unto gray list");
-            return false;
-        }
-#endif
-
-    value->color = space->visiable;
-    return true;
-}
-
 extern bool scan_Node(const Node node) __attribute__((always_inline));
 extern bool scan_Node(const Node node) {
     if (!node.reference) return false;
@@ -259,8 +181,8 @@ extern bool scan_Node(const Node node) {
 
     if (!space) return true;
 
-    VM_DEBUG(5, "scanning (%s) node 0x%p in space 0x%p",
-             nodeTypename(node),
+    VM_DEBUG(5, "scanning (%d) node 0x%p in space 0x%p",
+             getKind(node),
              reference,
              space);
 
@@ -289,102 +211,6 @@ extern bool scan_Node(const Node node) {
     }
     VM_DEBUG(5, "scan end (0x%p)", slot);
     return true;
-
-#if 0
-    bool scan_hash() {
-        Hash value = node.hash;
-        VM_DEBUG(5, "scan begin (%s)", nodeTypename(node));
-        if (!darken_Node(value->first))  return false;
-        VM_DEBUG(5, "scan end (%s)", nodeTypename(node));
-        return true;
-    };
-    bool scan_hash_block() {
-        struct hash_block *value = node.hash_block;
-        VM_DEBUG(5, "scan begin (%s)", nodeTypename(node));
-        if (!darken_Node(value->next))  return false;
-        unsigned inx = value->size;
-        for ( ; 0 < inx-- ; ) {
-            if (!darken_Node(value->list[inx])) return false;
-        }
-        VM_DEBUG(5, "scan end (%s)", nodeTypename(node));
-        return true;
-    };
-    bool scan_hash_entry() {
-        Hash_entry value = node.hash_entry;
-        VM_DEBUG(5, "scan begin (%s)", nodeTypename(node));
-        if (!darken_Node(value->next))   return false;
-        if (!darken_Node(value->symbol)) return false;
-        if (!darken_Node(value->value))  return false;
-        VM_DEBUG(5, "scan end (%s)", nodeTypename(node));
-        return true;
-    };
-    bool scan_pair() {
-        Pair value = node.pair;
-        VM_DEBUG(5, "scan begin (%s)", nodeTypename(node));
-        if (!darken_Node(value->car)) return false;
-        if (!darken_Node(value->cdr)) return false;
-        VM_DEBUG(5, "scan end (%s)", nodeTypename(node));
-        return true;
-    };
-    bool scan_set() {
-        Set value = node.set;
-        VM_DEBUG(5, "scan begin (%s)", nodeTypename(node));
-        if (!darken_Node(value->first))  return false;
-        VM_DEBUG(5, "scan end (%s)", nodeTypename(node));
-        return true;
-    };
-    bool scan_set_block() {
-        struct set_block *value = node.set_block;
-        VM_DEBUG(5, "scan begin (%s)", nodeTypename(node));
-        if (!darken_Node(value->next))  return false;
-        unsigned inx = value->size;
-        for ( ; 0 < inx-- ; ) {
-            if (!darken_Node(value->list[inx])) return false;
-        }
-        VM_DEBUG(5, "scan end (%s)", nodeTypename(node));
-        return true;
-    };
-    bool scan_set_cell() {
-        Set_cell value = node.set_cell;
-        VM_DEBUG(5, "scan begin (%s)", nodeTypename(node));
-        if (!darken_Node(value->first)) return false;
-        if (!darken_Node(value->rest))  return false;
-        VM_DEBUG(5, "scan end (%s)", nodeTypename(node));
-        return true;
-    };
-    bool type_unfinished() {
-        VM_ERROR("%s is not finished", node_type_Name(hasType(node)));
-        return false;
-    };
-
-    switch (hasType(reference)) {
-    case nt_count:         return true;
-    case nt_hash:          return scan_hash();
-    case nt_hash_block:    return scan_hash_block();
-    case nt_hash_entry:    return scan_hash_entry();
-    case nt_input:         return true;
-    case nt_integer:       return true;
-    case nt_output:        return true;
-    case nt_pair:          return scan_pair();
-    case nt_primitive:     return true;
-    case nt_set:           return scan_set();
-    case nt_set_block:     return scan_set_block();
-    case nt_set_cell:      return scan_set_cell();
-    case nt_symbol:        return true;
-    case nt_text:          return true;
-
-        /*********************************/
-
-    case nt_unknown: return true;
-    }
-
-    VM_ERROR("Invalid Type %u", (unsigned) hasType(reference));
-    return false;
-#endif
-}
-
-extern bool node_Darken(Node node) {
-    return darken_Node(node);
 }
 
 extern bool node_ExternalInit(const EA_Type type, const Header result) {
@@ -444,8 +270,8 @@ extern bool node_Allocate(const Space space,
              size_in_char,
              space);
 
-    header->atom  = (atom ? 1 : 0);
-    //    header->kind  = type;
+    header->atom = (atom ? 1 : 0);
+    header->kind = 0;
 
     if (!space) return true;
 
@@ -524,7 +350,7 @@ extern bool space_Scan(const Space space, unsigned int upto) {
         space->scan = scan->before;
 
         if (!scan_Node(scan)) {
-            VM_ERROR("unable to scan node (%s) 0x%p", nodeTypename(scan), scan);
+            VM_ERROR("unable to scan node (%d) 0x%p", getKind(scan), scan);
             return false;
         }
     }
@@ -559,7 +385,7 @@ extern bool space_Flip(const Space space) {
     root->color = space->visiable = space_Hidden(space);
 
     // extract the root from the old black chain
-    if (!extract_Node(root)) {
+    if (!extract_From(root)) {
         VM_ERROR("unable to extract the start root from old black");
         return false;
     }
@@ -591,7 +417,7 @@ extern bool space_Flip(const Space space) {
     }
 
     // concatinate the old white and old clear chains
-    if (!extract_Node(bottom)) {
+    if (!extract_From(bottom)) {
         VM_ERROR("unable concatinate old white and old clear");
         return false;
     }
@@ -616,7 +442,7 @@ extern bool space_Flip(const Space space) {
 
         for ( ; size-- ; ) {
             Reference value = array[size];
-            if (!node_Darken(value)) {
+            if (!darken_Node(value)) {
                 VM_ERROR("unable to darken a clink value");
             }
         }

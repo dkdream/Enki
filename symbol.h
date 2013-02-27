@@ -25,6 +25,7 @@ struct symbol {
 extern Symbol _empty_symbol;
 extern bool symbol_Create(TextBuffer value, Symbol*);
 extern void check_SymbolTable__(const char*, unsigned);
+extern void init_global_symboltable();
 
 /* macros */
 extern inline const char* symbol_Text(Symbol) __attribute__((always_inline nonnull(1)));

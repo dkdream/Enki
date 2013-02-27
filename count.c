@@ -6,6 +6,7 @@
  **    <routine-list-end>
  **/
 #include "count.h"
+#include "treadmill.h"
 
 extern bool count_Create(unsigned int value, Count *target) {
     if (!node_Allocate(_zero_space,
@@ -16,6 +17,7 @@ extern bool count_Create(unsigned int value, Count *target) {
 
     Count result = (*target);
 
+    setKind(result, nt_count);
     result->value = value;
 
     return true;

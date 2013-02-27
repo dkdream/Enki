@@ -28,8 +28,8 @@ static inline bool cell_Create(Node first, Set_cell rest, Set_cell* target) {
 
     Set_cell result = *target;
 
-    node_Live(first);
-    node_Live(rest);
+    darken_Node(first);
+    darken_Node(rest);
 
     result->first = first;
     result->rest  = rest;
@@ -55,7 +55,7 @@ static inline bool cell_First(Set_cell current, Node* target) {
     if (!current) return false;
     if (!target)  return false;
 
-    node_Live(current->first);
+    darken_Node(current->first);
     *target = current->first;
 
     return true;
@@ -66,7 +66,7 @@ static inline bool cell_Next(Set_cell current, Set_cell* target) {
     if (!current->rest) return false;
     if (!target)        return false;
 
-    node_Live(current->rest);
+    darken_Node(current->rest);
     *target = current->rest;
 
     return true;
@@ -91,7 +91,7 @@ static inline bool allowInSet(Set set, Node value) {
     if (!set)         return false;
     if (isNil(value)) return false;
     if (nt_unknown == set->type) return true;
-    return (set->type == hasType(value));
+    return (set->type == getKind(value));
 }
 
 static inline bool matchSets(Set left, Set right) {
@@ -107,7 +107,7 @@ static inline bool hashForSet(Set set, Node value, HashCode *target) {
 
     HashCode hashcode = 0;
     if (nt_unknown != set->type) {
-        if (set->type != hasType(value)) return false;
+        if (set->type != getKind(value)) return false;
         hashcode = node_HashCode(value);
     } else {
         union {

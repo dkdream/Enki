@@ -53,11 +53,16 @@ TSTS    := $(notdir $(wildcard *.ea))
 RUNS    := $(TSTS:test_%.ea=test_%.run)
 DEPENDS := $(C_SOURCES:%.c=.depends/%.d) $(MAINS:%.c=.depends/%.d)
 
+UNIT_TESTS := test_reader.gcc
+
 all :: libEnki.a
 
 asm  :: $(ASMS)
 test :: $(RUNS)
 	@echo all test runs
+
+units :: $(UNIT_TESTS:%.gcc=%.x)
+	echo  $(UNIT_TESTS:%.gcc=%.x)
 
 install : install.bin install.inc install.lib
 
@@ -79,22 +84,9 @@ scrub ::
 enki.vm : enki_main.o libEnki.a 
 	$(GCC) $(CFLAGS) -o $@ $^ $(LIBFLAGS)
 
-test.vm : test_parser.o libEnki.a
-	$(GCC) $(DBFLAGS) -o $@ $^ $(LIBFLAGS)
+enki.o : enki.c ; $(GCC) $(DBFLAGS) $(INCFLAGS) -c -o $@ $<
 
-test_parser : test.vm
-	./test.vm test_simple.ea
-
-tail.check :
-	-@rm -f     next.s
-	-$(GCC) $(CFLAG) -S  -fverbose-asm  -combine -o next.s next.c
-	-@grep call next.s | sort | uniq | grep -v 'string' | grep -v 'file'
-	-@grep jmp  next.s | grep -v '.L[0-9]'
-
-test_parser.o : test_parser.c ; $(GCC) $(DBFLAGS) $(INCFLAGS) -c -o $@ $<
-
-enki.o : enki.c  ; $(GCC) $(DBFLAGS) $(INCFLAGS) -c -o $@ $<
-enki.c : enki.cu
+$(UNIT_TESTS:%.gcc=%.x) : libEnki.a
 
 libEnki.a : $(H_SOURCES)
 libEnki.a : $(C_SOURCES:%.c=%.o)
@@ -153,6 +145,13 @@ enki_ver.h : FORCE
 	@$(ENKI.test) $(RUNFLAGS) $< >$@ 2>&1 || ( cat $@ ; rm -f $@; false )
 	@cat $@
 	@echo '==============================================================='
+
+%.o : %.gcc
+	@echo $(GCC) $(DBFLAGS) -c -o $@ $<
+	@$(GCC) $(CFLAGS) -x c -c -o $@ $<
+
+%.x : %.o
+	$(GCC) $(CFLAGS) -o $@ $+ libEnki.a
 
 .depends : ; @mkdir .depends
 

@@ -14,31 +14,42 @@
 #include <string.h>
 #include <stdbool.h>
 #include <error.h>
+#include <stdarg.h>
 
-extern void fatal(const char *cstr, ...);// __attribute__ ((noreturn)(format (printf, 1, 2)));
+static void fatal(const char *reason, ...) __attribute__ ((noreturn format (printf, 1, 2)));
+static void fatal(const char *reason, ...)
+{
+    if (reason) {
+        va_list ap;
+        va_start(ap, reason);
+        fprintf(stderr, "\nerror: ");
+        vfprintf(stderr, reason, ap);
+        fprintf(stderr, "\n");
+        va_end(ap);
+    }
+
+#if 0
+    if (nil != cdr(backtrace)) {
+        oop args= newLong(traceDepth);      GC_PROTECT(args);
+        args= newPair(args, nil);
+        args= newPair(traceStack, args);
+        apply(cdr(backtrace), args, globals);   GC_UNPROTECT(args);
+    }
+    else {
+        int i= traceDepth;
+        while (i--) {
+            printf("%3d: ", i);
+            dumpln(arrayAt(traceStack, i));
+        }
+    }
+#endif
+
+    exit(1);
+}
+
 
 #define GC_PROTECT(var)
 #define GC_UNPROTECT(var)
-
-#if 0
-#define NODE(val) ((Node)((Reference)(val)))
-
-// make symbol
-extern Node intern(char *cstr);
-// constructors
-extern Pair    newPair(Node, Node);
-extern String  newString(char *cstr);
-extern Integer newLong(long val);
-
-extern Node setCdr(Pair, Node); //== (setCdr(pair,node); return node)
-extern Node setCar(Pair, Node); //== (setCar(pair,node); return node)
-
-extern Node s_dot;
-extern Node s_quasiquote;
-extern Node s_quote;
-extern Node s_unquote;
-extern Node s_unquote_splicing;
-#endif
 
 #define CHAR_PRINT    (1<<0)
 #define CHAR_BLANK    (1<<1)
@@ -216,6 +227,7 @@ static inline bool matchChar(FILE *fp, int match)
     int chr = getc(fp);
     if (match == chr) return true;
     ungetc(chr, fp);
+    return false;
 }
 
 static int readChar(int chr, FILE *fp)
@@ -284,7 +296,7 @@ static int readChar(int chr, FILE *fp)
     }
 }
 
-static bool read(FILE *fp, Target result);
+extern bool read(FILE *fp, Target result);
 static bool readList(FILE *fp, int delim, Target result);
 static bool readCode(FILE *fp, Target result);
 static bool readInteger(FILE *fp, int first, Target result);
@@ -461,7 +473,7 @@ static bool readComment(FILE *fp)
     return true;
 }
 
-static bool read(FILE *fp, Target result)
+extern bool read(FILE *fp, Target result)
 {
     for (;;) {
         int chr = getc(fp);

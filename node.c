@@ -17,8 +17,6 @@
 #include <stdarg.h>
 /* */
 
-unsigned int ea_global_debug = 0;
-
 extern HashCode node_HashCode(Node node)
 {
     if (!node.reference) return 0;
@@ -29,7 +27,7 @@ extern HashCode node_HashCode(Node node)
         HashCode output;
     } convert;
 
-    switch (hasType(node)) {
+    switch (getKind(node)) {
     case nt_symbol:
         result = node.symbol->hashcode;
         break;
@@ -62,9 +60,9 @@ bool node_Match(Node left, Node right) {
     if (0 == left.reference)  return false;
     if (0 == right.reference) return false;
 
-    EA_Type type = hasType(left);
+    EA_Type type = getKind(left);
 
-    if (type != hasType(right)) return false;
+    if (type != getKind(right)) return false;
 
     switch (type) {
     case nt_text:
@@ -83,6 +81,7 @@ bool node_Match(Node left, Node right) {
     }
 }
 
+#if 0
 extern void node_Print(FILE* output, Node node) {
     if (!output) return;
 
@@ -91,7 +90,7 @@ extern void node_Print(FILE* output, Node node) {
         return;
     }
 
-    switch (hasType(node)) {
+    switch (getKind(node)) {
     case nt_unknown:
         fprintf(output, "unknown(0x%p)",
                 node.reference);
@@ -115,46 +114,6 @@ extern void node_Print(FILE* output, Node node) {
     case nt_count:
         fprintf(output, "count(%u)",
                 node.count->value);
-        return;
-
-    case nt_set_cell:
-        fprintf(output, "cell(0x%p (0x%p, 0x%p))",
-                node.reference,
-                node.set_cell->first.reference,
-                node.set_cell->rest);
-        return;
-
-    case nt_hash_entry:
-        fprintf(output, "entry(0x%p (%s, 0x%p))",
-                node.reference,
-                (const char *) node.hash_entry->symbol->value,
-                node.hash_entry->value.reference);
-        return;
-
-    case nt_hash_block:
-        fprintf(output, "hash_block(0x%p (%u, 0x%p))",
-                node.reference,
-                node.hash_block->size,
-                node.hash_block->next);
-        return;
-
-    case nt_hash:
-        fprintf(output, "hash(0x%p %u)",
-                node.reference,
-                node.hash->fullsize);
-        return;
-
-    case nt_set_block:
-        fprintf(output, "set_block(0x%p (%u, 0x%p))",
-                node.reference,
-                node.set_block->size,
-                node.set_block->next);
-        return;
-
-    case nt_set:
-        fprintf(output, "set(0x%p %u)",
-                node.reference,
-                node.set->fullsize);
         return;
 
     case nt_primitive:
@@ -181,60 +140,80 @@ extern void node_Print(FILE* output, Node node) {
                 node.reference,
                 node.pair->car.reference,
                 node.pair->cdr.reference);
+
+#if 0
+    case nt_set_cell:
+        fprintf(output, "cell(0x%p (0x%p, 0x%p))",
+                node.reference,
+                node.set_cell->first.reference,
+                node.set_cell->rest);
+        return;
+
+    case nt_set_block:
+        fprintf(output, "set_block(0x%p (%u, 0x%p))",
+                node.reference,
+                node.set_block->size,
+                node.set_block->next);
+        return;
+
+    case nt_set:
+        fprintf(output, "set(0x%p %u)",
+                node.reference,
+                node.set->fullsize);
+        return;
+
+    case nt_hash_entry:
+        fprintf(output, "entry(0x%p (%s, 0x%p))",
+                node.reference,
+                (const char *) node.hash_entry->symbol->value,
+                node.hash_entry->value.reference);
+        return;
+
+    case nt_hash_block:
+        fprintf(output, "hash_block(0x%p (%u, 0x%p))",
+                node.reference,
+                node.hash_block->size,
+                node.hash_block->next);
+        return;
+
+    case nt_hash:
+        fprintf(output, "hash(0x%p %u)",
+                node.reference,
+                node.hash->fullsize);
+        return;
+#endif
     }
 
     fprintf(output, "type[%d](0x%p)",
-            hasType(node),
+            getKind(node),
             node.reference);
     return;
 }
+#endif
 
 const char* node_type_Name(enum node_type type)
 {
     switch (type) {
     case nt_unknown:       return "unknown";
     case nt_count:         return "count";
-    case nt_hash:          return "hash";
-    case nt_hash_block:    return "hash_block";
-    case nt_hash_entry:    return "hash_entry";
     case nt_input:         return "input";
     case nt_integer:       return "integer";
     case nt_output:        return "output";
     case nt_pair:          return "pair";
     case nt_primitive:     return "primitive";
+    case nt_symbol:        return "symbol";
+    case nt_text:          return "text";
+#if 0
+    case nt_hash:          return "hash";
+    case nt_hash_block:    return "hash_block";
+    case nt_hash_entry:    return "hash_entry";
     case nt_set:           return "set";
     case nt_set_block:     return "set_block";
     case nt_set_cell:      return "set_cell";
-    case nt_symbol:        return "symbol";
-    case nt_text:          return "text";
+#endif
     }
 
     return "undefined";
-}
-
-unsigned int node_type_FixSize(enum node_type type)
-{
-    unsigned base = 0;
-
-    switch (type) {
-    case nt_unknown:       base = sizeof(struct gc_header);     break;
-    case nt_count:         base = sizeof(struct count);         break;
-    case nt_hash:          base = sizeof(struct hash);          break;
-    case nt_hash_block:    base = sizeof(struct hash_block);    break;
-    case nt_hash_entry:    base = sizeof(struct hash_entry);    break;
-    case nt_input:         base = sizeof(struct input);         break;
-    case nt_integer:       base = sizeof(struct integer);       break;
-    case nt_output:        base = sizeof(struct output);        break;
-    case nt_pair:          base = sizeof(struct pair);          break;
-    case nt_primitive:     base = sizeof(struct primitive);     break;
-    case nt_set:           base = sizeof(struct set);           break;
-    case nt_set_block:     base = sizeof(struct set_block);     break;
-    case nt_set_cell:      base = sizeof(struct set_cell);      break;
-    case nt_symbol:        base = sizeof(struct symbol);        break;
-    case nt_text:          base = sizeof(struct text);          break;
-    }
-
-    return base;
 }
 
 extern void debug_Message(const char *filename, unsigned int linenum,
@@ -254,7 +233,7 @@ extern void node_PrintFul(FILE* output, Node node) {
         return;
     }
 
-    switch (hasType(node)) {
+    switch (getKind(node)) {
     case nt_unknown:
         fprintf(output, "unknown(0x%p)",
                 node.reference);
@@ -280,6 +259,31 @@ extern void node_PrintFul(FILE* output, Node node) {
                 node.count->value);
         return;
 
+    case nt_primitive:
+        fprintf(output, "primitive(0x%p %u)",
+                node.reference,
+                node.primitive->size);
+        return;
+
+    case nt_input:
+        fprintf(output, "input(0x%p %u)",
+                node.reference,
+                node.input->input);
+        return;
+
+    case nt_output:
+        fprintf(output, "output(0x%p %u)",
+                node.reference,
+                node.output->output);
+        return;
+
+    case nt_pair:
+        fprintf(output, "pair(0x%p (0x%p, 0x%p))",
+                node.reference,
+                node.pair->car.reference,
+                node.pair->cdr.reference);
+        return;
+#if 0
     case nt_hash_entry:
         if (!(node.hash_entry)) {
             fprintf(output, "nil");
@@ -329,35 +333,11 @@ extern void node_PrintFul(FILE* output, Node node) {
     case nt_set:
         set_Print(output, node.set);
         return;
-
-    case nt_primitive:
-        fprintf(output, "primitive(0x%p %u)",
-                node.reference,
-                node.primitive->size);
-        return;
-
-    case nt_input:
-        fprintf(output, "input(0x%p %u)",
-                node.reference,
-                node.input->input);
-        return;
-
-    case nt_output:
-        fprintf(output, "output(0x%p %u)",
-                node.reference,
-                node.output->output);
-        return;
-
-    case nt_pair:
-        fprintf(output, "pair(0x%p (0x%p, 0x%p))",
-                node.reference,
-                node.pair->car.reference,
-                node.pair->cdr.reference);
-
+#endif
     }
 
     fprintf(output, "type[%d](0x%p)",
-            hasType(node),
+            getKind(node),
             node.reference);
     return;
 }
@@ -387,7 +367,7 @@ extern void node_PrintTree(FILE* output, unsigned level, Node node) {
         fprintf(output, ")");
     }
 
-    switch (hasType(node)) {
+    switch (getKind(node)) {
     case nt_unknown:
         fprintf(output, "unknown(0x%p)",
                 node.reference);
@@ -413,6 +393,31 @@ extern void node_PrintTree(FILE* output, unsigned level, Node node) {
                 node.count->value);
         return;
 
+    case nt_primitive:
+        fprintf(output, "primitive(0x%p %u)",
+                node.reference,
+                node.primitive->size);
+        return;
+
+    case nt_input:
+        fprintf(output, "input(0x%p %u)",
+                node.reference,
+                node.input->input);
+        return;
+
+    case nt_output:
+        fprintf(output, "output(0x%p %u)",
+                node.reference,
+                node.output->output);
+        return;
+
+    case nt_pair:
+        fprintf(output, "pair(0x%p (0x%p, 0x%p))",
+                node.reference,
+                node.pair->car.reference,
+                node.pair->cdr.reference);
+        return;
+#if 0
     case nt_hash_entry:
         if (!(node.hash_entry)) {
             fprintf(output, "nil");
@@ -458,34 +463,11 @@ extern void node_PrintTree(FILE* output, unsigned level, Node node) {
     case nt_set:
         set_Print(output, node.set);
         return;
-
-    case nt_primitive:
-        fprintf(output, "primitive(0x%p %u)",
-                node.reference,
-                node.primitive->size);
-        return;
-
-    case nt_input:
-        fprintf(output, "input(0x%p %u)",
-                node.reference,
-                node.input->input);
-        return;
-
-    case nt_output:
-        fprintf(output, "output(0x%p %u)",
-                node.reference,
-                node.output->output);
-        return;
-
-    case nt_pair:
-        fprintf(output, "pair(0x%p (0x%p, 0x%p))",
-                node.reference,
-                node.pair->car.reference,
-                node.pair->cdr.reference);
+#endif
     }
 
     fprintf(output, "type[%d](0x%p)",
-            hasType(node),
+            getKind(node),
             node.reference);
     return;
 }

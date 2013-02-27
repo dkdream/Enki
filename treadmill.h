@@ -103,8 +103,9 @@ struct gc_header {
         struct {
             enum gc_color color  : 2;
             unsigned int  atom   : 1; // is this a tuple of values
-            unsigned int  inside : 1; // is this inside a space (managed)
+            unsigned int  inside : 1; // is this inside a space (malloc/free by the treadmill)
             unsigned int  prefix : 1; // the first slot is a pointer atomic data. (implies !atom)
+            unsigned int  kind   : 6; // the kind (used by c-code) (and prettyprint)
         } __attribute__((__packed__));
     } __attribute__((__packed__));
 
@@ -134,16 +135,43 @@ extern bool space_Scan(const Space, unsigned int);
 extern bool clink_Init(Clink *link, unsigned size, Reference* array);
 extern bool clink_Drop(Clink *link);
 
+//extern bool node_ExternalInit(const EA_Type, struct gc_header *);
+
+extern bool node_Allocate(struct gc_treadmill *space,
+                          bool atom,
+                          Size size_in_char,
+                          Size prefix_in_char,
+                          Target);
+
+extern bool insert_After(const Header mark, const Header node);
+extern bool insert_Before(const Header mark, const Header node);
+extern bool extract_From(const Header mark);
+
 extern inline Reference asReference(Header header) __attribute__((always_inline));
 extern inline Reference asReference(Header header) {
     if (!header) return (Reference)0;
     return (Reference)(header + 1);
 }
 
-extern inline Header asHeader(Reference value) __attribute__((always_inline));
-extern inline Header asHeader(Reference value) {
-    if (!value) return (Header)0;
-    return (((Header)value) - 1);
+extern inline Header asHeader(const Node value) __attribute__((always_inline));
+extern inline Header asHeader(const Node value) {
+    if (!value.reference) return (Header)0;
+    return (((Header)value.reference) - 1);
+}
+
+extern inline EA_Type getKind(const Node value) __attribute__((always_inline));
+extern inline EA_Type getKind(const Node value) {
+    if (!value.reference) return nt_unknown;
+    Header header = asHeader(value);
+    return header->kind;
+}
+
+extern inline bool setKind(const Node value, EA_Type kind) __attribute__((always_inline));
+extern inline bool setKind(const Node value, EA_Type kind) {
+    if (!value.reference) return false;
+    Header header = asHeader(value);
+    header->kind = kind;
+    return true;
 }
 
 extern inline unsigned long asSize(unsigned base_sizeof, unsigned extend_sizeof)  __attribute__((always_inline));
@@ -217,15 +245,71 @@ extern inline Header fresh_tuple(unsigned long size_in_pointers,
     return header;
 }
 
-extern inline bool clink_Assign(Clink *link, unsigned index, Reference value) __attribute__((always_inline));
-extern inline bool clink_Assign(Clink *link, unsigned index, Reference value) {
+extern inline bool darken_Node(const Node node) __attribute__((always_inline));
+extern inline bool darken_Node(const Node node) {
+    if (!node.reference) return true;
+
+    const Header value = asHeader(node);
+    const Space  space = value->space;
+
+    if (!space) return true;
+
+    if (value->color == space->visiable) return true;
+
+    VM_DEBUG(5, "darkening (%d) node 0x%p",
+             getKind(node),
+             node.reference);
+
+    const Header scan   = space->scan;
+    const Header top    = space->top;
+
+    if (value == scan) {
+        if (top != scan) {
+            VM_ERROR("%s", "found a clear/white node in the gray chain");
+            return false;
+        }
+    }
+
+    if (!extract_From(value)) {
+        VM_ERROR("unable to extract the node from clear list");
+        return false;
+    }
+
+    if (top == scan) {
+        if (!insert_After(top, value)) {
+            VM_ERROR("unable to add the node to gray list");
+            return false;
+        }
+        value->color = space->visiable;
+        space->scan  = value;
+        return true;
+    }
+
+#ifndef OPTION_TWO
+        if (!insert_After(top, value)) {
+            VM_ERROR("unable to append the node unto gray list");
+            return false;
+        }
+#else
+        if (!insert_Before(scan, value)) {
+            VM_ERROR("unable to insert the node into gray list");
+            return false;
+        }
+#endif
+
+    value->color = space->visiable;
+    return true;
+}
+
+extern inline bool clink_Assign(Clink *link, unsigned index, const Node value) __attribute__((always_inline));
+extern inline bool clink_Assign(Clink *link, unsigned index, const Node value) {
     if (!link)                return false;
     if (!link->array)         return false;
     if (!link->before)        return false;
     if (!link->after)         return false;
     if (link->size <= index)  return false;
-    if (!node_Darken(value))  return false;
-    link->array[index] = value;
+    if (!darken_Node(value))  return false;
+    link->array[index] = value.reference;
     return true;
 }
 

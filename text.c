@@ -65,7 +65,7 @@ static inline HashCode hash_full(TextBuffer value) {
     return result;
 }
 
-extern inline bool text_Create(TextBuffer value, Text *target) {
+extern bool text_Create(TextBuffer value, Text *target) {
     const unsigned     size = value.position;
     const HashCode hashcode = hash_full(value);
     const int         cells = size / sizeof(const unsigned long);
@@ -79,6 +79,7 @@ extern inline bool text_Create(TextBuffer value, Text *target) {
 
     Text result = *target;
 
+    setKind(result, nt_text);
     result->size     = size;
     result->hashcode = hashcode;
 
@@ -114,6 +115,7 @@ extern bool text_Append(Text head, Text tail, Text *target) {
 
     Text result = *target;
 
+    setKind(result, nt_text);
     result->size     = size;
     result->hashcode = hashcode;
 

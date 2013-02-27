@@ -21,6 +21,7 @@ extern bool primitive_Create(Symbol label, Operator function, unsigned int exten
 
     Primitive result = *target;
 
+    setKind(result, nt_primitive);
     result->label    = label;
     result->function = function;
     result->size     = extend;

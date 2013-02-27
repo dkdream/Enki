@@ -162,7 +162,7 @@ extern bool hash_Add(Hash table, Symbol name, Node value) {
 
     for ( ; list ; list = list->next) {
         if (list->symbol == name) {
-            node_Live(value);
+            darken_Node(value);
             list->value = value;
             return true;
         }
@@ -211,7 +211,7 @@ extern bool hash_Remove(Hash table, Symbol name) {
     }
 
     table->count -= 1;
-    node_Live(list->next);
+    darken_Node(list->next);
     *(location) = list->next;
     return true;
 }

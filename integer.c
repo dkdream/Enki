@@ -7,6 +7,7 @@
  **    <routine-list-end>
  **/
 #include "integer.h"
+#include "treadmill.h"
 
 extern bool integer_Create(long value, Integer *target) {
     if (!node_Allocate(_zero_space,
@@ -18,6 +19,7 @@ extern bool integer_Create(long value, Integer *target) {
 
     Integer result = *target;
 
+    setKind(result, nt_integer);
     result->value = value;
 
     return result;
