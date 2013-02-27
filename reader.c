@@ -351,8 +351,6 @@ static bool readList(FILE *fp, int delim, Target result)
         goto failure;
     }
 
-    printf("read list %p\n", head);
-
     GC_UNPROTECT(hold);
     GC_UNPROTECT(head);
     return true;
@@ -394,8 +392,6 @@ static bool readString(FILE *fp, int end, Target result)
         buffer_append(&buf, chr);
     }
 
-    printf("read string %s\n", buffer_contents(&buf));
-
     return text_Create(buf, result.text);
 
     failure:
@@ -423,8 +419,6 @@ static bool readInteger(FILE *fp, int first, Target result)
     }
 
     ungetc(chr, fp);
-
-    printf("read integer %s\n", buffer_contents(&buf));
 
     long value = strtoul(buffer_contents(&buf), 0, 0);
 
@@ -463,8 +457,6 @@ static bool readSymbol(FILE *fp, int first, Target result)
     }
 
     ungetc(chr, fp);
-
-    printf("read symbol %s\n", buffer_contents(&buf));
 
     return symbol_Create(buf, result.symbol);
 

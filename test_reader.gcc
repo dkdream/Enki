@@ -27,12 +27,8 @@ int main(int argc, char **argv)
     Reference target;
 
     while (read(data, &target)) {
-
         printf("read 0x%p\n", target);
-
-        if (!prettyPrint(stdout, 0, target)) {
-            printf("Error pretty printing target\n");
-        }
+        prettyPrint(stdout, target);
     }
 
     printf("\n");

@@ -125,7 +125,7 @@ extern bool print(FILE* output, Node node) {
     return true;
 }
 
-extern bool prettyPrint(FILE* output, unsigned level, Node node) {
+extern bool dump(FILE* output, unsigned level, Node node) {
     if (!output) return false;
 
     if (!node.reference) {
@@ -145,7 +145,7 @@ extern bool prettyPrint(FILE* output, unsigned level, Node node) {
     void sub_tree(Node value) {
         fprintf(output, "\n");
         indent(level+1);
-        prettyPrint(output, level+1, value);
+        dump(output, level+1, value);
     }
     void close() {
         fprintf(output, ")");
@@ -211,4 +211,118 @@ extern bool prettyPrint(FILE* output, unsigned level, Node node) {
             getKind(node),
             node.reference);
     return true;
+}
+
+
+extern void prettyPrint(FILE* output, Node node) {
+    unsigned offset = 0;
+
+    if (!output) return;
+
+    void prettyPrint_intern(Node node, unsigned level) {
+        if (!node.reference) {
+            fprintf(output, "nil");
+            return;
+        }
+
+        void indent() {
+            unsigned count = 0;
+            for ( ; count < (level + 1) ; ++count ) {
+                fprintf(output, "   ");
+            }
+        }
+
+        void open() {
+            fprintf(output, "(");
+        }
+
+        void close() {
+            fprintf(output, ")");
+        }
+
+        if (offset > 50) {
+            fprintf(output, "\n");
+            indent();
+            offset = 0;
+        }
+
+        switch (getKind(node)) {
+        case nt_unknown:
+            offset += 10;
+            fprintf(output, "unknown(%p)", node.reference);
+            return;
+
+        case nt_symbol:
+            offset += node.symbol->size + 1;
+            echo_string(output, (const char *) node.symbol->value);
+            return;
+
+        case nt_text:
+            offset += node.text->size + 3;
+            fprintf(output, "\"");
+            echo_string(output, (const char *) node.text->value);
+            fprintf(output, "\"");
+            return;
+
+        case nt_integer:
+            offset += 10;
+            fprintf(output, "%ld", node.integer->value);
+            return;
+
+        case nt_count:
+            offset += 10;
+            fprintf(output, "%u",
+                    node.count->value);
+            return;
+
+        case nt_primitive:
+            offset += 20;
+            fprintf(output, "primitive(%p %u)",
+                    node.reference,
+                    node.primitive->size);
+            return;
+
+        case nt_input:
+            offset += 20;
+            fprintf(output, "input(%p %u)",
+                    node.reference,
+                    node.input->input);
+            return;
+
+        case nt_output:
+            offset += 20;
+            fprintf(output, "output(%p %u)",
+                    node.reference,
+                    node.output->output);
+            return;
+
+        case nt_pair: {
+            Node tail = node.pair->cdr;
+            open();
+            prettyPrint_intern(node.pair->car, level+1);
+            while (tail.reference) {
+                EA_Type type = getKind(tail);
+                if (nt_pair == type) {
+                    fprintf(output, " ");
+                    prettyPrint_intern(tail.pair->car, level+1);
+                    tail = tail.pair->cdr;
+                    continue;
+                }
+                fprintf(output, " . ");
+                prettyPrint_intern(tail, level+1);
+                break;
+            }
+            close();
+            return;
+        }
+        }
+
+        offset += 20;
+        fprintf(output, "type[%d](%p)",
+                getKind(node),
+                node.reference);
+        return;
+    }
+
+    prettyPrint_intern(node, 0);
 }
