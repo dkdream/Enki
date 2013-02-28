@@ -17,18 +17,10 @@ struct primitive {
     unsigned int buffer[];
 };
 
-extern Primitive    _enclose;
-extern Primitive    _apply;
-extern Primitive    _closure;
-extern Primitive    _hash;
-extern Primitive    _set;
-extern Primitive    _entry;
-extern Primitive    _context;
-extern Primitive    _one_or_more;
-extern Primitive    _add;
-extern Primitive    _depth;
-extern Primitive    _contract;
-extern Primitive    _drop;
+extern Primitive f_quote;       // quote a syntax tree
+extern Primitive p_eval_symbol;
+extern Primitive p_eval_pair;
+extern Primitive p_apply_expr;
 
 extern bool primitive_Create(Symbol label, Operator function, unsigned int extend, Primitive*);
 
