@@ -41,11 +41,13 @@ dump
 ,@(testing one two three)
 
 ;; test [ list
-[testing 1 2 3 4 5 6 7 8 9 10 testing]
+[testing 1 2 3 4 5 6 7 8 9 10 . testing]
 
-;; test { list
-{testing 1 2 3 4 5 6 7 8 9 10 testing}
+;; test delay list
+{testing 1 2 3 4 5 6 7 8 9 10 . testing}
 
 ;; test path 
-
 one.two.three
+
+;; test
+_

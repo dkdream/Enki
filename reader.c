@@ -367,6 +367,98 @@ static bool readList(FILE *fp, int delim, Target result)
     return false;
 }
 
+static bool readTuple(FILE *fp, int delim, Target result)
+{
+    const char *error = 0;
+    unsigned size;
+    bool     dotted;
+    Pair  head = 0;
+    Pair  tail = head;
+    Node  hold = NIL;
+
+    GC_PROTECT(head);
+    GC_PROTECT(hold);
+
+    if (!read(fp, &(hold.reference))) goto eof;
+
+    if (!pair_Create(hold, NIL, &head)) goto failure;
+
+    tail = head;
+
+    for (;;) {
+        if (!read(fp, &(hold.reference))) goto eof;
+        if (!pair_Create(hold, NIL, &(hold.pair))) goto failure;
+        if (!pair_SetCdr(tail, hold)) goto failure;
+        tail = hold.pair;
+    }
+
+    eof:
+    if (!matchChar(fp, delim)) {
+        error = "EOF while reading list";
+        goto failure;
+    }
+
+    if (!list_State(head, &size, &dotted)) goto failure;
+    if (!tuple_Create(size, result.tuple)) goto failure;
+    if (!tuple_Fill(*result.tuple, head))  goto failure;
+
+
+    GC_UNPROTECT(hold);
+    GC_UNPROTECT(head);
+    return true;
+
+    failure:
+    if (!error) {
+        fatal(error);
+    }
+
+    GC_UNPROTECT(hold);
+    GC_UNPROTECT(head);
+    return false;
+}
+
+static bool readControl(FILE *fp, Symbol control, int delim, Target result)
+{
+    const char *error = 0;
+    Pair  head = 0;
+    Pair  tail = head;
+    Node  hold = NIL;
+
+    GC_PROTECT(head);
+    GC_PROTECT(hold);
+
+    if (!pair_Create(control, NIL, result.pair)) goto failure;
+
+    head = *result.pair;
+    tail = head;
+
+    for (;;) {
+        if (!read(fp, &(hold.reference))) goto eof;
+        if (!pair_Create(hold, NIL, &(hold.pair))) goto failure;
+        if (!pair_SetCdr(tail, hold)) goto failure;
+        tail = hold.pair;
+    }
+
+    eof:
+    if (!matchChar(fp, delim)) {
+        error = "EOF while reading list";
+        goto failure;
+    }
+
+    GC_UNPROTECT(hold);
+    GC_UNPROTECT(head);
+    return true;
+
+    failure:
+    if (!error) {
+        fatal(error);
+    }
+
+    GC_UNPROTECT(hold);
+    GC_UNPROTECT(head);
+    return false;
+}
+
 static bool readCode(FILE *fp, Target result)
 {
     int chr = getc(fp);
@@ -512,40 +604,53 @@ extern bool read(FILE *fp, Target result)
         case '\'': return readQuote(fp, s_quote, result);
         case '`':  return readQuote(fp, s_quasiquote, result);
         case '(':  return readList(fp, ')', result);
-        case '[':  return readList(fp, ']', result);
-        case '{':  return readList(fp, '}', result);
+        case '[':  return readTuple(fp, ']', result);
+        case '{':  return readControl(fp, s_delay, '}', result);
 
-        case ';':  {
-            readComment(fp);
-            continue;
-        }
-
-        case '0' ... '9': {
-            return readInteger(fp, chr, result);
-        }
-
-        case ',': {
-            if (matchChar(fp, '@')) {
-                return readQuote(fp, s_unquote_splicing, result);
-            } else {
-                return readQuote(fp, s_unquote, result);
+        case ';':
+            {
+                readComment(fp);
+                continue;
             }
-        }
+
+        case '0' ... '9':
+            {
+                return readInteger(fp, chr, result);
+            }
+
+        case ',':
+            {
+                if (matchChar(fp, '@')) {
+                    return readQuote(fp, s_unquote_splicing, result);
+                } else {
+                    return readQuote(fp, s_unquote, result);
+                }
+            }
 
         case '}':
         case ']':
-        case ')': {
-            ungetc(chr, fp);
-            return false;
-        }
+        case ')':
+            {
+                ungetc(chr, fp);
+                return false;
+            }
 
-        case '-': {
-            int dhr = getc(fp); ungetc(dhr, fp);
-            if (isDigit10(dhr)) return readInteger(fp, chr, result);
-            else return readSymbol(fp, chr, result);
-        }
+        case '-':
+            {
+                int dhr = getc(fp); ungetc(dhr, fp);
+                if (isDigit10(dhr)) return readInteger(fp, chr, result);
+                else return readSymbol(fp, chr, result);
+            }
 
-        default: return readSymbol(fp, chr, result);
+        default:
+            {
+                bool rtn = readSymbol(fp, chr, result);
+                if (nt_pair == getKind(*(result.reference))) {
+                    if (!list_UnDot(*(result.pair))) return false;
+
+                }
+                return rtn;
+            }
         }
     }
 }

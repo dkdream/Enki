@@ -203,6 +203,8 @@ const char* node_type_Name(enum node_type type)
     case nt_primitive:     return "primitive";
     case nt_symbol:        return "symbol";
     case nt_text:          return "text";
+    case nt_tuple:         return "tuple";
+
 #if 0
     case nt_hash:          return "hash";
     case nt_hash_block:    return "hash_block";
@@ -283,6 +285,10 @@ extern void node_PrintFul(FILE* output, Node node) {
                 node.pair->car.reference,
                 node.pair->cdr.reference);
         return;
+
+    case nt_tuple:
+        break;
+
 #if 0
     case nt_hash_entry:
         if (!(node.hash_entry)) {
@@ -417,6 +423,9 @@ extern void node_PrintTree(FILE* output, unsigned level, Node node) {
                 node.pair->car.reference,
                 node.pair->cdr.reference);
         return;
+
+    case nt_tuple:
+        break;
 #if 0
     case nt_hash_entry:
         if (!(node.hash_entry)) {

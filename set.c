@@ -5,6 +5,7 @@
  ** Routine List:
  **    <routine-list-end>
  **/
+#define USE_SET
 #include "set.h"
 #include "node.h"
 #include "treadmill.h"

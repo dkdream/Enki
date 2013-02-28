@@ -46,3 +46,32 @@ extern bool pair_Create(const Node car, const Node cdr, Pair* target) {
     return true;
 }
 
+extern bool list_State(Pair pair, unsigned *count, bool *dotted) {
+    if (!pair) return false;
+
+    unsigned at = 0;
+    for (; pair ; ++at) {
+        if (nt_pair != getKind(pair)) {
+            *count  = at;
+            *dotted = true;
+            return true;
+        }
+        pair = pair->cdr.pair;
+    }
+
+    *count  = at;
+    *dotted = false;
+    return true;
+}
+
+extern bool list_UnDot(Pair pair) {
+    if (!pair) return false;
+
+    for (; pair ;) {
+        if (nt_pair != getKind(pair->cdr)) {
+            return pair_Create(pair->cdr, NIL, &(pair->cdr.pair));
+        }
+        pair = pair->cdr.pair;
+    }
+    return true;
+}

@@ -8,19 +8,24 @@
  **/
 
 #include "count.h"
-#include "hash.h"
 #include "input.h"
 #include "integer.h"
 #include "output.h"
 #include "pair.h"
 #include "primitive.h"
-#include "set.h"
 #include "symbol.h"
 #include "text.h"
-
-
+#include "tuple.h"
 /* */
 #include "node.h"
+/* */
+#ifdef USE_HASH
+#include "hash.h"
+#endif
+
+#ifdef USE_SET
+#include "set.h"
+#endif
 /* */
 /***************************
  ** end of file

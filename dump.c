@@ -117,6 +117,9 @@ extern bool print(FILE* output, Node node) {
                 node.reference,
                 node.pair->car.reference,
                 node.pair->cdr.reference);
+
+    case nt_tuple:
+        break;
     }
 
     fprintf(output, "type[%d](%p)",
@@ -184,6 +187,12 @@ extern bool dump(FILE* output, Node node) {
                 node.pair->car.reference,
                 node.pair->cdr.reference);
         return true;
+
+    case nt_tuple:
+        fprintf(output, "tuple(%p (size=%d))",
+                node.reference,
+                (unsigned) asHeader(node.reference)->count);
+        return true;
     }
 
     fprintf(output, "type[%d](%p)",
@@ -245,14 +254,6 @@ extern void prettyPrint(FILE* output, Node node) {
             }
         }
 
-        void open() {
-            fprintf(output, "(");
-        }
-
-        void close() {
-            fprintf(output, ")");
-        }
-
         if (offset > 50) {
             fprintf(output, "\n");
             indent();
@@ -309,25 +310,39 @@ extern void prettyPrint(FILE* output, Node node) {
                     node.output->output);
             return;
 
-        case nt_pair: {
-            Node tail = node.pair->cdr;
-            open();
-            prettyPrint_intern(node.pair->car, level+1);
-            while (tail.reference) {
-                EA_Type type = getKind(tail);
-                if (nt_pair == type) {
-                    fprintf(output, " ");
-                    prettyPrint_intern(tail.pair->car, level+1);
-                    tail = tail.pair->cdr;
-                    continue;
+        case nt_pair:
+            {
+                Node tail = node.pair->cdr;
+                fprintf(output, "(");
+                prettyPrint_intern(node.pair->car, level+1);
+                while (tail.reference) {
+                    EA_Type type = getKind(tail);
+                    if (nt_pair == type) {
+                        fprintf(output, " ");
+                        prettyPrint_intern(tail.pair->car, level+1);
+                        tail = tail.pair->cdr;
+                        continue;
+                    }
+                    fprintf(output, " . ");
+                    prettyPrint_intern(tail, level+1);
+                    break;
                 }
-                fprintf(output, " . ");
-                prettyPrint_intern(tail, level+1);
-                break;
+                fprintf(output, ")");
+                return;
             }
-            close();
-            return;
-        }
+
+        case nt_tuple:
+            {
+                const unsigned max = asHeader(node)->count;
+                unsigned inx = 0;
+                fprintf(output, "[");
+                for (; inx < max ;++inx) {
+                    if (0 < inx) fprintf(output, " ");
+                    prettyPrint_intern(node.tuple->item[inx], level+1);
+                }
+                fprintf(output, "]");
+                return;
+            }
         }
 
         offset += 20;

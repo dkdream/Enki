@@ -39,6 +39,7 @@ typedef enum node_type {
     nt_primitive,
     nt_symbol,
     nt_text,
+    nt_tuple,
 #if 0
     nt_hash,
     nt_hash_block,
@@ -60,20 +61,26 @@ typedef enum result_code {
 typedef void *Reference;
 /*    */
 typedef struct count          *Count;
-typedef struct hash           *Hash;
-typedef struct hash_block     *Hash_block;
-typedef struct hash_entry     *Hash_entry;
 typedef struct input          *Input;
 typedef struct integer        *Integer;
 typedef struct output         *Output;
 typedef struct pair           *Pair;
 typedef struct primitive      *Primitive;
+typedef struct symbol         *Symbol;
+typedef struct text           *Text;
+typedef struct tuple          *Tuple;
+
+#ifdef USE_HASH
+typedef struct hash           *Hash;
+typedef struct hash_block     *Hash_block;
+typedef struct hash_entry     *Hash_entry;
+#endif
+
+#ifdef USE_SET
 typedef struct set            *Set;
 typedef struct set_block      *Set_block;
 typedef struct set_cell       *Set_cell;
-typedef struct symbol         *Symbol;
-typedef struct text           *Text;
-
+#endif
 /*    */
 
 union node {
@@ -87,6 +94,7 @@ union node {
     Primitive     primitive;
     Symbol        symbol;
     Text          text;
+    Tuple         tuple;
 #if 0
     Hash          hash;
     Hash_block    hash_block;
@@ -109,6 +117,7 @@ union node_target {
     Primitive     *primitive;
     Symbol        *symbol;
     Text          *text;
+    Tuple         *tuple;
 #if 0
     Hash          *hash;
     Hash_block    *hash_block;
@@ -132,32 +141,10 @@ typedef unsigned long      Size;
 extern unsigned int ea_global_debug;
 extern struct gc_treadmill* _zero_space;
 extern struct gc_header*    _fooness;
-extern Primitive    _enclose;
-extern Primitive    _apply;
-extern Primitive    _closure;
-extern Primitive    _hash;
-extern Primitive    _set;
-extern Primitive    _entry;
-extern Primitive    _context;
-extern Primitive    _one_or_more;
-extern Primitive    _add;
-extern Primitive    _depth;
-extern Primitive    _contract;
-extern Primitive    _drop;
 
-extern Symbol s_dot;
-extern Symbol s_quasiquote;
-extern Symbol s_quote;
-extern Symbol s_unquote;
-extern Symbol s_unquote_splicing;
-
-extern const char*  node_type_Name(EA_Type type);
-extern unsigned int node_type_FixSize(EA_Type type);
 extern void debug_Message(const char *filename, unsigned int linenum, bool newline, const char *format, ...);
 
 /* macros */
-extern inline void vm_noop() __attribute__((always_inline));
-extern inline void vm_noop() { return; }
 
 #define VM_ERROR(args...) error_at_line(1, 0,  __FILE__,  __LINE__, args)
 
@@ -172,22 +159,6 @@ extern inline void vm_noop() { return; }
 #else
 #define VM_ON_DEBUG(level, args...) vm_noop()
 #endif
-
-
-#define ONCE(code) ({ static bool done = false; if (done) return code; })
-
-#define CHECK_TRUE(boolean)  ({ if (!boolean) { VM_DEBUG(3, "returning error"); return rc_error; } })
-#define CHECK_FALSE(boolean) ({ if (boolean)  { VM_DEBUG(3, "returning error"); return rc_error; } })
-
-#define ASSIGN_TO(value, location) ({ \
-    typeof (value) hold__ = (value);\
-    if (!node_Live(hold__)) { \
-        VM_DEBUG(3, "returning error"); \
-        return rc_error; \
-    } else { \
-        location = hold__; \
-    }})
-
 
 extern inline bool isNil(Node node) __attribute__((always_inline));
 extern inline bool isNil(Node node) {

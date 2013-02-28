@@ -94,7 +94,7 @@ typedef struct gc_treadmill *Space;
 
 #define BITS_PER_WORD (sizeof(long) * 8)
 #define WORD_SIZE     (sizeof(long))
-#define POINTER_SIZE  (sizeof(void *))
+#define POINTER_SIZE  (sizeof(Node))
 
 struct gc_header {
     unsigned long count : BITS_PER_WORD - 12 __attribute__((__packed__));

@@ -36,6 +36,7 @@ Symbol s_quasiquote = 0;
 Symbol s_quote = 0;
 Symbol s_unquote = 0;
 Symbol s_unquote_splicing = 0;
+Symbol s_delay = 0;
 
 void fill_Symbol(const char* value, Symbol* result) {
     TextBuffer hold = BUFFER_INITIALISER;
@@ -56,6 +57,7 @@ void startEnkiLibrary() {
     fill_Symbol("quote", &s_quote);
     fill_Symbol("unquote", &s_unquote);
     fill_Symbol("unquote_splicing", &s_unquote_splicing);
+    fill_Symbol("delay", &s_delay);
 }
 
 void stopEnkiLibrary() {

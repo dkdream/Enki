@@ -5,6 +5,8 @@
  ** Routine List:
  **    <routine-list-end>
  **/
+#define USE_HASH
+
 #include "hash.h"
 #include "symbol.h"
 #include "node.h"
