@@ -53,7 +53,7 @@ TSTS    := $(notdir $(wildcard *.ea))
 RUNS    := $(TSTS:test_%.ea=test_%.run)
 DEPENDS := $(C_SOURCES:%.c=.depends/%.d) $(MAINS:%.c=.depends/%.d)
 
-UNIT_TESTS := test_reader.gcc
+UNIT_TESTS := test_reader.gcc test_sizes.gcc
 
 all :: libEnki.a
 

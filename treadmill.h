@@ -97,15 +97,18 @@ typedef struct gc_treadmill *Space;
 #define POINTER_SIZE  (sizeof(Node))
 
 struct gc_header {
-    unsigned long count : BITS_PER_WORD - 12 __attribute__((__packed__));
     union {
-        unsigned int flags : 12;
-        struct {
-            enum gc_color color  : 2;
-            unsigned int  atom   : 1; // is this a tuple of values
-            unsigned int  inside : 1; // is this inside a space (malloc/free by the treadmill)
-            unsigned int  prefix : 1; // the first slot is a pointer atomic data. (implies !atom)
-            unsigned int  kind   : 6; // the kind (used by c-code) (and prettyprint)
+        unsigned long state __attribute__((__packed__));
+        unsigned long count : BITS_PER_WORD - 12 __attribute__((__packed__));
+        union {
+            unsigned int flags : 12 __attribute__((__packed__));
+            struct {
+                enum gc_color color  : 2;
+                unsigned int  atom   : 1; // is this a tuple of values
+                unsigned int  inside : 1; // is this inside a space (malloc/free by the treadmill)
+                unsigned int  prefix : 1; // the first slot is a pointer an atomic segment. (implies !atom)
+                unsigned int  kind   : 6; // the kind (used by c-code) (and prettyprint)
+            } __attribute__((__packed__));
         } __attribute__((__packed__));
     } __attribute__((__packed__));
 

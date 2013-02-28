@@ -1,0 +1,44 @@
+/*-*- mode: c;-*-*/
+/***************************
+ **
+ ** Project: *current project*
+ **
+ ** Routine List:
+ **    <routine-list-end>
+ **/
+
+#include "treadmill.h"
+#include "all_types.inc"
+#include "node.h"
+
+#include <stdio.h>
+
+
+int main(int argc, char **argv)
+{
+    printf("size of word %u\n", WORD_SIZE);
+    printf("size of unsigned long %u\n", sizeof(unsigned long));
+    printf("size of long %u\n", sizeof(long));
+    printf("size of pointer %u\n", POINTER_SIZE);
+    printf("bits per word %u\n", BITS_PER_WORD);
+    printf("size of header %u\n", sizeof(struct gc_header));
+    printf("size of treadmill %u\n", sizeof(struct gc_treadmill));
+    printf("size of Node %u\n", sizeof(Node));
+    printf("size of Target %u\n", sizeof(Target));
+    printf("size of Reference %u\n", sizeof(Reference));
+    printf("size of HashCode %u\n", sizeof(HashCode));
+    printf("size of Size %u\n", sizeof(Size));
+
+
+    struct gc_header *root = 0;
+
+    printf("offset state %d\n",  (int)(&(root->state)));
+    //    printf("offset count %d\n",  (int)(&(root->count)));
+    //    printf("offset flags %d\n",  (int)(&(root->flags)));
+    printf("offset space %d\n",  (int)(&(root->space)));
+    printf("offset before %d\n", (int)(&(root->before)));
+    printf("offset after %d\n",  (int)(&(root->after)));
+
+    return 0;
+}
+
