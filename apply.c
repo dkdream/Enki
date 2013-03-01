@@ -16,7 +16,6 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
-#include <signal.h>
 
 
 // add a stack slot to the root set (with markings __FILE__, __LINE__)
@@ -24,13 +23,11 @@
 // remove a stack slot from the root set
 #define GC_UNPROTECT(V)
 
-extern Node enki_globals;
-
 static Pair traceStack = 0;
 static int  traceDepth = 0;
 
 // print error message followed be oop stacktrace
-static void fatal(char *reason, ...)
+extern void fatal(const char *reason, ...)
 {
     if (reason) {
         va_list ap;
@@ -40,6 +37,8 @@ static void fatal(char *reason, ...)
         fprintf(stderr, "\n");
         va_end(ap);
     }
+
+    if (!traceStack) exit(1);
 
     int inx = traceDepth;
     while (inx--) {
@@ -257,65 +256,6 @@ extern bool eval(Node expr, Node env, Target result)
  done:
     --traceDepth;
     return true;
-}
-
-static void enki_sigint(int signo)
-{
-    fatal("\nInterrupt(%d)",signo);
-}
-
-extern void replFile(FILE *stream)
-{
-    signal(SIGINT, enki_sigint);
-
-    for (;;) {
-        if (stream == stdin) {
-            printf(".");
-            fflush(stdout);
-        }
-
-        Node obj = NIL;
-
-        if (!read(stream, TARGET(obj))) break;
-
-        GC_PROTECT(obj);
-
-#if 0
-        if (opt_v) {
-            dump(stdout, obj);
-            printf("\n");
-            fflush(stdout);
-        }
-#endif
-
-        expand(obj, enki_globals, TARGET(obj));
-        encode(obj, enki_globals, TARGET(obj));
-        eval(obj,   enki_globals, TARGET(obj));
-
-        if (stream == stdin) {
-            printf(" => ");
-            fflush(stdout);
-            dump(stdout, obj);
-            printf("\n");
-            fflush(stdout);
-        }
-
-        GC_UNPROTECT(obj);
-
-#if 0
-        if (opt_v) {
-            GC_gcollect();
-            printf("%ld collections, %ld objects, %ld bytes, %4.1f%% fragmentation\n",
-                   (long)GC_collections, (long)GC_count_objects(), (long)GC_count_bytes(),
-                   GC_count_fragments() * 100.0);
-        }
-#endif
-    }
-
-    int c = getc(stream);
-
-    if (EOF != c)
-        fatal("unexpected character 0x%02x '%c'\n", c, c);
 }
 
 /*****************

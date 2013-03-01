@@ -18,18 +18,14 @@ static bool __initialized = false;
 
 unsigned int ea_global_debug = 0;
 Space     _zero_space = 0;
-Primitive _enclose = 0;
-Primitive _apply = 0;
-Primitive _closure = 0;
-Primitive _hash = 0;
-Primitive _set = 0;
-Primitive _entry = 0;
-Primitive _context = 0;
-Primitive _one_or_more = 0;
-Primitive _add = 0;
-Primitive _depth = 0;
-Primitive _contract = 0;
-Primitive _drop = 0;
+
+Node enki_globals = NIL;
+
+Primitive f_quote = 0;       // quote a syntax tree
+Primitive p_eval_symbol = 0;
+Primitive p_eval_pair = 0;
+Primitive p_apply_expr = 0;
+Primitive p_apply_form = 0;
 
 Symbol s_dot = 0;
 Symbol s_quasiquote = 0;

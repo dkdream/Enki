@@ -10,6 +10,7 @@
 #include <stdio.h>
 
 extern bool read(FILE *fp, Target result);
+extern void replFile(FILE *stream);
 
 /***************************
  ** end of file

@@ -16,51 +16,18 @@
 
 int main(int argc, char **argv)
 {
-#ifdef on32_bits
-    printf("bits per word %u\n", BITS_PER_WORD);
-    printf("size of word %u\n", WORD_SIZE);
-    printf("size of unsigned long %u\n", sizeof(unsigned long));
-    printf("size of long %u\n", sizeof(long));
-    printf("size of pointer %u\n", POINTER_SIZE);
-    printf("size of header %u\n", sizeof(struct gc_header));
-    printf("size of treadmill %u\n", sizeof(struct gc_treadmill));
-    printf("size of Node %u\n", sizeof(Node));
-    printf("size of Target %u\n", sizeof(Target));
-    printf("size of Reference %u\n", sizeof(Reference));
-    printf("size of HashCode %u\n", sizeof(HashCode));
-    printf("size of Size %u\n", sizeof(Size));
-
-    Header    header = 0;
-    Reference reference   = 0;
-
-    printf("offset state %d\n",  (int)(&(header->state)));
-    printf("offset space %d\n",  (int)(&(header->space)));
-    printf("offset before %d\n", (int)(&(header->before)));
-    printf("offset after %d\n\n",  (int)(&(header->after)));
-    printf("offset to Reference %d\n", (int)(header + 1));
-    printf("offset to Header %d\n\n", (int)(((Header)(reference)) - 1));
-
-    Node node = (Node)((Reference)(header + 1));
-
-    printf("offset to Node.reference %d\n", (int)(node.reference));
-    printf("offset to Node.pair %d\n", (int)(node.pair));
-    printf("offset to Node.pair->car %d\n", (int)(&(node.pair->car)));
-    printf("offset to Node.pair->cdr %d\n", (int)(&(node.pair->cdr)));
-    printf("offset to Node.tuple->item[0] %d\n", (int)(&(node.tuple->item[0])));
-    printf("offset to Node.tuple->item[1] %d\n", (int)(&(node.tuple->item[1])));
-#else
-    printf("bits per word %lu\n", BITS_PER_WORD);
-    printf("size of word %lu\n", WORD_SIZE);
-    printf("size of unsigned long %lu\n", sizeof(unsigned long));
-    printf("size of long %lu\n", sizeof(long));
-    printf("size of pointer %lu\n", POINTER_SIZE);
-    printf("size of header %lu\n", sizeof(struct gc_header));
-    printf("size of treadmill %lu\n", sizeof(struct gc_treadmill));
-    printf("size of Node %lu\n", sizeof(Node));
-    printf("size of Target %lu\n", sizeof(Target));
-    printf("size of Reference %lu\n", sizeof(Reference));
-    printf("size of HashCode %lu\n", sizeof(HashCode));
-    printf("size of Size %lu\n", sizeof(Size));
+    printf("bits per word %zu\n", BITS_PER_WORD);
+    printf("size of word %zu\n", WORD_SIZE);
+    printf("size of unsigned long %zu\n", sizeof(unsigned long));
+    printf("size of long %zu\n", sizeof(long));
+    printf("size of pointer %zu\n", POINTER_SIZE);
+    printf("size of header %zu\n", sizeof(struct gc_header));
+    printf("size of treadmill %zu\n", sizeof(struct gc_treadmill));
+    printf("size of Node %zu\n", sizeof(Node));
+    printf("size of Target %zu\n", sizeof(Target));
+    printf("size of Reference %zu\n", sizeof(Reference));
+    printf("size of HashCode %zu\n", sizeof(HashCode));
+    printf("size of Size %zu\n", sizeof(Size));
 
     Header    header = 0;
     Reference reference   = 0;
@@ -80,7 +47,6 @@ int main(int argc, char **argv)
     printf("offset to Node.pair->cdr %ld\n", (long)(&(node.pair->cdr)));
     printf("offset to Node.tuple->item[0] %ld\n", (long)(&(node.tuple->item[0])));
     printf("offset to Node.tuple->item[1] %ld\n", (long)(&(node.tuple->item[1])));
-#endif
 
     return 0;
 }

@@ -9,47 +9,20 @@
 #include "all_types.inc"
 #include "treadmill.h"
 #include "text_buffer.h"
+#include "apply.h"
+#include "dump.h"
 
 /* */
 #include <string.h>
 #include <stdbool.h>
 #include <error.h>
-#include <stdarg.h>
-
-static void fatal(const char *reason, ...) __attribute__ ((noreturn format (printf, 1, 2)));
-static void fatal(const char *reason, ...)
-{
-    if (reason) {
-        va_list ap;
-        va_start(ap, reason);
-        fprintf(stderr, "\nerror: ");
-        vfprintf(stderr, reason, ap);
-        fprintf(stderr, "\n");
-        va_end(ap);
-    }
-
-#if 0
-    if (nil != cdr(backtrace)) {
-        oop args= newLong(traceDepth);      GC_PROTECT(args);
-        args= newPair(args, nil);
-        args= newPair(traceStack, args);
-        apply(cdr(backtrace), args, globals);   GC_UNPROTECT(args);
-    }
-    else {
-        int i= traceDepth;
-        while (i--) {
-            printf("%3d: ", i);
-            dumpln(arrayAt(traceStack, i));
-        }
-    }
-#endif
-
-    exit(1);
-}
-
+#include <signal.h>
 
 #define GC_PROTECT(var)
 #define GC_UNPROTECT(var)
+
+extern Node enki_globals;
+
 
 #define CHAR_PRINT    (1<<0)
 #define CHAR_BLANK    (1<<1)
@@ -653,4 +626,63 @@ extern bool read(FILE *fp, Target result)
             }
         }
     }
+}
+
+static void enki_sigint(int signo)
+{
+    fatal("\nInterrupt(%d)",signo);
+}
+
+extern void replFile(FILE *stream)
+{
+    signal(SIGINT, enki_sigint);
+
+    for (;;) {
+        if (stream == stdin) {
+            printf(".");
+            fflush(stdout);
+        }
+
+        Node obj = NIL;
+
+        if (!read(stream, TARGET(obj))) break;
+
+        GC_PROTECT(obj);
+
+#if 0
+        if (opt_v) {
+            dump(stdout, obj);
+            printf("\n");
+            fflush(stdout);
+        }
+#endif
+
+        expand(obj, enki_globals, TARGET(obj));
+        encode(obj, enki_globals, TARGET(obj));
+        eval(obj,   enki_globals, TARGET(obj));
+
+        if (stream == stdin) {
+            printf(" => ");
+            fflush(stdout);
+            dump(stdout, obj);
+            printf("\n");
+            fflush(stdout);
+        }
+
+        GC_UNPROTECT(obj);
+
+#if 0
+        if (opt_v) {
+            GC_gcollect();
+            printf("%ld collections, %ld objects, %ld bytes, %4.1f%% fragmentation\n",
+                   (long)GC_collections, (long)GC_count_objects(), (long)GC_count_bytes(),
+                   GC_count_fragments() * 100.0);
+        }
+#endif
+    }
+
+    int c = getc(stream);
+
+    if (EOF != c)
+        fatal("unexpected character 0x%02x '%c'\n", c, c);
 }

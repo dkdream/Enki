@@ -55,7 +55,7 @@ DEPENDS := $(C_SOURCES:%.c=.depends/%.d) $(MAINS:%.c=.depends/%.d)
 
 UNIT_TESTS := test_reader.gcc test_sizes.gcc
 
-all :: libEnki.a
+all :: enki.vm libEnki.a 
 
 asm  :: $(ASMS)
 test :: $(RUNS)
@@ -84,7 +84,7 @@ scrub ::
 enki.vm : enki_main.o libEnki.a 
 	$(GCC) $(CFLAGS) -o $@ $^ $(LIBFLAGS)
 
-enki.o : enki.c ; $(GCC) $(DBFLAGS) $(INCFLAGS) -c -o $@ $<
+enki_main.o : enki_main.c
 
 $(UNIT_TESTS:%.gcc=%.x) : libEnki.a
 
