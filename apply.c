@@ -6,6 +6,13 @@
  **    <routine-list-end>
  **/
 #include "apply.h"
+#include "primitive.h"
+#include "reader.h"
+#include "dump.h"
+#include "treadmill.h"
+#include "pair.h"
+#include "symbol.h"
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -17,209 +24,173 @@
 // remove a stack slot from the root set
 #define GC_UNPROTECT(V)
 
-union Object;
-typedef union Object *oop;
+extern Node enki_globals;
 
-enum { oop_Undefined,
-       oop_Long,
-       oop_String,
-       oop_Symbol,
-       oop_Pair,
-       _oop_Array,
-       oop_Array,
-       oop_Expr,
-       oop_Form,
-       oop_Fixed,
-       oop_Subr
-};
+static Pair traceStack = 0;
+static int  traceDepth = 0;
 
-typedef oop (*imp_t)(oop args, oop env);
-#define oop_nil ((oop)0)
-#define oop_eof ((oop)-1)
-
-static int   getType(oop);
-static bool  is(int,oop);
-static oop   car(oop);
-static oop   cdr(oop);
-static oop   cdr(oop);
-static oop   assq(oop,oop);
-static oop   map(imp_t,oop,oop);
-static void  fdump(FILE*, oop);
-static void  fdumpln(FILE*, oop);
-static oop   arrayAt(oop, int);
-static oop   arrayAtPut(oop, int, oop);
-static oop   newPair(oop,oop);
-static oop   newLong(int);
-
-
-static imp_t getImp(oop);
-static oop   getFunc(oop);
-
-static oop oop_read(FILE*);
-static oop oop_apply(oop fun, oop args, oop env);
-static oop oop_expand(oop expr, oop env);
-static oop oop_encode(oop expr, oop env);
-static oop oop_eval(oop obj, oop env);
-static void oop_fatal(char *reason, ...);
-static void oop_replFile(FILE *stream);
-
-
-static oop oop_applicators;
-
-static oop oop_s_quote;
-static oop oop_p_apply_expr;
-static oop oop_p_eval_symbol;
-static oop oop_p_eval_pair;
-static oop oop_f_quote;
-static oop oop_globals;
-
-static int opt_v;
-
-static oop traceStack = oop_nil;
-static int traceDepth = 0;
-
-static oop oop_apply(oop fun, oop args, oop env)
+// print error message followed be oop stacktrace
+static void fatal(char *reason, ...)
 {
-    oop result = oop_nil;
+    if (reason) {
+        va_list ap;
+        va_start(ap, reason);
+        fprintf(stderr, "\nerror: ");
+        vfprintf(stderr, reason, ap);
+        fprintf(stderr, "\n");
+        va_end(ap);
+    }
 
-    GC_PROTECT(result);
+    int inx = traceDepth;
+    while (inx--) {
+        Node value;
+        list_GetItem(traceStack, inx, TARGET(value));
+        printf("%3d: ", inx);
+        dump(stdout, value);
+        printf("\n");
+    }
+
+    exit(1);
+}
+
+extern bool apply(Node fun, Node args, Node env, Target result)
+{
     GC_PROTECT(args);
 
     for (;;) {
-        if (opt_v > 1) {
-            fprintf(stderr, "APPLY ");
-            fdump(stderr, fun);
-            fprintf(stderr, " TO ");
-            fdump(stderr, args);
-            fprintf(stderr, " IN ");
-            fdumpln(stderr, env);
+        // Primitive -> Operator
+        if (isKind(fun, nt_primitive)) {
+            Operator function = fun.primitive->function;
+            if (!function(args, env, result)) goto error;
+            GC_UNPROTECT(args);
+            return true;
         }
 
-        if (oop_Subr == getType(fun)) {
-            imp_t function = getImp(fun);
-            result = function(args, env);
-            break;
+        // Expression -> p_apply_expr
+        if (isKind(fun, nt_expression)) {
+            if (!pair_Create(fun, args, &(args.pair))) goto error;
+            fun.primitive = p_apply_expr;
+            continue;
         }
 
-        // oop_Expr       -> oop_Subr(subr_apply_expr)
-        // <selector> -> oop_Expr
-        // <generic>  -> oop_Expr
-        oop ap = oop_nil;
-
-        switch (getType(fun)) {
-        case oop_Expr:
-            ap = oop_p_apply_expr;
-            break;
-
-        default:
-            ap = arrayAt(cdr(oop_applicators), getType(fun));
-            if (oop_nil == ap) goto error;
+        // Form -> p_apply_form
+        if (isKind(fun, nt_form)) {
+            if (!pair_Create(fun, args, &(args.pair))) goto error;
+            fun.primitive = p_apply_form;
+            continue;
         }
 
-        args = newPair(fun, args);
-        fun  = ap;
+        goto error;
     }
-
-    GC_UNPROTECT(args);
-    GC_UNPROTECT(result);
-
-    return result;
 
  error:
     fprintf(stderr, "\nerror: cannot apply: ");
-    fdumpln(stderr, fun);
-    oop_fatal(0);
-    return oop_nil;
+    dump(stderr, fun);
+    //    fatal(0);
+
+    GC_UNPROTECT(args);
+    return false;
 }
 
-static oop oop_expand(oop expr, oop env)
+extern bool expand(Node expr, Node env, Target result)
 {
-    oop list = expr;
-    oop head = oop_nil;
-    oop tail = oop_nil;
+    Node list = expr;
+    Node head = NIL;
+    Node tail = NIL;
 
     GC_PROTECT(list);
     GC_PROTECT(head);
     GC_PROTECT(tail);
 
     for (;;) {
-        if (opt_v > 1) {
-            fprintf(stderr, "EXPAND ");
-            fdumpln(stderr, list);
-            fprintf(stderr, " IN ");
-            fdumpln(stderr, env);
+        if (!isKind(list, nt_pair)) {
+            ASSIGN(result, list);
+            goto done;
         }
 
-        if (!is(oop_Pair, list)) goto done;
+        head = list.pair->car;
+        tail = list.pair->cdr;
 
         // first expand the head of the list
-        head = oop_expand(car(list), env);
-        tail = cdr(list);
+        expand(head, env, TARGET(head));
+
+        // deal with quoted values
+        if (isIdentical(s_quote, head)) goto list_done;
 
         // check if the head is a reference
-        if (!is(oop_Symbol, head)) goto list_begin;
+        if (!isKind(head, nt_symbol)) goto list_begin;
 
-        if (oop_s_quote == head) goto list_done;
+        Node value = NIL;
 
-        oop reference = cdr(assq(head, env));
+        // check if the enviroment
+        alist_Get(env.pair, head, TARGET(value));
 
         // check if the reference is a form
-        if (!is(oop_Form, reference)) goto list_begin;
+        if (!isKind(value, nt_form)) goto list_begin;
 
         // get the form function
-        oop func = getFunc(reference);
+        //oop func = getFunc(reference);
 
         // apply the form function to the rest of the list
-        list = oop_apply(func, tail, env);
+        if (!apply(value, tail, env, TARGET(list))) goto error;
     }
 
  list_begin:
     // first expand all user defined forms
-    tail = map(oop_expand, tail, env);
+    list_Map(expand, tail.pair, env, &(tail.pair));
 
  list_done:
-    list = newPair(head, tail);
+    pair_Create(head, tail, result.pair);
 
  done:
     GC_UNPROTECT(tail);
     GC_UNPROTECT(head);
     GC_UNPROTECT(list);
 
-    return list;
+    return true;
+
+ error:
+    fprintf(stderr, "\nexpand error");
+    //   fatal(0)
+
+    GC_UNPROTECT(tail);
+    GC_UNPROTECT(head);
+    GC_UNPROTECT(list);
+
+    return false;
 }
 
-static oop oop_encode(oop expr, oop env)
+extern bool encode(Node expr, Node env, Target result)
 {
-    oop list = expr;
-    oop head = oop_nil;
-    oop tail = oop_nil;
+    Node list = expr;
+    Node head = NIL;
+    Node tail = NIL;
 
     GC_PROTECT(list);
     GC_PROTECT(head);
     GC_PROTECT(tail);
-    GC_PROTECT(env);
-    GC_PROTECT(tmp);
 
-    if (opt_v > 1) {
-        fprintf(stderr, "ENCODE ");
-        fdumpln(stderr, list);
-        fprintf(stderr, " IN ");
-        fdumpln(stderr, env);
+    if (!isKind(list, nt_pair)) {
+        ASSIGN(result, list);
+        goto done;
     }
 
-    if (!is(oop_Pair, list)) goto done;
+    head = list.pair->car;
+    tail = list.pair->cdr;
 
-    head = oop_encode(car(list), env);
-    tail = cdr(list);
+    encode(head, env, TARGET(head));
 
-    if (is(oop_Symbol, head)) {
-        oop val = cdr(assq(head, env));
-        if (is(oop_Fixed, val)
-            || is(oop_Subr, val))
-            head = val;
+    if (isKind(head, nt_symbol)) {
+        Node value = NIL;
+        // check if the enviroment
+        alist_Get(env.pair, head, TARGET(value));
+        if (isKind(value, nt_fixed)
+            || isKind(value, nt_primitive)) {
+            head = value;
+        }
     }
 
-    if (oop_f_quote == head) goto list_done;
+    if (isIdentical(f_quote, head)) goto list_done;
 
     /*
       this short cut will NOT work for
@@ -240,108 +211,92 @@ static oop oop_encode(oop expr, oop env)
        one for the encode (encode pair) phase and
        one for the apply  (apply pair) phase */
 
-    tail = map(oop_encode, tail, env);
+    list_Map(encode, tail.pair, env, &(tail.pair));
 
  list_done:
-    list = newPair(head, tail);
+    pair_Create(head, tail, result.pair);
 
  done:
-    GC_UNPROTECT(tmp);
-    GC_UNPROTECT(env);
     GC_UNPROTECT(tail);
     GC_UNPROTECT(head);
     GC_UNPROTECT(list);
 
-    return list;
+    return true;
 }
 
-static oop oop_eval(oop obj, oop env)
+extern bool eval(Node expr, Node env, Target result)
 {
-    if (opt_v > 1) {
-        fprintf(stderr, "EVAL ");
-        fdumpln(stderr, obj);
-        fprintf(stderr, " IN ");
-        fdumpln(stderr, env);
-    }
+    list_SetItem(traceStack, traceDepth++, expr);
 
-    arrayAtPut(traceStack, traceDepth++, obj);
+    Primitive evaluator = 0;
 
-    oop ev = oop_nil;
-
-    switch (getType(obj)) {
-    case oop_Symbol: // Symbol -> subr_eval_symbol
-        ev = oop_p_eval_symbol;
+    switch (getKind(expr)) {
+    case nt_symbol:
+        evaluator = p_eval_symbol;
         break;
 
-    case oop_Pair: // Pair   -> subr_eval_pair
-        ev =  oop_p_eval_pair;
+    case nt_pair:
+        evaluator = p_eval_pair;
         break;
+
     default:
+        ASSIGN(result, expr);
         goto done;
     }
 
-    oop args = oop_nil;
+    Node args = NIL;
 
     GC_PROTECT(args);
 
-    args = newPair(obj, oop_nil);
-    obj  = oop_apply(ev, args, env);
+    pair_Create(expr, NIL, &(args.pair));
+
+    apply(evaluator, args, env, result);
 
     GC_UNPROTECT(args);
 
  done:
     --traceDepth;
-    return obj;
+    return true;
 }
 
-// print error message followed be oop stacktrace
-static void oop_fatal(char *reason, ...)
+static void enki_sigint(int signo)
 {
-    if (reason) {
-        va_list ap;
-        va_start(ap, reason);
-        fprintf(stderr, "\nerror: ");
-        vfprintf(stderr, reason, ap);
-        fprintf(stderr, "\n");
-        va_end(ap);
-    }
-
-    int i= traceDepth;
-    while (i--) {
-        printf("%3d: ", i);
-        fdumpln(stdout, arrayAt(traceStack, i));
-    }
-
-    exit(1);
+    fatal("\nInterrupt(%d)",signo);
 }
 
-static void oop_replFile(FILE *stream)
+extern void replFile(FILE *stream)
 {
+    signal(SIGINT, enki_sigint);
+
     for (;;) {
         if (stream == stdin) {
             printf(".");
             fflush(stdout);
         }
 
-        oop obj = oop_read(stream);
+        Node obj = NIL;
 
-        if (obj == oop_eof) break;
+        if (!read(stream, TARGET(obj))) break;
 
         GC_PROTECT(obj);
 
+#if 0
         if (opt_v) {
-            fdumpln(stdout, obj);
+            dump(stdout, obj);
+            printf("\n");
             fflush(stdout);
         }
+#endif
 
-        obj = oop_expand(obj, oop_globals);
-        obj = oop_encode(obj, oop_globals);
-        obj = oop_eval(obj, oop_globals);
+        expand(obj, enki_globals, TARGET(obj));
+        encode(obj, enki_globals, TARGET(obj));
+        eval(obj,   enki_globals, TARGET(obj));
 
         if (stream == stdin) {
             printf(" => ");
             fflush(stdout);
-            fdumpln(stdout, obj);
+            dump(stdout, obj);
+            printf("\n");
             fflush(stdout);
         }
 
@@ -360,16 +315,7 @@ static void oop_replFile(FILE *stream)
     int c = getc(stream);
 
     if (EOF != c)
-        oop_fatal("unexpected character 0x%02x '%c'\n", c, c);
-}
-
-static void oop_sigint(int signo)
-{
-    oop_fatal("\nInterrupt(%d)",signo);
-}
-
-static oop_setup() {
-    signal(SIGINT, oop_sigint);
+        fatal("unexpected character 0x%02x '%c'\n", c, c);
 }
 
 /*****************

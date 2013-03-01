@@ -177,6 +177,13 @@ extern inline bool setKind(const Node value, EA_Type kind) {
     return true;
 }
 
+extern inline bool isKind(const Node value, const EA_Type kind)  __attribute__((always_inline));
+extern inline bool isKind(const Node value, const EA_Type kind) {
+    if  (!value.reference) return false;
+    Header header = asHeader(value);
+    return kind == header->kind;
+}
+
 extern inline unsigned long asSize(unsigned base_sizeof, unsigned extend_sizeof)  __attribute__((always_inline));
 extern inline unsigned long asSize(unsigned base_sizeof, unsigned extend_sizeof) {
     return base_sizeof + extend_sizeof;

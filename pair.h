@@ -7,6 +7,7 @@
  **   -- <desc>
  **/
 #include "reference.h"
+#include "primitive.h"
 
 struct pair {
     Node car;
@@ -26,6 +27,15 @@ extern bool list_GetItem(Pair pair, unsigned index, Target value);
 // replace the nil/value at the end
 extern bool list_SetEnd(Pair pair, const Node value);
 extern bool list_GetEnd(Pair pair, Target value);
+
+//
+extern bool alist_Entry(Pair pair, const Node label, Pair* entry);
+extern bool alist_Get(Pair pair, const Node label, Target entry);
+extern bool alist_Set(Pair pair, const Node label, const Node value);
+extern bool alist_Add(Pair pair, const Node label, const Node value, Pair* target);
+
+//
+extern bool list_Map(Operator func, Pair pair, const Node env, Pair* target);
 
 /***************************
  ** end of file

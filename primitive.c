@@ -8,13 +8,13 @@
 #include "primitive.h"
 #include "treadmill.h"
 
-extern bool primitive_Create(Symbol label, Operator function, unsigned int extend, Primitive *target) {
+extern bool primitive_Create(Symbol label, Operator function, Primitive *target) {
     if (!function) return false;
     if (!label)    return false;
 
     if (!node_Allocate(_zero_space,
                        true,
-                       asSize(sizeof(struct primitive), sizeof(unsigned char) * extend),
+                       sizeof(struct primitive),
                        0,
                        target))
         return false;
@@ -24,7 +24,6 @@ extern bool primitive_Create(Symbol label, Operator function, unsigned int exten
     setKind(result, nt_primitive);
     result->label    = label;
     result->function = function;
-    result->size     = extend;
 
     return true;
 }

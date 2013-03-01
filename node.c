@@ -141,6 +141,9 @@ extern void node_Print(FILE* output, Node node) {
                 node.pair->car.reference,
                 node.pair->cdr.reference);
 
+    default:
+        break;
+
 #if 0
     case nt_set_cell:
         fprintf(output, "cell(%p (%p, %p))",
@@ -205,6 +208,10 @@ const char* node_type_Name(enum node_type type)
     case nt_text:          return "text";
     case nt_tuple:         return "tuple";
 
+    case nt_expression:    return "expression";
+    case nt_form:          return "form";
+    case nt_fixed:         return "fixed";
+
 #if 0
     case nt_hash:          return "hash";
     case nt_hash_block:    return "hash_block";
@@ -262,9 +269,9 @@ extern void node_PrintFul(FILE* output, Node node) {
         return;
 
     case nt_primitive:
-        fprintf(output, "primitive(%p %u)",
+        fprintf(output, "primitive(%p %s)",
                 node.reference,
-                node.primitive->size);
+                (const char*)(node.primitive->label->value));
         return;
 
     case nt_input:
@@ -287,6 +294,9 @@ extern void node_PrintFul(FILE* output, Node node) {
         return;
 
     case nt_tuple:
+        break;
+
+    default:
         break;
 
 #if 0
@@ -400,9 +410,9 @@ extern void node_PrintTree(FILE* output, unsigned level, Node node) {
         return;
 
     case nt_primitive:
-        fprintf(output, "primitive(%p %u)",
+        fprintf(output, "primitive(%p %s)",
                 node.reference,
-                node.primitive->size);
+                (const char*)(node.primitive->label->value));
         return;
 
     case nt_input:
@@ -426,6 +436,10 @@ extern void node_PrintTree(FILE* output, unsigned level, Node node) {
 
     case nt_tuple:
         break;
+
+    default:
+        break;
+
 #if 0
     case nt_hash_entry:
         if (!(node.hash_entry)) {

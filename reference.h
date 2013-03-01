@@ -36,10 +36,15 @@ typedef enum node_type {
     nt_integer,
     nt_output,
     nt_pair,
-    nt_primitive,
+    nt_primitive,  // like maru Subr
     nt_symbol,
     nt_text,
-    nt_tuple,
+    nt_tuple,      // fixed size tuple (like maru _Array)
+
+    nt_expression, // to simulate maru Expr
+    nt_form,       // to simulate maru Form
+    nt_fixed,      // to simulate maru Fixed
+
 #if 0
     nt_hash,
     nt_hash_block,
@@ -137,6 +142,9 @@ typedef unsigned long      Size;
 
 #define NIL       ((Node)((Reference)0))
 #define NIL_CODE  ((Code)((Reference)0))
+
+#define TARGET(node)         (Target)(&(node.reference))
+#define ASSIGN(target, node) (target.reference[0] = node.reference)
 
 extern unsigned int ea_global_debug;
 extern struct gc_treadmill* _zero_space;

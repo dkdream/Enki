@@ -16,6 +16,7 @@
 
 int main(int argc, char **argv)
 {
+#ifdef on32_bits
     printf("bits per word %u\n", BITS_PER_WORD);
     printf("size of word %u\n", WORD_SIZE);
     printf("size of unsigned long %u\n", sizeof(unsigned long));
@@ -47,6 +48,39 @@ int main(int argc, char **argv)
     printf("offset to Node.pair->cdr %d\n", (int)(&(node.pair->cdr)));
     printf("offset to Node.tuple->item[0] %d\n", (int)(&(node.tuple->item[0])));
     printf("offset to Node.tuple->item[1] %d\n", (int)(&(node.tuple->item[1])));
+#else
+    printf("bits per word %lu\n", BITS_PER_WORD);
+    printf("size of word %lu\n", WORD_SIZE);
+    printf("size of unsigned long %lu\n", sizeof(unsigned long));
+    printf("size of long %lu\n", sizeof(long));
+    printf("size of pointer %lu\n", POINTER_SIZE);
+    printf("size of header %lu\n", sizeof(struct gc_header));
+    printf("size of treadmill %lu\n", sizeof(struct gc_treadmill));
+    printf("size of Node %lu\n", sizeof(Node));
+    printf("size of Target %lu\n", sizeof(Target));
+    printf("size of Reference %lu\n", sizeof(Reference));
+    printf("size of HashCode %lu\n", sizeof(HashCode));
+    printf("size of Size %lu\n", sizeof(Size));
+
+    Header    header = 0;
+    Reference reference   = 0;
+
+    printf("offset state %ld\n",  (long)(&(header->state)));
+    printf("offset space %ld\n",  (long)(&(header->space)));
+    printf("offset before %ld\n", (long)(&(header->before)));
+    printf("offset after %ld\n\n",  (long)(&(header->after)));
+    printf("offset to Reference %ld\n", (long)(header + 1));
+    printf("offset to Header %ld\n\n", (long)(((Header)(reference)) - 1));
+
+    Node node = (Node)((Reference)(header + 1));
+
+    printf("offset to Node.reference %ld\n", (long)(node.reference));
+    printf("offset to Node.pair %ld\n", (long)(node.pair));
+    printf("offset to Node.pair->car %ld\n", (long)(&(node.pair->car)));
+    printf("offset to Node.pair->cdr %ld\n", (long)(&(node.pair->cdr)));
+    printf("offset to Node.tuple->item[0] %ld\n", (long)(&(node.tuple->item[0])));
+    printf("offset to Node.tuple->item[1] %ld\n", (long)(&(node.tuple->item[1])));
+#endif
 
     return 0;
 }

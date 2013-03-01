@@ -8,21 +8,20 @@
  **/
 #include "reference.h"
 
-typedef ResultCode (*Operator)(Node args, Node env, Target result);
+typedef bool (*Operator)(Node args, Node env, Target result);
 
 struct primitive {
-    Symbol       label;
-    Operator     function;
-    unsigned int size;
-    unsigned int buffer[];
+    Symbol   label;
+    Operator function;
 };
 
 extern Primitive f_quote;       // quote a syntax tree
 extern Primitive p_eval_symbol;
 extern Primitive p_eval_pair;
 extern Primitive p_apply_expr;
+extern Primitive p_apply_form;
 
-extern bool primitive_Create(Symbol label, Operator function, unsigned int extend, Primitive*);
+extern bool primitive_Create(Symbol label, Operator function, Primitive*);
 
 /* macros */
 

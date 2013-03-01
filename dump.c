@@ -47,10 +47,12 @@ static inline void echo_string(FILE* output, const char* text) {
             continue;
         default: break;
         }
+
         if (0x20 > value) {
             fprintf(output, "\\%x", value);
             continue;
         }
+
         if (0x7e < value) {
             fprintf(output, "\\%x", value);
             continue;
@@ -94,10 +96,9 @@ extern bool print(FILE* output, Node node) {
         return true;
 
     case nt_primitive:
-        fprintf(output, "%s(%p %u)",
+        fprintf(output, "%s(%p)",
                 (const char *) node.primitive->label->value,
-                node.reference,
-                node.primitive->size);
+                node.reference);
         return true;
 
     case nt_input:
@@ -119,6 +120,9 @@ extern bool print(FILE* output, Node node) {
                 node.pair->cdr.reference);
 
     case nt_tuple:
+        break;
+
+    default:
         break;
     }
 
@@ -164,9 +168,9 @@ extern bool dump(FILE* output, Node node) {
         return true;
 
     case nt_primitive:
-        fprintf(output, "primitive(%p %u)",
+        fprintf(output, "primitive(%p %s)",
                 node.reference,
-                node.primitive->size);
+                (const char*)(node.primitive->label->value));
         return true;
 
     case nt_input:
@@ -193,6 +197,9 @@ extern bool dump(FILE* output, Node node) {
                 node.reference,
                 (unsigned) asHeader(node.reference)->count);
         return true;
+
+    default:
+        break;
     }
 
     fprintf(output, "type[%d](%p)",
@@ -215,6 +222,7 @@ extern bool dumpTree(FILE* output, unsigned level, Node node) {
             fprintf(output, "   ");
         }
     }
+
     void sub_tree(Node value) {
         fprintf(output, "\n");
         indent(level+1);
@@ -291,9 +299,9 @@ extern void prettyPrint(FILE* output, Node node) {
 
         case nt_primitive:
             offset += 20;
-            fprintf(output, "primitive(%p %u)",
+            fprintf(output, "primitive(%p %s)",
                     node.reference,
-                    node.primitive->size);
+                    (const char*)(node.primitive->label->value));
             return;
 
         case nt_input:
@@ -343,6 +351,8 @@ extern void prettyPrint(FILE* output, Node node) {
                 fprintf(output, "]");
                 return;
             }
+        default:
+            break;
         }
 
         offset += 20;
