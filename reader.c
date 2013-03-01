@@ -645,7 +645,7 @@ extern void replFile(FILE *stream)
 
         Node obj = NIL;
 
-        if (!read(stream, TARGET(obj))) break;
+        if (!read(stream, &obj)) break;
 
         GC_PROTECT(obj);
 
@@ -657,9 +657,9 @@ extern void replFile(FILE *stream)
         }
 #endif
 
-        expand(obj, enki_globals, TARGET(obj));
-        encode(obj, enki_globals, TARGET(obj));
-        eval(obj,   enki_globals, TARGET(obj));
+        expand(obj, enki_globals, &obj);
+        encode(obj, enki_globals, &obj);
+        eval(obj,   enki_globals, &obj);
 
         if (stream == stdin) {
             printf(" => ");

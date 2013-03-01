@@ -17,12 +17,22 @@ struct pair {
 extern bool pair_Create(const Node car, const Node cdr, Pair* target);
 extern bool pair_SetCar(Pair pair, const Node car);
 extern bool pair_SetCdr(Pair pair, const Node cdr);
+extern bool pair_GetCar(Pair pair, Target car);
+extern bool pair_GetCdr(Pair pair, Target cdr);
 
 // when using a pair as a list
 extern bool list_State(Pair pair, unsigned *count, bool *dotted);
 extern bool list_UnDot(Pair pair);
+
+// index=0 -> car
+// index=1 -> cadr
 extern bool list_SetItem(Pair pair, unsigned index, const Node value);
 extern bool list_GetItem(Pair pair, unsigned index, Target value);
+
+// index=0 -> cdr
+// index=1 -> cddr
+extern bool list_SetTail(Pair pair, unsigned index, const Node value);
+extern bool list_GetTail(Pair pair, unsigned index, Target value);
 
 // replace the nil/value at the end
 extern bool list_SetEnd(Pair pair, const Node value);

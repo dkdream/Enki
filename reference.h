@@ -88,7 +88,8 @@ typedef struct set_cell       *Set_cell;
 #endif
 /*    */
 
-union node {
+union  __attribute__ ((__transparent_union__ __packed__))
+node {
     Reference     reference;
     /**/
     Count         count;
@@ -109,9 +110,12 @@ union node {
     Set_cell      set_cell;
 #endif
     /**/
-}  __attribute__ ((__transparent_union__));
+};
 
-union node_target {
+typedef union node Node;
+
+union __attribute__ ((__transparent_union__ __packed__))
+node_target {
     Reference     *reference;
     /**/
     Count         *count;
@@ -123,6 +127,8 @@ union node_target {
     Symbol        *symbol;
     Text          *text;
     Tuple         *tuple;
+
+    Node          *node;
 #if 0
     Hash          *hash;
     Hash_block    *hash_block;
@@ -132,9 +138,8 @@ union node_target {
     Set_cell      *set_cell;
 #endif
     /**/
-}  __attribute__ ((__transparent_union__));
+};
 
-typedef union node        Node;
 typedef union node_target Target;
 
 typedef unsigned long long HashCode;
@@ -143,7 +148,7 @@ typedef unsigned long      Size;
 #define NIL       ((Node)((Reference)0))
 #define NIL_CODE  ((Code)((Reference)0))
 
-#define TARGET(node)         (Target)(&(node.reference))
+//#define TARGET(node)         (Target)(&(node.reference))
 #define ASSIGN(target, node) (target.reference[0] = node.reference)
 
 extern unsigned int ea_global_debug;

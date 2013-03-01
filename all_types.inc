@@ -17,6 +17,9 @@
 #include "text.h"
 #include "tuple.h"
 /* */
+#include "apply.h"
+#include "reader.h"
+#include "dump.h"
 #include "node.h"
 /* */
 #ifdef USE_HASH

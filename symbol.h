@@ -36,6 +36,7 @@ extern Symbol s_lambda;
 extern Symbol s_set;
 
 extern bool symbol_Create(TextBuffer value, Symbol*);
+extern bool symbol_Convert(const char* value, Symbol*);
 extern void check_SymbolTable__(const char*, unsigned);
 extern void init_global_symboltable();
 

@@ -43,7 +43,7 @@ extern void fatal(const char *reason, ...)
     int inx = traceDepth;
     while (inx--) {
         Node value;
-        list_GetItem(traceStack, inx, TARGET(value));
+        list_GetItem(traceStack, inx, &value);
         printf("%3d: ", inx);
         dump(stdout, value);
         printf("\n");
@@ -111,7 +111,7 @@ extern bool expand(Node expr, Node env, Target result)
         tail = list.pair->cdr;
 
         // first expand the head of the list
-        expand(head, env, TARGET(head));
+        expand(head, env, &head);
 
         // deal with quoted values
         if (isIdentical(s_quote, head)) goto list_done;
@@ -122,7 +122,7 @@ extern bool expand(Node expr, Node env, Target result)
         Node value = NIL;
 
         // check if the enviroment
-        alist_Get(env.pair, head, TARGET(value));
+        alist_Get(env.pair, head, &value);
 
         // check if the reference is a form
         if (!isKind(value, nt_form)) goto list_begin;
@@ -131,7 +131,7 @@ extern bool expand(Node expr, Node env, Target result)
         //oop func = getFunc(reference);
 
         // apply the form function to the rest of the list
-        if (!apply(value, tail, env, TARGET(list))) goto error;
+        if (!apply(value, tail, env, &list)) goto error;
     }
 
  list_begin:
@@ -177,12 +177,12 @@ extern bool encode(Node expr, Node env, Target result)
     head = list.pair->car;
     tail = list.pair->cdr;
 
-    encode(head, env, TARGET(head));
+    encode(head, env, &head);
 
     if (isKind(head, nt_symbol)) {
         Node value = NIL;
         // check if the enviroment
-        alist_Get(env.pair, head, TARGET(value));
+        alist_Get(env.pair, head, &value);
         if (isKind(value, nt_fixed)
             || isKind(value, nt_primitive)) {
             head = value;
