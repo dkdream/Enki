@@ -15,7 +15,7 @@ struct primitive {
     Operator function;
 };
 
-extern Primitive f_quote;       // quote a syntax tree
+extern Node      f_quote;       // quote a syntax tree
 extern Primitive p_eval_symbol;
 extern Primitive p_eval_pair;
 extern Primitive p_apply_expr;

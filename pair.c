@@ -46,6 +46,22 @@ extern bool pair_SetCdr(Pair pair, const Node cdr) {
     return true;
 }
 
+extern bool pair_GetCar(Pair pair, Target car) {
+    if (!pair) return false;
+
+    ASSIGN(car, pair->car);
+
+    return true;
+}
+
+extern bool pair_GetCdr(Pair pair, Target cdr) {
+    if (!pair) return false;
+
+    ASSIGN(cdr, pair->cdr);
+
+    return true;
+}
+
 extern bool list_State(Pair pair, unsigned *count, bool *dotted) {
     if (!pair) return false;
 
@@ -89,6 +105,8 @@ extern bool list_SetItem(Pair pair, unsigned index, const Node value) {
              continue;
          }
 
+         if (!darken_Node(value)) return false;
+
          pair->car = value;
          return true;
      }
@@ -106,6 +124,40 @@ extern bool list_GetItem(Pair pair, unsigned index, Target value) {
          }
 
          ASSIGN(value, pair->car);
+         return true;
+     }
+
+     return false;
+}
+
+extern bool list_SetTail(Pair pair, unsigned index, const Node value) {
+    if (!pair) return false;
+
+     for (; isKind(pair, nt_pair) ; --index) {
+         if (0 < index) {
+             pair = pair->cdr.pair;
+             continue;
+         }
+
+         if (!darken_Node(value)) return false;
+
+         pair->cdr = value;
+         return true;
+     }
+
+     return false;
+}
+
+extern bool list_GetTail(Pair pair, unsigned index, Target value) {
+     if (!pair) return false;
+
+     for (; isKind(pair, nt_pair) ; --index) {
+         if (0 < index) {
+             pair = pair->cdr.pair;
+             continue;
+         }
+
+         ASSIGN(value, pair->cdr);
          return true;
      }
 

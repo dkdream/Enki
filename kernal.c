@@ -21,7 +21,7 @@ Space     _zero_space = 0;
 
 Node enki_globals = NIL;
 
-Primitive f_quote = 0;       // quote a syntax tree
+Node      f_quote = NIL;       // quote a syntax tree
 Primitive p_eval_symbol = 0;
 Primitive p_eval_pair = 0;
 Primitive p_apply_expr = 0;
@@ -33,8 +33,13 @@ Symbol s_quote = 0;
 Symbol s_unquote = 0;
 Symbol s_unquote_splicing = 0;
 Symbol s_delay = 0;
+Symbol s_t = 0;
+Symbol s_nil = 0;
+Symbol s_lambda = 0;
+Symbol s_set = 0;
 
-extern void define(Node symbol, Node value, Node context);
+extern void defineValue(Node symbol, const Node value);
+extern bool fixed_Function(Node fixed, Target function);
 
 void fill_Symbol(const char* value, Symbol* result) {
     TextBuffer hold = BUFFER_INITIALISER;
@@ -187,7 +192,7 @@ static SUBR(define)
 
     GC_PROTECT(value);
 
-    define(symbol, value, enki_globals);
+    defineValue(symbol, value);
 
     GC_UNPROTECT(value);
 
@@ -294,17 +299,241 @@ static SUBR(lambda)
     return setKind(*result.reference, nt_expression);
 }
 
+static SUBR(eval_symbol)
+{
+    Node symbol = NIL;
+
+    pair_GetCar(args.pair, &symbol);
+
+    // lookup symbol in the current enviroment
+    if (!alist_Get(env.pair, symbol, result)) {
+        if (!isKind(symbol, nt_symbol)) {
+            fatal("undefined variable: <non-symbol>");
+        } else {
+            fatal("undefined variable: %s", symbol_Text(symbol.symbol));
+        }
+    }
+
+    return true;
+}
+
+
+static SUBR(eval_pair)
+{
+    Node obj   = NIL;
+    Node head  = NIL;
+    Node tail  = NIL;
+
+    // (subr_eval_pair obj)
+    pair_GetCar(args.pair, &obj);
+    pair_GetCar(obj.pair, &head);
+    pair_GetCdr(obj.pair, &tail);
+
+    pushTrace(obj);
+
+    // first eval the head
+    eval(head, env, &head);
+
+    if (isKind(head, nt_fixed)) {
+        // apply Fixed to un-evaluated arguments
+        Node func = NIL;
+        fixed_Function(head, &func);
+        apply(func, tail, env, result);
+        goto done;
+    }
+
+    // evaluate the arguments
+    list_Map(eval, tail.pair, env, &tail.pair);
+
+    // now apply the head to the evaluated arguments
+    apply(head, tail, env, result);
+
+ done:
+    popTrace();
+    return true;
+}
+
+static SUBR(eval)
+{
+    Node expr;
+    Node cenv;
+
+    // (eval expr env)
+    // (eval expr)
+    list_GetItem(args.pair, 0, &expr);
+    list_GetItem(args.pair, 1, &cenv);
+
+    if (isNil(cenv)) cenv = env;
+
+    expand(expr, cenv, &expr);
+    encode(expr, cenv, &expr);
+    eval(expr, cenv, result);
+
+    return true;
+}
+
+static SUBR(apply_expr)
+{
+    return true;
+#if 0
+    oop fun       = car(args);
+    oop arguments = cdr(args);
+    oop defn      = get(fun, Expr,defn);
+    oop formals   = car(defn);
+    oop body      = cdr(defn);
+    oop tmp       = nil;
+    oop ans       = nil;
+
+    GC_PROTECT(defn);
+    GC_PROTECT(env);
+    GC_PROTECT(tmp);
+
+    // retreve the closure enviroment
+    env = get(fun, Expr,env);
+
+    // bind parameters to values
+    // extending the closure enviroment
+    oop argl = arguments;
+    while (is(Pair, formals)) {
+        if (!is(Pair, argl)) {
+            fprintf(stderr, "\nerror: too few arguments applying ");
+            fdump(stderr, fun);
+            fprintf(stderr, " to ");
+            fdumpln(stderr, arguments);
+            fatal(0);
+        }
+        tmp     = newPair(car(formals), car(argl));
+        env     = newPair(tmp, env);
+        formals = cdr(formals);
+        argl    = cdr(argl);
+    }
+
+    // bind (rest) parameter to remaining values
+    // extending the closure enviroment
+    if (is(Symbol, formals)) {
+        tmp  = newPair(formals, argl);
+        env  = newPair(tmp, env);
+        argl = nil;
+    }
+
+    // check --
+    if (nil != argl) {
+        fprintf(stderr, "\nerror: too many arguments applying ");
+        fdump(stderr, fun);
+        fprintf(stderr, " to ");
+        fdumpln(stderr, arguments);
+        fatal(0);
+    }
+
+    // process the body of the lambda
+    // and return the last value
+    while (is(Pair, body)) {
+        ans  = eval(car(body), env);
+        body = cdr(body);
+    }
+
+    GC_UNPROTECT(tmp);
+    GC_UNPROTECT(env);
+    GC_UNPROTECT(defn);
+
+    return ans;
+#endif
+}
+
+static SUBR(apply_form)
+{
+    Node form;
+    Node cargs;
+
+    pair_GetCar(args.pair, &form);
+    pair_GetCdr(args.pair, &cargs);
+
+#if 0
+    form_Function(form, &func);
+    return apply(func, cargs, env, result);
+#endif
+
+    return true;
+}
+
+static SUBR(apply)
+{
+    Node func  = NIL;
+    Node cargs = NIL;
+    Node cenv  = NIL;
+
+    list_GetItem(args.pair, 0, &func);
+    list_GetItem(args.pair, 1, &cargs);
+    list_GetItem(args.pair, 2, &cargs);
+
+    if (isNil(cenv)) cenv = env;
+
+    return apply(func, cargs, cenv, result);
+}
+
+static SUBR(form)
+{
+#if 0
+    arity1(args, "form");
+    return newForm(car(args));
+#endif
+    return true;
+}
+
+
+static Primitive definePrimitive(const char* name, Operator func) {
+    return 0;
+}
+
+static Node defineFixed(const char* name, Operator func) {
+    return NIL;
+}
+
+#define MK_SYM(x)  fill_Symbol(#x, &s_ ##x)
+#define MK_PRM(x) definePrimitive(#x, opr_ ## x);
+#define MK_FXD(x) defineFixed(#x, opr_ ## x);
+
 void startEnkiLibrary() {
     if (__initialized) return;
 
     init_global_symboltable();
 
     fill_Symbol(".", &s_dot);
-    fill_Symbol("quasiquote", &s_quasiquote);
-    fill_Symbol("quote", &s_quote);
-    fill_Symbol("unquote", &s_unquote);
-    fill_Symbol("unquote_splicing", &s_unquote_splicing);
-    fill_Symbol("delay", &s_delay);
+
+    MK_SYM(quasiquote);
+    MK_SYM(quote);
+    MK_SYM(unquote);
+    MK_SYM(unquote_splicing);
+    MK_SYM(delay);
+    MK_SYM(t);
+    MK_SYM(nil);
+    MK_SYM(lambda);
+    MK_SYM(set);
+
+    f_quote = MK_FXD(quote);
+
+    MK_FXD(if);
+    MK_FXD(and);
+    MK_FXD(or);
+    MK_FXD(set);
+    MK_FXD(define);
+    MK_FXD(let);
+    MK_FXD(while);
+    MK_FXD(lambda);
+
+    MK_PRM(gensym);
+    MK_PRM(find);
+
+    p_eval_symbol = MK_PRM(eval_symbol);
+    p_eval_pair   = MK_PRM(eval_pair);
+    p_apply_expr  = MK_PRM(apply_expr);
+    p_apply_form  = MK_PRM(apply_form);
+
+    MK_PRM(form);
+    MK_PRM(eval);
+    MK_PRM(apply);
+
+    defineValue("nil", NIL);
 }
 
 void stopEnkiLibrary() {

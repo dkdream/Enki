@@ -158,6 +158,16 @@ extern bool symbol_Create(TextBuffer value, Symbol *target) {
     return true;
 }
 
+extern bool symbol_Convert(const char* value, Symbol* target) {
+    if (!value) return false;
+
+    TextBuffer data = BUFFER_INITIALISER;
+    data.position = strlen(value);
+    data.buffer   = (char*)value;
+
+    return symbol_Create(data, target);
+}
+
 /*****************
  ** end of file **
  *****************/

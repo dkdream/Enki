@@ -52,7 +52,7 @@ extern void fatal(const char *reason, ...)
     exit(1);
 }
 
-extern bool apply(Node fun, Node args, Node env, Target result)
+extern bool apply(Node fun, Node args, const Node env, Target result)
 {
     GC_PROTECT(args);
 
@@ -91,7 +91,8 @@ extern bool apply(Node fun, Node args, Node env, Target result)
     return false;
 }
 
-extern bool expand(Node expr, Node env, Target result)
+// expand all forms
+extern bool expand(const Node expr, const Node env, Target result)
 {
     Node list = expr;
     Node head = NIL;
@@ -127,9 +128,6 @@ extern bool expand(Node expr, Node env, Target result)
         // check if the reference is a form
         if (!isKind(value, nt_form)) goto list_begin;
 
-        // get the form function
-        //oop func = getFunc(reference);
-
         // apply the form function to the rest of the list
         if (!apply(value, tail, env, &list)) goto error;
     }
@@ -159,7 +157,8 @@ extern bool expand(Node expr, Node env, Target result)
     return false;
 }
 
-extern bool encode(Node expr, Node env, Target result)
+// translate know symbols to known values
+extern bool encode(const Node expr, const Node env, Target result)
 {
     Node list = expr;
     Node head = NIL;
@@ -183,9 +182,12 @@ extern bool encode(Node expr, Node env, Target result)
         Node value = NIL;
         // check if the enviroment
         alist_Get(env.pair, head, &value);
-        if (isKind(value, nt_fixed)
-            || isKind(value, nt_primitive)) {
+        switch (getKind(value)) {
+        case nt_fixed:
+        case nt_primitive:
             head = value;
+        default:
+            break;
         }
     }
 
@@ -223,9 +225,9 @@ extern bool encode(Node expr, Node env, Target result)
     return true;
 }
 
-extern bool eval(Node expr, Node env, Target result)
+extern bool eval(const Node expr, const Node env, Target result)
 {
-    list_SetItem(traceStack, traceDepth++, expr);
+    pushTrace(expr);
 
     Primitive evaluator = 0;
 
@@ -254,7 +256,7 @@ extern bool eval(Node expr, Node env, Target result)
     GC_UNPROTECT(args);
 
  done:
-    --traceDepth;
+    popTrace(expr);
     return true;
 }
 

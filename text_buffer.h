@@ -22,7 +22,7 @@ typedef struct text_buffer TextBuffer;
 
 extern inline void buffer_reset(TextBuffer *tbuf) __attribute__((always_inline nonnull(1)));
 extern inline void buffer_reset(TextBuffer *tbuf) {
-    tbuf->position= 0;
+    tbuf->position = 0;
 }
 
 extern inline void buffer_append(TextBuffer *tbuf, int chr) __attribute__((always_inline nonnull(1)));
