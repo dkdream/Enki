@@ -209,7 +209,7 @@ extern inline unsigned long toSize(unsigned long size_in_pointers) {
 
 extern inline Header fresh_atom(unsigned long size_in_chars) __attribute__((always_inline));
 extern inline Header fresh_atom(unsigned long size_in_chars) {
-    unsigned fullcount = toCount(size_in_chars);
+    unsigned long fullcount = toCount(size_in_chars);
     unsigned long fullsize  = toSize(fullcount);
     fullsize += sizeof(struct gc_header);
 
@@ -233,7 +233,7 @@ extern inline Header fresh_tuple(unsigned long size_in_pointers,
                                  unsigned long prefix_in_chars)
 {
     bool prefix = (0 < prefix_in_chars);
-    unsigned long fullcount = size_in_pointers + 1;
+    unsigned long fullcount = size_in_pointers;
     unsigned long fullsize  = toSize(fullcount);
     fullsize += sizeof(struct gc_header);
 

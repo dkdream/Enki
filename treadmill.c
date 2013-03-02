@@ -334,12 +334,6 @@ extern bool node_Allocate(const Space space,
 
     const Header header = fresh_tuple(toCount(size_in_char), prefix_in_char);
 
-    if (0 >= header->count) {
-        VM_ERROR("unable to add to node size %d from %p",
-                 size_in_char,
-                 space);
-    }
-
     VM_DEBUG(4, "allocating header %p (%d)[%d] for node %p size %d from space %p",
              header,
              header->kind,
@@ -349,7 +343,6 @@ extern bool node_Allocate(const Space space,
              space);
 
     header->atom = (atom ? 1 : 0);
-    header->kind = 0;
 
     if (!space) return true;
 

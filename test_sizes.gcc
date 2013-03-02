@@ -32,7 +32,7 @@ int main(int argc, char **argv)
     Header    header = 0;
     Reference reference   = 0;
 
-    printf("offset state %ld\n",  (long)(&(header->state)));
+    //    printf("offset state %ld\n",  (long)(&(header->state)));
     printf("offset space %ld\n",  (long)(&(header->space)));
     printf("offset before %ld\n", (long)(&(header->before)));
     printf("offset after %ld\n\n",  (long)(&(header->after)));
