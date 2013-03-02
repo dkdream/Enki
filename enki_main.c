@@ -15,14 +15,7 @@ int main(int argc, char **argv)
 {
     startEnkiLibrary();
 
-    FILE* data = fopen("./test_reader.scm", "r");
-
-    if (!data) {
-        printf("unable to open file ./test_reader.scm");
-        return -1;
-    }
-
-    replFile(data);
+    replFile(stdin);
 
     stopEnkiLibrary();
     return 0;

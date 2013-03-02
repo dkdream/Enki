@@ -8,7 +8,7 @@
  **/
 #include "reference.h"
 
-typedef bool (*Operator)(Node args, Node env, Target result);
+typedef void (*Operator)(Node args, Node env, Target result);
 
 struct primitive {
     Symbol   label;

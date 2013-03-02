@@ -44,6 +44,11 @@ Symbol s_nil = 0;
 Symbol s_lambda = 0;
 Symbol s_set = 0;
 
+#define GC_PROTECT(NODE)
+#define GC_UNPROTECT(NODE)
+
+#define SUBR(NAME) void opr_##NAME(Node args, Node env, Target result)
+
 extern void defineValue(Node symbol, const Node value) {
     Node globals;
     pair_GetCdr(enki_globals.pair, &globals);
@@ -51,12 +56,21 @@ extern void defineValue(Node symbol, const Node value) {
     pair_SetCdr(enki_globals.pair, globals);
 }
 
-#define GC_PROTECT(NODE)
-#define GC_UNPROTECT(NODE)
+static unsigned checkArgs(Node args, unsigned min, const char* name)
+{
+    unsigned count  = 0;
+    bool     dotted = false;
 
-#define SUBR(NAME) bool opr_##NAME(Node args, Node env, Target result)
+    list_State(args.pair, &count, &dotted);
 
-static bool eval_binding(Node binding, Node env, Target entry)
+    if (count < min) {
+        fatal("wrong number of arguments (%i) in: %s\n", count, name);
+    }
+
+    return count;
+}
+
+static void eval_binding(Node binding, Node env, Target entry)
 {
     Node symbol = NIL;
     Node expr   = NIL;
@@ -67,10 +81,10 @@ static bool eval_binding(Node binding, Node env, Target entry)
 
     eval(expr, env, &value);
 
-    return pair_Create(symbol, value, entry.pair);
+    pair_Create(symbol, value, entry.pair);
 }
 
-static bool eval_begin(Node body, Node env, Target last)
+static void eval_begin(Node body, Node env, Target last)
 {
     Node expr  = NIL;
     Node value = NIL;
@@ -82,7 +96,6 @@ static bool eval_begin(Node body, Node env, Target last)
     }
 
     ASSIGN(last, value);
-    return true;
 }
 
 static SUBR(if)
@@ -99,9 +112,9 @@ static SUBR(if)
     eval(tst, env, &val);
 
     if (isNil(val)) {
-        return eval_begin(e_body, env, result);
+        eval_begin(e_body, env, result);
     } else {
-        return eval(t_expr, env, result);
+        eval(t_expr, env, result);
     }
 }
 
@@ -119,7 +132,6 @@ static SUBR(and)
     }
 
     ASSIGN(result, ans);
-    return true;;
 }
 
 static SUBR(or)
@@ -136,7 +148,6 @@ static SUBR(or)
     }
 
     ASSIGN(result, ans);
-    return true;
 }
 
 static SUBR(set)
@@ -169,8 +180,6 @@ static SUBR(set)
     pair_SetCdr(entry, value);
 
     ASSIGN(result,value);
-
-    return true;;
 }
 
 static SUBR(define)
@@ -198,8 +207,6 @@ static SUBR(define)
     GC_UNPROTECT(value);
 
     ASSIGN(result, value);
-
-    return true;
 }
 
 static SUBR(let)
@@ -218,8 +225,6 @@ static SUBR(let)
     eval_begin(body, env2, result);
 
     GC_UNPROTECT(env2);
-
-    return true;
 }
 
 static SUBR(while)
@@ -238,8 +243,6 @@ static SUBR(while)
 
         eval_begin(body, env, result);
     }
-
-    return true;
 }
 
 static SUBR(gensym)
@@ -252,7 +255,7 @@ static SUBR(gensym)
 
     sprintf(data, "0x%.10lx", current);
 
-    return symbol_Convert(data, result.symbol);
+    symbol_Convert(data, result.symbol);
 }
 
 static SUBR(find)
@@ -285,19 +288,17 @@ static SUBR(find)
 
     GC_UNPROTECT(lst);
     GC_UNPROTECT(tst);
-
-    return true;
 }
 
 static SUBR(quote)
 {
-    return pair_GetCar(args.pair, result);
+    pair_GetCar(args.pair, result);
 }
 
 static SUBR(lambda)
 {
     pair_Create(args, env, result.pair);
-    return setKind(*result.reference, nt_expression);
+    setKind(*result.reference, nt_expression);
 }
 
 static SUBR(eval_symbol)
@@ -314,8 +315,6 @@ static SUBR(eval_symbol)
             fatal("undefined variable: %s", symbol_Text(symbol.symbol));
         }
     }
-
-    return true;
 }
 
 
@@ -351,7 +350,6 @@ static SUBR(eval_pair)
 
  done:
     popTrace();
-    return true;
 }
 
 static SUBR(eval)
@@ -369,76 +367,82 @@ static SUBR(eval)
     expand(expr, cenv, &expr);
     encode(expr, cenv, &expr);
     eval(expr, cenv, result);
-
-    return true;
 }
 
 static SUBR(apply_expr)
 {
-    return true;
-#if 0
-    oop fun       = car(args);
-    oop arguments = cdr(args);
-    oop defn      = get(fun, Expr,defn);
-    oop formals   = car(defn);
-    oop body      = cdr(defn);
-    oop tmp       = nil;
-    oop ans       = nil;
+    Node fun       = NIL;
+    Node arguments = NIL;
+    Node defn      = NIL;
+    Node cenv      = NIL;
+    Node formals   = NIL;
+    Node body      = NIL;
+    Node tmp       = NIL;
 
-    GC_PROTECT(defn);
-    GC_PROTECT(env);
+    pair_GetCar(args.pair, &fun); //(fun . arguments)
+    pair_GetCdr(args.pair, &arguments);
+
+    pair_GetCar(fun.pair, &defn); //((formals) . body)
+    pair_GetCdr(fun.pair, &cenv); // retreve the closure enviroment
+
+    pair_GetCar(defn.pair, &formals);
+    pair_GetCdr(defn.pair, &body);
+
+    Node vlist = arguments;
+
+    GC_PROTECT(cenv);
     GC_PROTECT(tmp);
-
-    // retreve the closure enviroment
-    env = get(fun, Expr,env);
 
     // bind parameters to values
     // extending the closure enviroment
-    oop argl = arguments;
-    while (is(Pair, formals)) {
-        if (!is(Pair, argl)) {
+    while (isKind(formals, nt_pair)) {
+        Node var = NIL;
+        Node val = NIL;
+
+        if (!isKind(vlist, nt_pair)) {
             fprintf(stderr, "\nerror: too few arguments applying ");
-            fdump(stderr, fun);
-            fprintf(stderr, " to ");
-            fdumpln(stderr, arguments);
+            dump(stderr, fun);
+            fprintf(stderr, "\n to ");
+            dump(stderr, arguments);
+            fprintf(stderr, "\n");
             fatal(0);
         }
-        tmp     = newPair(car(formals), car(argl));
-        env     = newPair(tmp, env);
-        formals = cdr(formals);
-        argl    = cdr(argl);
+
+        pair_GetCar(formals.pair, &var);
+        pair_GetCar(vlist.pair,   &val);
+
+        pair_GetCdr(formals.pair, &formals);
+        pair_GetCdr(vlist.pair,   &vlist);
+
+        pair_Create(var, val, &tmp.pair);
+        pair_Create(tmp, cenv, &cenv.pair);
     }
 
     // bind (rest) parameter to remaining values
     // extending the closure enviroment
-    if (is(Symbol, formals)) {
-        tmp  = newPair(formals, argl);
-        env  = newPair(tmp, env);
-        argl = nil;
+    if (isKind(formals, nt_symbol)) {
+        pair_Create(formals, vlist, &tmp.pair);
+        pair_Create(tmp, cenv, &cenv.pair);
+        vlist = NIL;
     }
 
     // check --
-    if (nil != argl) {
+    if (!isNil(vlist)) {
         fprintf(stderr, "\nerror: too many arguments applying ");
-        fdump(stderr, fun);
-        fprintf(stderr, " to ");
-        fdumpln(stderr, arguments);
+        dump(stderr, fun);
+        fprintf(stderr, "\n to ");
+        dump(stderr, arguments);
+        fprintf(stderr, "\n");
         fatal(0);
     }
 
+    GC_PROTECT(tmp);
+
     // process the body of the lambda
     // and return the last value
-    while (is(Pair, body)) {
-        ans  = eval(car(body), env);
-        body = cdr(body);
-    }
+    eval_begin(body, cenv, result);
 
-    GC_UNPROTECT(tmp);
-    GC_UNPROTECT(env);
-    GC_UNPROTECT(defn);
-
-    return ans;
-#endif
+    GC_PROTECT(cenv);
 }
 
 static SUBR(apply_form)
@@ -451,7 +455,7 @@ static SUBR(apply_form)
     pair_GetCdr(args.pair, &cargs);
     pair_GetCar(form.pair, &func);
 
-    return apply(func, cargs, env, result);
+    apply(func, cargs, env, result);
 }
 
 static SUBR(apply)
@@ -466,7 +470,7 @@ static SUBR(apply)
 
     if (isNil(cenv)) cenv = env;
 
-    return apply(func, cargs, cenv, result);
+    apply(func, cargs, cenv, result);
 }
 
 static SUBR(form)
@@ -474,10 +478,8 @@ static SUBR(form)
     Node func = NIL;
     pair_GetCar(args.pair, &func);
 
-    bool rtn = pair_Create(func, NIL, result.pair);
+    pair_Create(func, NIL, result.pair);
     setKind(*(result.pair), nt_form);
-
-    return rtn;
 }
 
 

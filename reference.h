@@ -161,7 +161,8 @@ typedef union node_target Target;
 
 #define ASSIGN(target, node) (target.reference[0] = node.reference)
 
-
+extern inline void enki_noop() __attribute__((always_inline));
+extern inline void enki_noop() { }
 
 extern inline bool isNil(Node node) __attribute__((always_inline));
 extern inline bool isNil(Node node) {
@@ -174,7 +175,6 @@ extern inline bool isIdentical(const Node left, const Node right) {
 }
 
 /* */
-extern void debug_Message(const char *filename, unsigned int linenum, bool newline, const char *format, ...);
 extern void startEnkiLibrary();
 extern void stopEnkiLibrary();
 

@@ -300,7 +300,7 @@ extern bool list_Map(Operator func, Pair pair, const Node env, Pair* target) {
         Node input  = pair->car;
         Node output = NIL;
 
-        if (!func(input, env, &output)) return false;
+        func(input, env, &output);
         if (!pair_SetCar(last, output)) return false;
 
         Pair hold = 0;

@@ -62,30 +62,15 @@
  **     if we are working with a node it must be black or gray.
  **   end
  ***/
-
 #include "treadmill.h"
 #include "all_types.inc"
 #include "node.h"
+#include "debug.h"
 
 /* */
 #include <string.h>
 #include <stdlib.h>
 
-extern unsigned int ea_global_debug;
-
-#define VM_ERROR(args...) error_at_line(1, 0,  __FILE__,  __LINE__, args)
-
-#if 1
-#define VM_DEBUG(level, args...) ({ typeof (level) hold__ = (level); if (hold__ <= ea_global_debug) debug_Message(__FILE__,  __LINE__, true, args); })
-#else
-#define VM_DEBUG(level, args...) vm_noop()
-#endif
-
-#if 1
-#define VM_ON_DEBUG(level, arg) ({ typeof (level) hold__ = (level); if (hold__ <= ea_global_debug) arg; })
-#else
-#define VM_ON_DEBUG(level, args...) vm_noop()
-#endif
 
 /* */
 static inline void fast_lock(int *address) {

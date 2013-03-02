@@ -60,7 +60,7 @@ extern void popTrace() {
     pair_GetCdr(traceStack, &traceStack);
 }
 
-extern bool apply(Node fun, Node args, const Node env, Target result)
+extern void apply(Node fun, Node args, const Node env, Target result)
 {
     GC_PROTECT(args);
 
@@ -68,9 +68,9 @@ extern bool apply(Node fun, Node args, const Node env, Target result)
         // Primitive -> Operator
         if (isKind(fun, nt_primitive)) {
             Operator function = fun.primitive->function;
-            if (!function(args, env, result)) goto error;
+            function(args, env, result);
             GC_UNPROTECT(args);
-            return true;
+            goto done;
         }
 
         // Expression -> p_apply_expr
@@ -95,12 +95,12 @@ extern bool apply(Node fun, Node args, const Node env, Target result)
     dump(stderr, fun);
     //    fatal(0);
 
+ done:
     GC_UNPROTECT(args);
-    return false;
 }
 
 // expand all forms
-extern bool expand(const Node expr, const Node env, Target result)
+extern void expand(const Node expr, const Node env, Target result)
 {
     Node list = expr;
     Node head = NIL;
@@ -137,7 +137,7 @@ extern bool expand(const Node expr, const Node env, Target result)
         if (!isKind(value, nt_form)) goto list_begin;
 
         // apply the form function to the rest of the list
-        if (!apply(value, tail, env, &list)) goto error;
+        apply(value, tail, env, &list);
     }
 
  list_begin:
@@ -151,22 +151,10 @@ extern bool expand(const Node expr, const Node env, Target result)
     GC_UNPROTECT(tail);
     GC_UNPROTECT(head);
     GC_UNPROTECT(list);
-
-    return true;
-
- error:
-    fprintf(stderr, "\nexpand error");
-    //   fatal(0)
-
-    GC_UNPROTECT(tail);
-    GC_UNPROTECT(head);
-    GC_UNPROTECT(list);
-
-    return false;
 }
 
 // translate know symbols to known values
-extern bool encode(const Node expr, const Node env, Target result)
+extern void encode(const Node expr, const Node env, Target result)
 {
     Node list = expr;
     Node head = NIL;
@@ -229,11 +217,9 @@ extern bool encode(const Node expr, const Node env, Target result)
     GC_UNPROTECT(tail);
     GC_UNPROTECT(head);
     GC_UNPROTECT(list);
-
-    return true;
 }
 
-extern bool eval(const Node expr, const Node env, Target result)
+extern void eval(const Node expr, const Node env, Target result)
 {
     pushTrace(expr);
 
@@ -265,7 +251,6 @@ extern bool eval(const Node expr, const Node env, Target result)
 
  done:
     popTrace();
-    return true;
 }
 
 /*****************
