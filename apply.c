@@ -24,7 +24,6 @@
 #define GC_UNPROTECT(V)
 
 static Pair traceStack = 0;
-static int  traceDepth = 0;
 
 // print error message followed be oop stacktrace
 extern void fatal(const char *reason, ...)
@@ -40,16 +39,25 @@ extern void fatal(const char *reason, ...)
 
     if (!traceStack) exit(1);
 
-    int inx = traceDepth;
-    while (inx--) {
+    for(; traceStack ;) {
         Node value;
-        list_GetItem(traceStack, inx, &value);
-        printf("%3d: ", inx);
-        dump(stdout, value);
-        printf("\n");
+        if (pair_GetCar(traceStack, &value)) {
+            //printf("%3d: ", inx);
+            dump(stdout, value);
+            printf("\n");
+        }
+        if (!pair_GetCdr(traceStack, &traceStack)) break;
     }
 
     exit(1);
+}
+
+extern void pushTrace(const Node expr) {
+    pair_Create(expr, traceStack, &traceStack);
+}
+
+extern void popTrace() {
+    pair_GetCdr(traceStack, &traceStack);
 }
 
 extern bool apply(Node fun, Node args, const Node env, Target result)
@@ -256,7 +264,7 @@ extern bool eval(const Node expr, const Node env, Target result)
     GC_UNPROTECT(args);
 
  done:
-    popTrace(expr);
+    popTrace();
     return true;
 }
 

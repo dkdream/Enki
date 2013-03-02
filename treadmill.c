@@ -71,6 +71,22 @@
 #include <string.h>
 #include <stdlib.h>
 
+extern unsigned int ea_global_debug;
+
+#define VM_ERROR(args...) error_at_line(1, 0,  __FILE__,  __LINE__, args)
+
+#if 1
+#define VM_DEBUG(level, args...) ({ typeof (level) hold__ = (level); if (hold__ <= ea_global_debug) debug_Message(__FILE__,  __LINE__, true, args); })
+#else
+#define VM_DEBUG(level, args...) vm_noop()
+#endif
+
+#if 1
+#define VM_ON_DEBUG(level, arg) ({ typeof (level) hold__ = (level); if (hold__ <= ea_global_debug) arg; })
+#else
+#define VM_ON_DEBUG(level, args...) vm_noop()
+#endif
+
 /* */
 static inline void fast_lock(int *address) {
     return;
@@ -87,7 +103,7 @@ extern inline bool initialize_StartNode(const Space space, const Header node) {
     memset(node, 0, sizeof(struct gc_header));
 
     node->count  = 0;
-    node->color  = nc_orange;
+    node->color  = nc_unknown;
     node->atom   = 1;
     node->inside = 0;
     node->prefix = 0;
@@ -117,8 +133,8 @@ extern inline Color space_Hidden(const Space space) {
 extern bool insert_After(const Header mark, const Header node) {
     if (!mark)        VM_ERROR("no mark");
     if (!node)        VM_ERROR("no node");
-    if (node->before) VM_ERROR("node %p is not unlinked", node);
-    if (node->after)  VM_ERROR("node %p is not unlinked", node);
+    if (node->before) VM_ERROR("node %p is not unlinked (before %p)", node, node->before);
+    if (node->after)  VM_ERROR("node %p is not unlinked (after %p)", node, node->after);
 
     const Header after  = mark->after;
 
@@ -134,8 +150,8 @@ extern bool insert_After(const Header mark, const Header node) {
 extern bool insert_Before(const Header mark, const Header node) {
     if (!mark)        VM_ERROR("no mark");
     if (!node)        VM_ERROR("no node");
-    if (node->before) VM_ERROR("node %p is not unlinked", node);
-    if (node->after)  VM_ERROR("node %p is not unlinked", node);
+    if (node->before) VM_ERROR("node %p is not unlinked (before %p)", node, node->before);
+    if (node->after)  VM_ERROR("node %p is not unlinked (after %p)", node, node->after);
 
     const Header before = mark->before;
 
@@ -172,43 +188,97 @@ extern bool extract_From(const Header node) {
     return true;
 }
 
-extern bool scan_Node(const Node node) __attribute__((always_inline));
-extern bool scan_Node(const Node node) {
-    if (!node.reference) return false;
 
-    const Header reference = asHeader(node.reference);
-    const Space  space     = reference->space;
+//extern inline bool darken_Node(const Node node) __attribute__((always_inline));
+extern bool darken_Node(const Node node) {
+    if (!node.reference) return true;
+
+    const Header header = asHeader(node);
+    const Space  space = header->space;
 
     if (!space) return true;
 
-    VM_DEBUG(5, "scanning (%d) node %p in space %p",
-             getKind(node),
-             reference,
-             space);
+    if (header->color == space->visiable) return true;
 
-    if (reference->color != space->visiable) {
-        VM_ERROR("scan error: scanning a clear or white node %p", reference);
+    VM_DEBUG(5, "darkening node %p (%d)[%d]",
+             node,
+             getKind(node),
+             header->count);
+
+    const Header scan   = space->scan;
+    const Header top    = space->top;
+
+    if (header == scan) {
+        if (top != scan) {
+            return false;
+        }
+    }
+
+    if (!extract_From(header)) {
         return false;
     }
 
-    if (reference->atom) return true;
+    if (top == scan) {
+        if (!insert_After(top, header)) {
+            return false;
+        }
+        header->color = space->visiable;
+        space->scan  = header;
+        return true;
+    }
 
-    Reference *slot = (Reference *)node.reference;
+#ifndef OPTION_TWO
+        if (!insert_After(top, header)) {
+            return false;
+        }
+#else
+        if (!insert_Before(scan, header)) {
+            return false;
+        }
+#endif
 
-    if (1 > reference->count) return true;
+    header->color = space->visiable;
+    return true;
+}
+
+extern inline bool scan_Node(const Header header) __attribute__((always_inline));
+extern inline bool scan_Node(const Header header) {
+    if (!header) return false;
+
+    const Space space = header->space;
+
+    if (!space) return true;
+
+    if (header->color != space->visiable) {
+        VM_ERROR("scan error: scanning a clear or white node %p", header);
+        return false;
+    }
+
+    if (header->atom) return true;
+    if (1 > header->count) return true;
+
+    VM_DEBUG(5, "scanning header %p (%d)[%d] in space %p",
+             header,
+             header->kind,
+             header->count,
+             space);
+
+    Reference *slot = (Reference*) asReference(header);
 
     VM_DEBUG(5, "scan begin (%p)", slot);
-    if (reference->prefix) {
+
+    if (header->prefix) {
         int inx;
-        for (inx = 1; inx < reference->count; ++inx) {
+        for (inx = 1; inx < header->count; ++inx) {
             if (!darken_Node(slot[inx])) return false;
         }
     } else {
         int inx;
-        for (inx = 0; inx < reference->count; ++inx) {
+        for (inx = 0; inx < header->count; ++inx) {
             if (!darken_Node(slot[inx])) return false;
         }
     }
+
     VM_DEBUG(5, "scan end (%p)", slot);
     return true;
 }
@@ -262,11 +332,19 @@ extern bool node_Allocate(const Space space,
         }
     }
 
-    const Header    header = fresh_tuple(toCount(size_in_char), prefix_in_char);
-    const Reference result = (*target.reference) = asReference(header);
+    const Header header = fresh_tuple(toCount(size_in_char), prefix_in_char);
 
-    VM_DEBUG(4, "allocating node %p of size %d from space %p",
-             result,
+    if (0 >= header->count) {
+        VM_ERROR("unable to add to node size %d from %p",
+                 size_in_char,
+                 space);
+    }
+
+    VM_DEBUG(4, "allocating header %p (%d)[%d] for node %p size %d from space %p",
+             header,
+             header->kind,
+             header->count,
+             asReference(header),
              size_in_char,
              space);
 
@@ -280,12 +358,14 @@ extern bool node_Allocate(const Space space,
     header->space  = space;
 
     // insert into the black chain
-    if (!insert_Before(space->free, result)) {
-        VM_ERROR("unable to add to %p to black list of %p",
-                 result,
+    if (!insert_Before(space->free, header)) {
+        VM_ERROR("unable to add to node %p to black list of %p",
+                 asReference(header),
                  space);
         return false;
     }
+
+    target.reference[0] = asReference(header);
 
     // only return (true) after its in the black chain
     return true;
@@ -317,6 +397,8 @@ extern bool space_Init(const Space space) {
 
     // set root to visible
     root->color = space->visiable;
+    up->color   = space_Hidden(space);
+    down->color = space_Hidden(space);
 
     space->top    = up;
     space->scan   = root;
@@ -331,6 +413,7 @@ extern bool space_Init(const Space space) {
 
     space->start_clinks.before = &space->start_clinks;
     space->start_clinks.after  = &space->start_clinks;
+    space->start_clinks.index  = 0;
 
     return true;
 }
@@ -430,42 +513,44 @@ extern bool space_Flip(const Space space) {
 
     space->scan = root; // set the start of the new gray chain
 
-    Clink *start = space->start_clinks.after;
+    Clink *start = &space->start_clinks;
     Clink *end   = &space->start_clinks;
 
     /* CLINK_LOCK */
-    for ( ; start != end ; ) {
-        unsigned   size  = start->size;
-        Reference *array = start->array;
+    do {
+        unsigned size = start->index;
+        Target *slots = start->array;
 
-        start = start->after;
-
-        for ( ; size-- ; ) {
-            Reference value = array[size];
-            if (!darken_Node(value)) {
-                VM_ERROR("unable to darken a clink value");
-            }
+        if (size > CLINK_COUNT) {
+            VM_ERROR("invalid clink (%p)", start);
         }
-    }
+
+        for (; 0 < size-- ;) {
+            if (!slots[size].reference) continue;
+
+            Reference value = slots[size].reference[0];
+
+            VM_DEBUG(4, "darkening root node %p (%d) in space %p",
+                     value,
+                     getKind(value),
+                     space);
+
+            darken_Node(value);
+        }
+        start = start->after;
+    } while ( start != end );
     /* CLINK_UNLOCK */
 
     VM_DEBUG(5, "flip space %p end", space);
     return true;
 }
 
-extern bool clink_Init(Clink *link, unsigned size, Reference* array) {
+extern bool clink_Begin(Clink *link) {
     if (!link)     return false;
-    if (!array)    return false;
-    if (0 >= size) return false;
 
     link->before = link;
     link->after  = link;
-    link->size   = size;
-    link->array  = array;
-
-    for ( ; size-- ; ) {
-        array[size] = 0;
-    }
+    link->index  = 0;
 
     const Space space = _zero_space;
 
@@ -487,10 +572,19 @@ extern bool clink_Init(Clink *link, unsigned size, Reference* array) {
     return true;
 }
 
-extern bool clink_Drop(Clink *link) {
+extern bool clink_Manage(Clink *link, Target slot) {
+    if (!link)           return false;
+    if (!slot.reference) return false;
+    if (CLINK_COUNT <= link->index) return false;
+    link->array[link->index] = slot;
+    ++(link->index);
+    return true;
+}
+
+extern bool clink_End(Clink *link) {
     if (!link) return false;
 
-    link->size = 0;
+    link->index = 0;
 
     const Space space = _zero_space;
 

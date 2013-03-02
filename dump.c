@@ -101,18 +101,6 @@ extern bool print(FILE* output, Node node) {
                 node.reference);
         return true;
 
-    case nt_input:
-        fprintf(output, "input(%p %u)",
-                node.reference,
-                node.input->input);
-        return true;
-
-    case nt_output:
-        fprintf(output, "output(%p %u)",
-                node.reference,
-                node.output->output);
-        return true;
-
     case nt_pair:
         fprintf(output, "pair(%p (%p, %p))",
                 node.reference,
@@ -171,18 +159,6 @@ extern bool dump(FILE* output, Node node) {
         fprintf(output, "primitive(%p %s)",
                 node.reference,
                 (const char*)(node.primitive->label->value));
-        return true;
-
-    case nt_input:
-        fprintf(output, "input(%p %u)",
-                node.reference,
-                node.input->input);
-        return true;
-
-    case nt_output:
-        fprintf(output, "output(%p %u)",
-                node.reference,
-                node.output->output);
         return true;
 
     case nt_pair:
@@ -302,20 +278,6 @@ extern void prettyPrint(FILE* output, Node node) {
             fprintf(output, "primitive(%p %s)",
                     node.reference,
                     (const char*)(node.primitive->label->value));
-            return;
-
-        case nt_input:
-            offset += 20;
-            fprintf(output, "input(%p %u)",
-                    node.reference,
-                    node.input->input);
-            return;
-
-        case nt_output:
-            offset += 20;
-            fprintf(output, "output(%p %u)",
-                    node.reference,
-                    node.output->output);
             return;
 
         case nt_pair:

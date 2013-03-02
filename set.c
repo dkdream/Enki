@@ -176,7 +176,6 @@ extern bool set_Contains(Set set, Node value) {
 
     for ( ; ; here = here->next) {
         if (!here) {
-            VM_ERROR("Set Error");
             return false;
         }
         if (index < here->size) break;
@@ -208,7 +207,6 @@ extern bool set_Add(Set set, Node value) {
 
     for ( ; ; here = here->next) {
         if (!here) {
-            VM_ERROR("Set Error");
             return false;
         }
         if (index < here->size) break;
@@ -249,7 +247,6 @@ extern bool set_Remove(Set set, Node value) {
 
     for ( ; ; here = here->next) {
         if (!here) {
-            VM_ERROR("Set Error");
             return false;
         }
         if (index < here->size) break;
@@ -382,10 +379,8 @@ extern void set_Print(FILE* output, Set set) {
     fprintf(output, "}");
 
     if (total != set->count) {
-        VM_ERROR("Set Count Error: seen %u cached %u", total, set->count);
+        //VM_ERROR("Set Count Error: seen %u cached %u", total, set->count);
     }
-
-
 }
 
 /*****************

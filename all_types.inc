@@ -8,9 +8,7 @@
  **/
 
 #include "count.h"
-#include "input.h"
 #include "integer.h"
-#include "output.h"
 #include "pair.h"
 #include "primitive.h"
 #include "symbol.h"

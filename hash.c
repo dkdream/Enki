@@ -83,7 +83,6 @@ extern bool hash_Find(Hash table, Symbol name, Node *target) {
 
     for ( ; ; here = here->next) {
         if (!here) {
-            VM_ERROR("%s", "Hash Table Error");
             return false;
         }
         if (index < here->size) break;
@@ -116,7 +115,6 @@ extern bool hash_Change(Hash table, Symbol name, Node value) {
 
     for ( ; ; here = here->next) {
         if (!here) {
-            VM_ERROR("%s", "Hash Table Error");
             return false;
         }
         if (index < here->size) break;
@@ -155,7 +153,6 @@ extern bool hash_Add(Hash table, Symbol name, Node value) {
 
     for ( ; ; here = here->next) {
         if (!here) {
-            VM_ERROR("%s", "Hash Table Error");
             return false;
         }
         if (index < here->size) break;
@@ -193,7 +190,6 @@ extern bool hash_Remove(Hash table, Symbol name) {
 
     for ( ; ; here = here->next) {
         if (!here) {
-            VM_ERROR("%s", "Hash Table Error");
             return false;
         }
         if (index < here->size) break;
@@ -264,7 +260,7 @@ extern void hash_Print(FILE* output, Hash table) {
     fprintf(output, "}");
 
     if (total != table->count) {
-        VM_ERROR("Hash Count Error: seen %u cached %u", total, table->count);
+        //VM_ERROR("Hash Count Error: seen %u cached %u", total, table->count);
     }
 
     return;

@@ -657,9 +657,13 @@ extern void replFile(FILE *stream)
         }
 #endif
 
-        expand(obj, enki_globals, &obj);
-        encode(obj, enki_globals, &obj);
-        eval(obj,   enki_globals, &obj);
+        Node globals = NIL;
+
+        pair_GetCdr(enki_globals.pair, &globals);
+
+        expand(obj, globals, &obj);
+        encode(obj, globals, &obj);
+        eval(obj,   globals, &obj);
 
         if (stream == stdin) {
             printf(" => ");

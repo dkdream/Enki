@@ -32,8 +32,6 @@ static struct _internal_SymbolTable *_global_symboltable = 0;
 extern void init_global_symboltable() {
     if (_global_symboltable) return;
 
-    VM_DEBUG(1, "init_global_symboltable");
-
     _empty_symbol = (Symbol) asReference(fresh_atom(sizeof(struct symbol)));
 
     setKind(_empty_symbol, nt_symbol);
@@ -75,7 +73,6 @@ extern void check_SymbolTable__(const char* filename, unsigned line) {
 
     printf("end\n");
 }
-
 
 static inline HashCode hash_full(TextBuffer value) {
     HashCode result = 5381;
@@ -152,6 +149,8 @@ extern bool symbol_Create(TextBuffer value, Symbol *target) {
     result->hashcode = hashcode;
 
     memcpy(result->value, value.buffer, size);
+
+    ((char*)(result->value))[size] = 0;
 
     _global_symboltable->row[row].first = entry;
 

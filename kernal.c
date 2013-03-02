@@ -16,9 +16,15 @@
 
 static bool __initialized = false;
 
-unsigned int ea_global_debug = 0;
-Space     _zero_space = 0;
+//
+unsigned int ea_global_debug = 5;
 
+//
+struct gc_treadmill enki_zero_space;
+
+Space _zero_space;
+
+// pair(nil, alist)
 Node enki_globals = NIL;
 
 Node      f_quote = NIL;       // quote a syntax tree
@@ -38,16 +44,11 @@ Symbol s_nil = 0;
 Symbol s_lambda = 0;
 Symbol s_set = 0;
 
-extern void defineValue(Node symbol, const Node value);
-extern bool fixed_Function(Node fixed, Target function);
-
-void fill_Symbol(const char* value, Symbol* result) {
-    TextBuffer hold = BUFFER_INITIALISER;
-
-    hold.buffer   = (char*)value;
-    hold.position = strlen(value);
-
-    symbol_Create(hold, result);
+extern void defineValue(Node symbol, const Node value) {
+    Node globals;
+    pair_GetCdr(enki_globals.pair, &globals);
+    alist_Add(globals.pair, symbol, value, &globals.pair);
+    pair_SetCdr(enki_globals.pair, globals);
 }
 
 #define GC_PROTECT(NODE)
@@ -337,7 +338,7 @@ static SUBR(eval_pair)
     if (isKind(head, nt_fixed)) {
         // apply Fixed to un-evaluated arguments
         Node func = NIL;
-        fixed_Function(head, &func);
+        pair_GetCar(head.pair, &func);
         apply(func, tail, env, result);
         goto done;
     }
@@ -444,16 +445,13 @@ static SUBR(apply_form)
 {
     Node form;
     Node cargs;
+    Node func;
 
     pair_GetCar(args.pair, &form);
     pair_GetCdr(args.pair, &cargs);
+    pair_GetCar(form.pair, &func);
 
-#if 0
-    form_Function(form, &func);
     return apply(func, cargs, env, result);
-#endif
-
-    return true;
 }
 
 static SUBR(apply)
@@ -473,32 +471,63 @@ static SUBR(apply)
 
 static SUBR(form)
 {
-#if 0
-    arity1(args, "form");
-    return newForm(car(args));
-#endif
-    return true;
+    Node func = NIL;
+    pair_GetCar(args.pair, &func);
+
+    bool rtn = pair_Create(func, NIL, result.pair);
+    setKind(*(result.pair), nt_form);
+
+    return rtn;
 }
 
 
 static Primitive definePrimitive(const char* name, Operator func) {
-    return 0;
+    Symbol    label = 0;
+    Primitive prim  = 0;
+
+    symbol_Convert(name, &label);
+    primitive_Create(label, func, &prim);
+
+    defineValue(label, prim);
+
+    return prim;
 }
 
 static Node defineFixed(const char* name, Operator func) {
-    return NIL;
+    Node      fixed = NIL;
+    Symbol    label = 0;
+    Primitive prim  = 0;
+
+    symbol_Convert(name, &label);
+    primitive_Create(label, func, &prim);
+
+    pair_Create(prim, NIL, &(fixed.pair));
+
+    setKind(fixed, nt_fixed);
+
+    defineValue(label, fixed);
+
+    return fixed;
 }
 
-#define MK_SYM(x)  fill_Symbol(#x, &s_ ##x)
+#define MK_SYM(x) symbol_Convert(#x, &s_ ##x)
 #define MK_PRM(x) definePrimitive(#x, opr_ ## x);
 #define MK_FXD(x) defineFixed(#x, opr_ ## x);
 
 void startEnkiLibrary() {
     if (__initialized) return;
 
+    space_Init(&enki_zero_space);
+
+    _zero_space = &enki_zero_space;
+
+    clink_Manage(&(enki_zero_space.start_clinks), &enki_globals);
+
     init_global_symboltable();
 
-    fill_Symbol(".", &s_dot);
+    pair_Create(NIL,NIL, &enki_globals.pair);
+
+    symbol_Convert(".", &s_dot);
 
     MK_SYM(quasiquote);
     MK_SYM(quote);
@@ -532,10 +561,8 @@ void startEnkiLibrary() {
     MK_PRM(form);
     MK_PRM(eval);
     MK_PRM(apply);
-
-    defineValue("nil", NIL);
 }
 
 void stopEnkiLibrary() {
     if (!__initialized) return;
-}
+ }

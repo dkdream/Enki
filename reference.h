@@ -32,18 +32,22 @@
 typedef enum node_type {
     nt_unknown,
     nt_count,
-    nt_input,
     nt_integer,
-    nt_output,
     nt_pair,
     nt_primitive,  // like maru Subr
     nt_symbol,
     nt_text,
     nt_tuple,      // fixed size tuple (like maru _Array)
 
-    nt_expression, // to simulate maru Expr
-    nt_form,       // to simulate maru Form
-    nt_fixed,      // to simulate maru Fixed
+    // these use pairs
+    nt_expression, // to simulate maru Expr  (expr env)
+    nt_form,       // to simulate maru Form  (expr nil)
+    nt_fixed,      // to simulate maru Fixed (expr nil)
+
+#if 0
+    nt_input,
+    nt_output,
+#endif
 
 #if 0
     nt_hash,
@@ -62,6 +66,9 @@ typedef enum result_code {
     rc_throw,
     rc_error,
 } ResultCode;
+
+typedef unsigned long long HashCode;
+typedef unsigned long      Size;
 
 typedef void *Reference;
 /*    */
@@ -93,14 +100,18 @@ node {
     Reference     reference;
     /**/
     Count         count;
-    Input         input;
     Integer       integer;
-    Output        output;
     Pair          pair;
     Primitive     primitive;
     Symbol        symbol;
     Text          text;
     Tuple         tuple;
+
+#if 0
+    Input         input;
+    Output        output;
+#endif
+
 #if 0
     Hash          hash;
     Hash_block    hash_block;
@@ -119,9 +130,7 @@ node_target {
     Reference     *reference;
     /**/
     Count         *count;
-    Input         *input;
     Integer       *integer;
-    Output        *output;
     Pair          *pair;
     Primitive     *primitive;
     Symbol        *symbol;
@@ -129,6 +138,11 @@ node_target {
     Tuple         *tuple;
 
     Node          *node;
+
+#if 0
+    Input         *input;
+    Output        *output;
+#endif
 #if 0
     Hash          *hash;
     Hash_block    *hash_block;
@@ -142,36 +156,12 @@ node_target {
 
 typedef union node_target Target;
 
-typedef unsigned long long HashCode;
-typedef unsigned long      Size;
-
 #define NIL       ((Node)((Reference)0))
 #define NIL_CODE  ((Code)((Reference)0))
 
-//#define TARGET(node)         (Target)(&(node.reference))
 #define ASSIGN(target, node) (target.reference[0] = node.reference)
 
-extern unsigned int ea_global_debug;
-extern struct gc_treadmill* _zero_space;
-extern struct gc_header*    _fooness;
 
-extern void debug_Message(const char *filename, unsigned int linenum, bool newline, const char *format, ...);
-
-/* macros */
-
-#define VM_ERROR(args...) error_at_line(1, 0,  __FILE__,  __LINE__, args)
-
-#if 1
-#define VM_DEBUG(level, args...) ({ typeof (level) hold__ = (level); if (hold__ <= ea_global_debug) debug_Message(__FILE__,  __LINE__, true, args); })
-#else
-#define VM_DEBUG(level, args...) vm_noop()
-#endif
-
-#if 1
-#define VM_ON_DEBUG(level, arg) ({ typeof (level) hold__ = (level); if (hold__ <= ea_global_debug) arg; })
-#else
-#define VM_ON_DEBUG(level, args...) vm_noop()
-#endif
 
 extern inline bool isNil(Node node) __attribute__((always_inline));
 extern inline bool isNil(Node node) {
@@ -184,6 +174,7 @@ extern inline bool isIdentical(const Node left, const Node right) {
 }
 
 /* */
+extern void debug_Message(const char *filename, unsigned int linenum, bool newline, const char *format, ...);
 extern void startEnkiLibrary();
 extern void stopEnkiLibrary();
 

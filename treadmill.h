@@ -73,12 +73,20 @@
 #include "reference.h"
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
+
+#define CLINK_COUNT 5
+
+typedef struct gc_clink      Clink;
+typedef enum   gc_color      Color;
+typedef struct gc_header    *Header;
+typedef struct gc_treadmill *Space;
 
 struct gc_clink {
-    struct gc_clink *before;
-    struct gc_clink *after;
-    unsigned         size;
-    Reference       *array;
+    Clink*   before;
+    Clink*   after;
+    unsigned index;
+    Target   array[CLINK_COUNT];
 };
 
 enum gc_color {
@@ -87,18 +95,12 @@ enum gc_color {
     nc_orange,
 };
 
-typedef struct gc_clink      Clink;
-typedef enum   gc_color      Color;
-typedef struct gc_header    *Header;
-typedef struct gc_treadmill *Space;
-
 #define BITS_PER_WORD (sizeof(long) * 8)
 #define WORD_SIZE     (sizeof(long))
 #define POINTER_SIZE  (sizeof(Node))
 
 struct gc_header {
-    union {
-        unsigned long state __attribute__((__packed__));
+    struct {
         unsigned long count : BITS_PER_WORD - 12 __attribute__((__packed__));
         union {
             unsigned int flags : 12 __attribute__((__packed__));
@@ -118,29 +120,32 @@ struct gc_header {
 };
 
 struct gc_treadmill {
-    enum   gc_color   visiable;
-    struct gc_header *free;   // start of the free    list
-    struct gc_header *bottom; // start of the hidden  list
-    struct gc_header *top;    // end   of the hidden  list
-    struct gc_header *scan;   // end   of the resting list
+    Color  visiable;
+    Header free;   // start of the free    list
+    Header bottom; // start of the hidden  list
+    Header top;    // end   of the hidden  list
+    Header scan;   // end   of the resting list
     /**/
-    struct gc_header  start_up;
-    struct gc_header  start_down;
-    struct gc_header  start_root;
-    struct gc_clink   start_clinks;
+    struct gc_header start_up;
+    struct gc_header start_down;
+    struct gc_header start_root;
+    Clink start_clinks;
 };
 
+extern Space _zero_space;
 
 extern bool space_Init(const Space); // this will erase the contents of the space
 extern bool space_Flip(const Space);
 extern bool space_Scan(const Space, unsigned int);
 
-extern bool clink_Init(Clink *link, unsigned size, Reference* array);
-extern bool clink_Drop(Clink *link);
+extern bool clink_Begin(Clink *link);
+extern bool clink_Manage(Clink *link, Target slot);
+extern bool clink_End(Clink *link);
 
-//extern bool node_ExternalInit(const EA_Type, struct gc_header *);
+//extern bool node_ExternalInit(const EA_Type, Header);
 
-extern bool node_Allocate(struct gc_treadmill *space,
+extern bool darken_Node(const Node node);
+extern bool node_Allocate(Space space,
                           bool atom,
                           Size size_in_char,
                           Size prefix_in_char,
@@ -204,7 +209,7 @@ extern inline unsigned long toSize(unsigned long size_in_pointers) {
 
 extern inline Header fresh_atom(unsigned long size_in_chars) __attribute__((always_inline));
 extern inline Header fresh_atom(unsigned long size_in_chars) {
-    unsigned long fullcount = toCount(size_in_chars);
+    unsigned fullcount = toCount(size_in_chars);
     unsigned long fullsize  = toSize(fullcount);
     fullsize += sizeof(struct gc_header);
 
@@ -228,7 +233,7 @@ extern inline Header fresh_tuple(unsigned long size_in_pointers,
                                  unsigned long prefix_in_chars)
 {
     bool prefix = (0 < prefix_in_chars);
-    unsigned long fullcount = size_in_pointers;
+    unsigned long fullcount = size_in_pointers + 1;
     unsigned long fullsize  = toSize(fullcount);
     fullsize += sizeof(struct gc_header);
 
@@ -238,6 +243,8 @@ extern inline Header fresh_tuple(unsigned long size_in_pointers,
     }
 
     Header header = (Header) malloc(fullsize);
+
+    memset(header, 0, fullsize);
 
     header->count  = fullcount;
     header->color  = nc_unknown;
@@ -253,74 +260,6 @@ extern inline Header fresh_tuple(unsigned long size_in_pointers,
     }
 
     return header;
-}
-
-extern inline bool darken_Node(const Node node) __attribute__((always_inline));
-extern inline bool darken_Node(const Node node) {
-    if (!node.reference) return true;
-
-    const Header value = asHeader(node);
-    const Space  space = value->space;
-
-    if (!space) return true;
-
-    if (value->color == space->visiable) return true;
-
-    VM_DEBUG(5, "darkening (%d) node %p",
-             getKind(node),
-             node.reference);
-
-    const Header scan   = space->scan;
-    const Header top    = space->top;
-
-    if (value == scan) {
-        if (top != scan) {
-            VM_ERROR("%s", "found a clear/white node in the gray chain");
-            return false;
-        }
-    }
-
-    if (!extract_From(value)) {
-        VM_ERROR("unable to extract the node from clear list");
-        return false;
-    }
-
-    if (top == scan) {
-        if (!insert_After(top, value)) {
-            VM_ERROR("unable to add the node to gray list");
-            return false;
-        }
-        value->color = space->visiable;
-        space->scan  = value;
-        return true;
-    }
-
-#ifndef OPTION_TWO
-        if (!insert_After(top, value)) {
-            VM_ERROR("unable to append the node unto gray list");
-            return false;
-        }
-#else
-        if (!insert_Before(scan, value)) {
-            VM_ERROR("unable to insert the node into gray list");
-            return false;
-        }
-#endif
-
-    value->color = space->visiable;
-    return true;
-}
-
-extern inline bool clink_Assign(Clink *link, unsigned index, const Node value) __attribute__((always_inline));
-extern inline bool clink_Assign(Clink *link, unsigned index, const Node value) {
-    if (!link)                return false;
-    if (!link->array)         return false;
-    if (!link->before)        return false;
-    if (!link->after)         return false;
-    if (link->size <= index)  return false;
-    if (!darken_Node(value))  return false;
-    link->array[index] = value.reference;
-    return true;
 }
 
 /* macros */
