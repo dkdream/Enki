@@ -71,6 +71,10 @@ extern bool print(FILE* output, Node node) {
 
     switch (getKind(node)) {
     case nt_unknown:
+        if (isIdentical(node, true_v)) {
+            fprintf(output, "t");
+            return true;
+        }
         fprintf(output, "unknown(%p)",
                 node.reference);
         return true;
@@ -106,9 +110,13 @@ extern bool print(FILE* output, Node node) {
                 node.reference,
                 node.pair->car.reference,
                 node.pair->cdr.reference);
+        return true;
 
     case nt_tuple:
-        break;
+        fprintf(output, "tuple(%p (size=%d))",
+                node.reference,
+                (unsigned) asHeader(node.reference)->count);
+        return true;
 
     default:
         break;
@@ -119,6 +127,7 @@ extern bool print(FILE* output, Node node) {
             node.reference);
     return true;
 }
+
 extern bool dump(FILE* output, Node node) {
     if (!output) return false;
 
@@ -129,6 +138,10 @@ extern bool dump(FILE* output, Node node) {
 
     switch (getKind(node)) {
     case nt_unknown:
+        if (isIdentical(node, true_v)) {
+            fprintf(output, "t");
+            return true;
+        }
         fprintf(output, "unknown(%p)",
                 node.reference);
         return true;

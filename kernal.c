@@ -591,6 +591,37 @@ static SUBR(neq)
     }
 }
 
+static SUBR(iso)
+{
+    Node depth; Node left; Node right;
+    checkArgs(args, "iso", 3, nt_integer, nt_unknown, nt_unknown);
+    fetchArgs(args, &depth, &left, &right, 0);
+
+    if (node_Iso(depth.integer->value, left,right)) {
+        ASSIGN(result, true_v);
+    } else {
+        ASSIGN(result, NIL);
+    }
+}
+
+static SUBR(assert)
+{
+    Node left; Node right;
+    checkArgs(args, "assert", 2, nt_unknown, nt_unknown);
+    fetchArgs(args, &left, &right, 0);
+
+    if (node_Iso(20, left,right)) {
+        ASSIGN(result, true_v);
+    } else {
+        fprintf(stderr, "not iso: ");
+        print(stderr, left);
+        fprintf(stderr, " to: ");
+        print(stderr, left);
+        fprintf(stderr, "\n");
+        fatal(0);
+    }
+}
+
 static SUBR(exit)
 {
     Node value = NIL;
@@ -632,6 +663,29 @@ static SUBR(dumpln)
     Node value = NIL;
     pair_GetCar(args.pair, &value);
     prettyPrint(stdout, value);
+    printf("\n");
+    ASSIGN(result,NIL);
+}
+
+static SUBR(print)
+{
+    Node value = NIL;
+    while (isKind(args, nt_pair)) {
+        pair_GetCar(args.pair, &value);
+        pair_GetCdr(args.pair, &args);
+        print(stdout, value);
+    }
+    ASSIGN(result,NIL);
+}
+
+static SUBR(println)
+{
+    Node value = NIL;
+    while (isKind(args, nt_pair)) {
+        pair_GetCar(args.pair, &value);
+        pair_GetCdr(args.pair, &args);
+        print(stdout, value);
+    }
     printf("\n");
     ASSIGN(result,NIL);
 }
@@ -741,12 +795,16 @@ void startEnkiLibrary() {
 
     MK_OPR(=,eq);
     MK_OPR(!=,neq);
+    MK_PRM(iso);
+    MK_PRM(assert);
     MK_PRM(exit);
     MK_PRM(abort);
     MK_PRM(current_environment);
     MK_PRM(global_environment);
     MK_PRM(dump);
     MK_PRM(dumpln);
+    MK_PRM(print);
+    MK_PRM(println);
 
     MK_CONST(t,true_v);
     MK_CONST(nil,NIL);
