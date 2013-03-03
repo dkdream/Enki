@@ -144,7 +144,7 @@ static SUBR(and)
 { //Fixed
     Node body = args;
     Node expr = NIL;
-    Node ans  = (Node) s_t;
+    Node ans  = true_v;
 
     for (; isKind(body, nt_pair) ;) {
         pair_GetCar(body.pair, &expr);
@@ -614,6 +614,11 @@ static SUBR(current_environment)
     ASSIGN(result, env);
 }
 
+static SUBR(global_environment)
+{
+    pair_GetCdr(enki_globals.pair, result);
+}
+
 static SUBR(dump)
 {
     Node value = NIL;
@@ -739,10 +744,12 @@ void startEnkiLibrary() {
     MK_PRM(exit);
     MK_PRM(abort);
     MK_PRM(current_environment);
+    MK_PRM(global_environment);
     MK_PRM(dump);
     MK_PRM(dumpln);
 
     MK_CONST(t,true_v);
+    MK_CONST(nil,NIL);
 }
 
 void stopEnkiLibrary() {

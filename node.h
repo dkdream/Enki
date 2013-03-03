@@ -8,6 +8,8 @@
  **/
 #include "reference.h"
 
+extern Node true_v;
+
 extern HashCode node_HashCode(Node node);
 extern bool     node_Match(Node left, Node right);
 extern void     node_TypeOf(Node value, Target result);

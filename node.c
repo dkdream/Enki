@@ -134,12 +134,17 @@ extern void node_TypeOf(Node value, Target result)
         goto as_symbol;
     }
 
- as_symbol:
-    symbol_Convert(text, result.symbol);
+ as_self:
+    if (isIdentical(true_v, value)) {
+        text = "true";
+        goto as_symbol;
+    }
+
+    ASSIGN(result, value);
     return;
 
- as_self:
-    ASSIGN(result, value);
+ as_symbol:
+    symbol_Convert(text, result.symbol);
     return;
 }
 

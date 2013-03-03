@@ -18,9 +18,6 @@
 #include <error.h>
 #include <signal.h>
 
-#define GC_PROTECT(var)
-#define GC_UNPROTECT(var)
-
 extern Node enki_globals;
 
 
@@ -287,8 +284,6 @@ static bool readList(FILE *fp, int delim, Target result)
     Pair  tail = head;
     Node  hold = NIL;
 
-    GC_PROTECT(head);
-    GC_PROTECT(hold);
 
     if (!readExpr(fp, &(hold.reference))) goto eof;
 
@@ -320,23 +315,19 @@ static bool readList(FILE *fp, int delim, Target result)
         goto failure;
     }
 
-    eof:
+ eof:
     if (!matchChar(fp, delim)) {
         error = "EOF while reading list";
         goto failure;
     }
 
-    GC_UNPROTECT(hold);
-    GC_UNPROTECT(head);
     return true;
 
-    failure:
+ failure:
     if (!error) {
         fatal(error);
     }
 
-    GC_UNPROTECT(hold);
-    GC_UNPROTECT(head);
     return false;
 }
 
@@ -349,8 +340,6 @@ static bool readTuple(FILE *fp, int delim, Target result)
     Pair  tail = head;
     Node  hold = NIL;
 
-    GC_PROTECT(head);
-    GC_PROTECT(hold);
 
     if (!readExpr(fp, &(hold.reference))) goto eof;
 
@@ -376,8 +365,6 @@ static bool readTuple(FILE *fp, int delim, Target result)
     if (!tuple_Fill(*result.tuple, head))  goto failure;
 
 
-    GC_UNPROTECT(hold);
-    GC_UNPROTECT(head);
     return true;
 
     failure:
@@ -385,8 +372,6 @@ static bool readTuple(FILE *fp, int delim, Target result)
         fatal(error);
     }
 
-    GC_UNPROTECT(hold);
-    GC_UNPROTECT(head);
     return false;
 }
 
@@ -396,9 +381,6 @@ static bool readControl(FILE *fp, Symbol control, int delim, Target result)
     Pair  head = 0;
     Pair  tail = head;
     Node  hold = NIL;
-
-    GC_PROTECT(head);
-    GC_PROTECT(hold);
 
     if (!pair_Create(control, NIL, result.pair)) goto failure;
 
@@ -412,23 +394,19 @@ static bool readControl(FILE *fp, Symbol control, int delim, Target result)
         tail = hold.pair;
     }
 
-    eof:
+ eof:
     if (!matchChar(fp, delim)) {
         error = "EOF while reading list";
         goto failure;
     }
 
-    GC_UNPROTECT(hold);
-    GC_UNPROTECT(head);
     return true;
 
-    failure:
+ failure:
     if (!error) {
         fatal(error);
     }
 
-    GC_UNPROTECT(hold);
-    GC_UNPROTECT(head);
     return false;
 }
 
@@ -495,17 +473,14 @@ static bool readInteger(FILE *fp, int first, Target result)
 static bool readQuote(FILE *fp, Node symbol, Target result)
 {
     Node hold;
-    GC_PROTECT(hold);
 
     if (!readExpr(fp, &(hold.reference))) goto failure;
     if (!pair_Create(hold, NIL, &hold.pair)) goto failure;
     if (!pair_Create(symbol, hold, result.pair)) goto failure;
 
-    GC_UNPROTECT(hold);
     return true;
 
     failure:
-    GC_UNPROTECT(hold);
     return false;
 }
 
@@ -535,7 +510,6 @@ static bool readSymbol(FILE *fp, int first, Target result)
         Reference tail;
         symbol_Create(buf, &head);
 
-        GC_PROTECT(head);
 
         bool rtn = readSymbol(fp, chr, &tail);
 
@@ -620,7 +594,6 @@ extern bool readExpr(FILE *fp, Target result)
                 bool rtn = readSymbol(fp, chr, result);
                 if (nt_pair == getKind(*(result.reference))) {
                     if (!list_UnDot(*(result.pair))) return false;
-
                 }
                 return rtn;
             }
@@ -636,8 +609,6 @@ static void enki_sigint(int signo)
 extern void readFile(FILE *stream)
 {
     signal(SIGINT, enki_sigint);
-
-    bool p_stages = true;
 
     for (;;) {
         if (stream == stdin) {
@@ -657,7 +628,6 @@ extern void readFile(FILE *stream)
 #endif
 
 
-        GC_PROTECT(obj);
 
 #if 0
         if (opt_v) {
@@ -691,21 +661,10 @@ extern void readFile(FILE *stream)
             printf("\n");
             fflush(stdout);
         }
-
-        GC_UNPROTECT(obj);
-
-#if 0
-        if (opt_v) {
-            GC_gcollect();
-            printf("%ld collections, %ld objects, %ld bytes, %4.1f%% fragmentation\n",
-                   (long)GC_collections, (long)GC_count_objects(), (long)GC_count_bytes(),
-                   GC_count_fragments() * 100.0);
-        }
-#endif
     }
 
     int c = getc(stream);
 
     if (EOF != c)
-        fatal("unexpected character 0x%02x '%c'\n", c, c);
+        fatal("expected 0x%02x received 0x%02x '%c'\n", EOF, c, c);
 }

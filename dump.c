@@ -246,6 +246,11 @@ extern void prettyPrint(FILE* output, Node node) {
 
         switch (getKind(node)) {
         case nt_unknown:
+            if (isIdentical(node, true_v)) {
+                offset += 2;
+                fprintf(output, "t");
+                return;
+            }
             offset += 10;
             fprintf(output, "unknown(%p)", node.reference);
             return;
