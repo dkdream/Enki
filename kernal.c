@@ -13,6 +13,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <error.h>
+#include <stdarg.h>
 
 static bool __initialized = false;
 
@@ -21,17 +22,17 @@ unsigned int ea_global_debug = 5;
 
 //
 struct gc_treadmill enki_zero_space;
+struct gc_header    enki_true;
 
 Space _zero_space;
 
-// pair(nil, alist)
-Node enki_globals = NIL;
-
-Node      f_quote = NIL;       // quote a syntax tree
+Node       enki_globals = NIL; // nt_pair(nil, alist)
+Node            true_v  = NIL; // nt_unknown
+Node            f_quote = NIL; // nt_fixed
 Primitive p_eval_symbol = 0;
-Primitive p_eval_pair = 0;
-Primitive p_apply_expr = 0;
-Primitive p_apply_form = 0;
+Primitive   p_eval_pair = 0;
+Primitive  p_apply_expr = 0;
+Primitive  p_apply_form = 0;
 
 Symbol s_dot = 0;
 Symbol s_quasiquote = 0;
@@ -44,9 +45,6 @@ Symbol s_nil = 0;
 Symbol s_lambda = 0;
 Symbol s_set = 0;
 
-#define GC_PROTECT(NODE)
-#define GC_UNPROTECT(NODE)
-
 #define SUBR(NAME) void opr_##NAME(Node args, Node env, Target result)
 
 extern void defineValue(Node symbol, const Node value) {
@@ -56,7 +54,7 @@ extern void defineValue(Node symbol, const Node value) {
     pair_SetCdr(enki_globals.pair, globals);
 }
 
-static unsigned checkArgs(Node args, unsigned min, const char* name)
+static unsigned checkArgs(Node args, const char* name, unsigned min, ...)
 {
     unsigned count  = 0;
     bool     dotted = false;
@@ -68,6 +66,30 @@ static unsigned checkArgs(Node args, unsigned min, const char* name)
     }
 
     return count;
+}
+
+static void fetchArgs(Node args, ...)
+{
+    va_list ap;
+    va_start(ap, args);
+
+    while (isKind(args, nt_pair)) {
+        Node *location = va_arg(ap, Node*);
+
+        if (!location) goto done;
+
+        pair_GetCar(args.pair, location);
+        pair_GetCdr(args.pair, &args);
+    }
+
+    for(;;) {
+        Node *location = va_arg(ap, Node*);
+        if (!location) goto done;
+        *location = NIL;
+    }
+
+ done:
+    va_end(ap);
 }
 
 static void eval_binding(Node binding, Node env, Target entry)
@@ -200,11 +222,7 @@ static SUBR(define)
 
     eval(expr, env, &value);
 
-    GC_PROTECT(value);
-
     defineValue(symbol, value);
-
-    GC_UNPROTECT(value);
 
     ASSIGN(result, value);
 }
@@ -218,13 +236,9 @@ static SUBR(let)
     pair_GetCar(args.pair, &bindings);
     pair_GetCdr(args.pair, &body);
 
-    GC_PROTECT(env2);
-
     list_Map(eval_binding, bindings.pair, env, &(env2.pair));
     list_SetEnd(env2.pair, env);
     eval_begin(body, env2, result);
-
-    GC_UNPROTECT(env2);
 }
 
 static SUBR(while)
@@ -266,9 +280,6 @@ static SUBR(find)
     list_GetItem(args.pair, 0, &tst);
     list_GetItem(args.pair, 0, &lst);
 
-    GC_PROTECT(tst);
-    GC_PROTECT(lst);
-
     while (isKind(lst, nt_pair)) {
         Node elm   = NIL;
         Node check = NIL;
@@ -285,9 +296,6 @@ static SUBR(find)
 
         pair_GetCdr(lst.pair, &lst);
     }
-
-    GC_UNPROTECT(lst);
-    GC_UNPROTECT(tst);
 }
 
 static SUBR(quote)
@@ -316,7 +324,6 @@ static SUBR(eval_symbol)
         }
     }
 }
-
 
 static SUBR(eval_pair)
 {
@@ -390,9 +397,6 @@ static SUBR(apply_expr)
 
     Node vlist = arguments;
 
-    GC_PROTECT(cenv);
-    GC_PROTECT(tmp);
-
     // bind parameters to values
     // extending the closure enviroment
     while (isKind(formals, nt_pair)) {
@@ -436,13 +440,9 @@ static SUBR(apply_expr)
         fatal(0);
     }
 
-    GC_PROTECT(tmp);
-
     // process the body of the lambda
     // and return the last value
     eval_begin(body, cenv, result);
-
-    GC_PROTECT(cenv);
 }
 
 static SUBR(apply_form)
@@ -482,6 +482,131 @@ static SUBR(form)
     setKind(*(result.pair), nt_form);
 }
 
+static SUBR(type_of)
+{
+    Node val = NIL;
+    checkArgs(args, "type_of", 1, nt_unknown);
+    pair_GetCar(args.pair, &val);
+    node_TypeOf(val, result);
+}
+
+static SUBR(com) {
+    Node val = NIL;
+    checkArgs(args, "~", 1, nt_integer);
+
+    pair_GetCar(args.pair, &val);
+
+    integer_Create(~(val.integer->value), result.integer);
+}
+
+/*
+ macro magic
+   1. define a defining macro (_do_binary) terms of an action macro (_do)
+   2. define the action macro
+   3. call the defining macro (to do the action)
+   4. un-define the action macro
+ later we can re-use the defining macro to add definitions to Enki
+*/
+#define _do_binary() \
+    _do(add,     +)  _do(mul,     *)  _do(div,     /)  _do(mod,  %)     \
+    _do(bitand,  &)  _do(bitor,   |)  _do(bitxor,  ^)  _do(shl, <<)  _do(shr, >>)
+
+#define _do(NAME, OP) \
+static SUBR(NAME) \
+{ \
+    Node left; Node right; \
+    checkArgs(args, #OP, 2, nt_integer, nt_integer); \
+    fetchArgs(args, &left, &right, 0); \
+    integer_Create((left.integer->value) OP (right.integer->value), result.integer); \
+}
+
+_do_binary()
+
+#undef _do
+
+#define _do_relation() \
+    _do(lt, <)  _do(le, <=)  _do(ge, >=)  _do(gt, >)
+
+#define _do(NAME, OP) \
+static SUBR(NAME) \
+{ \
+    Node left; Node right; \
+    checkArgs(args, #OP, 2, nt_integer, nt_integer); \
+    fetchArgs(args, &left, &right, 0); \
+    if ((left.integer->value) OP (right.integer->value)) { \
+        ASSIGN(result, true_v);                            \
+    } else { \
+        ASSIGN(result, NIL); \
+    } \
+}
+
+_do_relation()
+
+#undef _do
+
+static SUBR(eq)
+{
+    Node left; Node right;
+    checkArgs(args, "=", 2, nt_unknown, nt_unknown);
+    fetchArgs(args, &left, &right, 0);
+
+    if (node_Match(left,right)) {
+        ASSIGN(result, true_v);
+    } else {
+        ASSIGN(result, NIL);
+    }
+}
+static SUBR(neq)
+{
+    Node left; Node right;
+    checkArgs(args, "!=", 2, nt_unknown, nt_unknown);
+    fetchArgs(args, &left, &right, 0);
+
+    if (node_Match(left,right)) {
+        ASSIGN(result, NIL);
+    } else {
+        ASSIGN(result, true_v);
+    }
+}
+
+static SUBR(exit)
+{
+    Node value = NIL;
+
+    pair_GetCar(args.pair, &value);
+
+    if (isKind(value, nt_integer)) {
+        exit(value.integer->value);
+    } else {
+        exit(0);
+    }
+}
+
+static SUBR(abort)
+{
+    fatal("aborted");
+}
+
+static SUBR(current_environment)
+{
+    ASSIGN(result, env);
+}
+
+static SUBR(dump)
+{
+    Node value = NIL;
+    pair_GetCar(args.pair, &value);
+    prettyPrint(stdout, value);
+    ASSIGN(result,NIL);
+}
+
+static void defineConstant(const char* name, const Node value) {
+    Symbol label = 0;
+
+    symbol_Convert(name, &label);
+
+    defineValue(label, value);
+}
 
 static Primitive definePrimitive(const char* name, Operator func) {
     Symbol    label = 0;
@@ -512,12 +637,16 @@ static Node defineFixed(const char* name, Operator func) {
     return fixed;
 }
 
-#define MK_SYM(x) symbol_Convert(#x, &s_ ##x)
-#define MK_PRM(x) definePrimitive(#x, opr_ ## x);
-#define MK_FXD(x) defineFixed(#x, opr_ ## x);
+#define MK_SYM(x)     symbol_Convert(#x, &s_ ##x)
+#define MK_CONST(x,y) defineConstant(#x, y);
+#define MK_PRM(x)     definePrimitive(#x, opr_ ## x)
+#define MK_FXD(x)     defineFixed(#x, opr_ ## x)
+#define MK_OPR(x,y)   definePrimitive(#x, opr_ ## y)
 
 void startEnkiLibrary() {
     if (__initialized) return;
+
+    true_v = (Node)init_atom(&enki_true, 0);
 
     space_Init(&enki_zero_space);
 
@@ -563,6 +692,25 @@ void startEnkiLibrary() {
     MK_PRM(form);
     MK_PRM(eval);
     MK_PRM(apply);
+    MK_PRM(type_of);
+
+    MK_OPR(~,com);
+
+#define _do(NAME, OP) definePrimitive(#OP, opr_ ## NAME);
+
+    _do_binary();
+    _do_relation();
+
+#undef _do
+
+    MK_OPR(=,eq);
+    MK_OPR(!=,neq);
+    MK_PRM(exit);
+    MK_PRM(abort);
+    MK_PRM(current_environment);
+    MK_PRM(dump);
+
+    MK_CONST(t,true_v);
 }
 
 void stopEnkiLibrary() {

@@ -75,7 +75,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#define CLINK_COUNT 5
+#define ROOT_COUNT 5
 
 typedef struct gc_clink      Clink;
 typedef enum   gc_color      Color;
@@ -85,8 +85,8 @@ typedef struct gc_treadmill *Space;
 struct gc_clink {
     Clink*   before;
     Clink*   after;
+    unsigned max;
     unsigned index;
-    Target   array[CLINK_COUNT];
 };
 
 enum gc_color {
@@ -129,7 +129,10 @@ struct gc_treadmill {
     struct gc_header start_up;
     struct gc_header start_down;
     struct gc_header start_root;
-    Clink start_clinks;
+    struct {
+        Clink  start_clinks;
+        Target array[ROOT_COUNT];
+    } __attribute__((__packed__));
 };
 
 extern Space _zero_space;
@@ -138,9 +141,19 @@ extern bool space_Init(const Space); // this will erase the contents of the spac
 extern bool space_Flip(const Space);
 extern bool space_Scan(const Space, unsigned int);
 
-extern bool clink_Begin(Clink *link);
-extern bool clink_Manage(Clink *link, Target slot);
-extern bool clink_End(Clink *link);
+extern void clink_Init(Clink *link, unsigned max)  __attribute__((nonnull));
+extern bool clink_Manage(Clink *link, Target slot) __attribute__((nonnull));
+extern void clink_End(Clink *link)                 __attribute__((nonnull));
+
+#define GC_Begin(MAX) \
+   struct { Clink link__; Target array[MAX];} __LOCAL_GC; \
+   clink_Init((Clink*)(& __LOCAL_GC), MAX)
+
+#define GC_Protect(NAME) \
+   clink_Manage((Clink*)(& __LOCAL_GC), &(NAME))
+
+#define GC_End() \
+   clink_End((Clink*)(& __LOCAL_GC))
 
 //extern bool node_ExternalInit(const EA_Type, Header);
 
@@ -205,6 +218,51 @@ extern inline unsigned long toCount(unsigned long size_in_chars) {
 extern inline unsigned long toSize(unsigned long size_in_pointers) __attribute__((always_inline));
 extern inline unsigned long toSize(unsigned long size_in_pointers) {
     return size_in_pointers * POINTER_SIZE;
+}
+
+extern inline Reference init_atom(Header, unsigned long) __attribute__((nonnull always_inline));
+extern inline Reference init_atom(Header header,
+                                  unsigned long size_in_chars)
+{
+    unsigned long fullcount = toCount(size_in_chars);
+    memset(header, 0, sizeof(struct gc_header));
+
+    header->count  = fullcount;
+    header->color  = nc_unknown;
+    header->atom   = 1;
+    header->inside = 0;
+    header->prefix = 0;
+    header->space  = 0;
+    header->before = header->after = 0;
+
+    return asReference(header);
+}
+
+extern inline Reference init_tuple(Header, bool, unsigned long) __attribute__((nonnull always_inline));
+extern inline Reference init_tuple(Header header,
+                                   bool prefix,
+                                   unsigned long size_in_pointers)
+{
+    unsigned long fullcount = size_in_pointers;
+
+    memset(header, 0, sizeof(struct gc_header));
+
+    header->count  = fullcount;
+    header->color  = nc_unknown;
+    header->atom   = 1;
+    header->inside = 0;
+    header->prefix = (prefix ? 1 : 0);
+    header->space  = 0;
+    header->before = header->after = 0;
+
+    Reference reference = asReference(header);
+
+    if (prefix) {
+        Reference *slots = reference;
+        slots[0] = (slots + (fullcount + 1));
+    }
+
+    return asReference(header);
 }
 
 extern inline Header fresh_atom(unsigned long size_in_chars) __attribute__((always_inline));

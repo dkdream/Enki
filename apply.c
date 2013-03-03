@@ -12,16 +12,11 @@
 #include "treadmill.h"
 #include "pair.h"
 #include "symbol.h"
+#include "dump.h"
 
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
-
-
-// add a stack slot to the root set (with markings __FILE__, __LINE__)
-#define GC_PROTECT(V)
-// remove a stack slot from the root set
-#define GC_UNPROTECT(V)
 
 static Pair traceStack = 0;
 
@@ -62,14 +57,19 @@ extern void popTrace() {
 
 extern void apply(Node fun, Node args, const Node env, Target result)
 {
-    GC_PROTECT(args);
-
     for (;;) {
+#if 1
+        printf("appling: ");
+        prettyPrint(stdout, fun);
+        printf(" to: ");
+        prettyPrint(stdout, args);
+        printf("\n");
+#endif
+
         // Primitive -> Operator
         if (isKind(fun, nt_primitive)) {
             Operator function = fun.primitive->function;
             function(args, env, result);
-            GC_UNPROTECT(args);
             goto done;
         }
 
@@ -96,7 +96,7 @@ extern void apply(Node fun, Node args, const Node env, Target result)
     //    fatal(0);
 
  done:
-    GC_UNPROTECT(args);
+    return;
 }
 
 // expand all forms
@@ -106,9 +106,11 @@ extern void expand(const Node expr, const Node env, Target result)
     Node head = NIL;
     Node tail = NIL;
 
-    GC_PROTECT(list);
-    GC_PROTECT(head);
-    GC_PROTECT(tail);
+#if 0
+    printf("expanding: ");
+    prettyPrint(stdout, list);
+    printf("\n");
+#endif
 
     for (;;) {
         if (!isKind(list, nt_pair)) {
@@ -148,9 +150,7 @@ extern void expand(const Node expr, const Node env, Target result)
     pair_Create(head, tail, result.pair);
 
  done:
-    GC_UNPROTECT(tail);
-    GC_UNPROTECT(head);
-    GC_UNPROTECT(list);
+    return;
 }
 
 // translate know symbols to known values
@@ -160,9 +160,11 @@ extern void encode(const Node expr, const Node env, Target result)
     Node head = NIL;
     Node tail = NIL;
 
-    GC_PROTECT(list);
-    GC_PROTECT(head);
-    GC_PROTECT(tail);
+#if 1
+    printf("encoding: ");
+    prettyPrint(stdout, list);
+    printf("\n");
+#endif
 
     if (!isKind(list, nt_pair)) {
         ASSIGN(result, list);
@@ -214,9 +216,7 @@ extern void encode(const Node expr, const Node env, Target result)
     pair_Create(head, tail, result.pair);
 
  done:
-    GC_UNPROTECT(tail);
-    GC_UNPROTECT(head);
-    GC_UNPROTECT(list);
+    return;
 }
 
 extern void eval(const Node expr, const Node env, Target result)
@@ -241,13 +241,9 @@ extern void eval(const Node expr, const Node env, Target result)
 
     Node args = NIL;
 
-    GC_PROTECT(args);
-
     pair_Create(expr, NIL, &(args.pair));
 
     apply(evaluator, args, env, result);
-
-    GC_UNPROTECT(args);
 
  done:
     popTrace();

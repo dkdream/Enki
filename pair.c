@@ -285,7 +285,7 @@ extern bool list_Map(Operator func, Pair pair, const Node env, Pair* target) {
         return true;
     }
 
-    if (isKind(pair, nt_pair)) {
+    if (!isKind(pair, nt_pair)) {
         *target = 0;
         return true;
     }

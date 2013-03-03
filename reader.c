@@ -271,7 +271,7 @@ static int readChar(int chr, FILE *fp)
     }
 }
 
-extern bool read(FILE *fp, Target result);
+extern bool readExpr(FILE *fp, Target result);
 static bool readList(FILE *fp, int delim, Target result);
 static bool readCode(FILE *fp, Target result);
 static bool readInteger(FILE *fp, int first, Target result);
@@ -290,7 +290,7 @@ static bool readList(FILE *fp, int delim, Target result)
     GC_PROTECT(head);
     GC_PROTECT(hold);
 
-    if (!read(fp, &(hold.reference))) goto eof;
+    if (!readExpr(fp, &(hold.reference))) goto eof;
 
     if (!pair_Create(hold, NIL, result.pair)) goto failure;
 
@@ -298,7 +298,7 @@ static bool readList(FILE *fp, int delim, Target result)
     tail = head;
 
     for (;;) {
-        if (!read(fp, &(hold.reference))) goto eof;
+        if (!readExpr(fp, &(hold.reference))) goto eof;
 
         if (!isIdentical(hold.symbol, s_dot)) {
             if (!pair_Create(hold, NIL, &(hold.pair))) goto failure;
@@ -307,14 +307,14 @@ static bool readList(FILE *fp, int delim, Target result)
             continue;
         }
 
-        if (!read(fp, &(hold.reference))) {
+        if (!readExpr(fp, &(hold.reference))) {
             error = "missing item after .";
             goto failure;
         }
 
         if (!pair_SetCdr(tail, hold)) goto failure;
 
-        if (!read(fp, &(hold.reference))) goto eof;
+        if (!readExpr(fp, &(hold.reference))) goto eof;
 
         error = "extra item after .";
         goto failure;
@@ -352,14 +352,14 @@ static bool readTuple(FILE *fp, int delim, Target result)
     GC_PROTECT(head);
     GC_PROTECT(hold);
 
-    if (!read(fp, &(hold.reference))) goto eof;
+    if (!readExpr(fp, &(hold.reference))) goto eof;
 
     if (!pair_Create(hold, NIL, &head)) goto failure;
 
     tail = head;
 
     for (;;) {
-        if (!read(fp, &(hold.reference))) goto eof;
+        if (!readExpr(fp, &(hold.reference))) goto eof;
         if (!pair_Create(hold, NIL, &(hold.pair))) goto failure;
         if (!pair_SetCdr(tail, hold)) goto failure;
         tail = hold.pair;
@@ -406,7 +406,7 @@ static bool readControl(FILE *fp, Symbol control, int delim, Target result)
     tail = head;
 
     for (;;) {
-        if (!read(fp, &(hold.reference))) goto eof;
+        if (!readExpr(fp, &(hold.reference))) goto eof;
         if (!pair_Create(hold, NIL, &(hold.pair))) goto failure;
         if (!pair_SetCdr(tail, hold)) goto failure;
         tail = hold.pair;
@@ -497,7 +497,7 @@ static bool readQuote(FILE *fp, Node symbol, Target result)
     Node hold;
     GC_PROTECT(hold);
 
-    if (!read(fp, &(hold.reference))) goto failure;
+    if (!readExpr(fp, &(hold.reference))) goto failure;
     if (!pair_Create(hold, NIL, &hold.pair)) goto failure;
     if (!pair_Create(symbol, hold, result.pair)) goto failure;
 
@@ -562,7 +562,7 @@ static bool readComment(FILE *fp)
     return true;
 }
 
-extern bool read(FILE *fp, Target result)
+extern bool readExpr(FILE *fp, Target result)
 {
     for (;;) {
         int chr = getc(fp);
@@ -633,9 +633,11 @@ static void enki_sigint(int signo)
     fatal("\nInterrupt(%d)",signo);
 }
 
-extern void replFile(FILE *stream)
+extern void readFile(FILE *stream)
 {
     signal(SIGINT, enki_sigint);
+
+    bool p_stages = true;
 
     for (;;) {
         if (stream == stdin) {
@@ -645,13 +647,25 @@ extern void replFile(FILE *stream)
 
         Node obj = NIL;
 
-        if (!read(stream, &obj)) break;
+        if (p_stages) {
+            printf("\n\n");
+        }
+
+        if (!readExpr(stream, &obj)) break;
+
+        if (p_stages) {
+            printf("read: ");
+            prettyPrint(stdout, obj);
+            printf("\n");
+            fflush(stdout);
+        }
+
 
         GC_PROTECT(obj);
 
 #if 0
         if (opt_v) {
-            dump(stdout, obj);
+            prettyPrint(stdout, obj);
             printf("\n");
             fflush(stdout);
         }
@@ -662,13 +676,36 @@ extern void replFile(FILE *stream)
         pair_GetCdr(enki_globals.pair, &globals);
 
         expand(obj, globals, &obj);
+
+        if (p_stages) {
+            printf("expanded: ");
+            prettyPrint(stdout, obj);
+            printf("\n");
+            fflush(stdout);
+        }
+
         encode(obj, globals, &obj);
-        eval(obj,   globals, &obj);
+
+        if (p_stages) {
+            printf("encoded: ");
+            prettyPrint(stdout, obj);
+            printf("\n");
+            fflush(stdout);
+        }
+
+        eval(obj, globals, &obj);
+
+        if (p_stages) {
+            printf("evaluated: ");
+            prettyPrint(stdout, obj);
+            printf("\n");
+            fflush(stdout);
+        }
 
         if (stream == stdin) {
             printf(" => ");
             fflush(stdout);
-            dump(stdout, obj);
+            prettyPrint(stdout, obj);
             printf("\n");
             fflush(stdout);
         }

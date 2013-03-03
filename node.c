@@ -81,150 +81,66 @@ bool node_Match(Node left, Node right) {
     }
 }
 
-#if 0
-extern void node_Print(FILE* output, Node node) {
-    if (!output) return;
+extern void node_TypeOf(Node value, Target result)
+{
+    const char* text = 0;
 
-    if (!node.reference) {
-        fprintf(output, "nil");
-        return;
+    if (!isNil(value)) {
+        goto as_self;
     }
 
-    switch (getKind(node)) {
+    switch (getKind(value)) {
     case nt_unknown:
-        fprintf(output, "unknown(%p)",
-                node.reference);
-        return;
-
-    case nt_symbol:
-        fprintf(output, "symbol(%s)",
-                (const char *) node.symbol->value);
-        return;
-
-    case nt_text:
-        fprintf(output, "text(%s)",
-                (const char *) node.text->value);
-        return;
-
-    case nt_integer:
-        fprintf(output, "integer(%ld)",
-                node.integer->value);
-        return;
+        goto as_self;
 
     case nt_count:
-        fprintf(output, "count(%u)",
-                node.count->value);
-        return;
+        text = "count";
+        goto as_symbol;
 
-    case nt_primitive:
-        fprintf(output, "%s(%p %u)",
-                (const char *) node.primitive->label->value,
-                node.reference,
-                node.primitive->size);
-        return;
+    case nt_integer:
+        text = "integer";
+        goto as_symbol;
 
     case nt_pair:
-        fprintf(output, "pair(%p (%p, %p))",
-                node.reference,
-                node.pair->car.reference,
-                node.pair->cdr.reference);
+        text = "pair";
+        goto as_symbol;
 
-    default:
-        break;
+    case nt_primitive:
+        text = "primitive";
+        goto as_symbol;
 
-#if 0
-    case nt_input:
-        fprintf(output, "input(%p %u)",
-                node.reference,
-                node.input->input);
-        return;
+    case nt_symbol:
+        text = "symbol";
+        goto as_symbol;
 
-    case nt_output:
-        fprintf(output, "output(%p %u)",
-                node.reference,
-                node.output->output);
-        return;
+    case nt_text:
+        text = "text";
+        goto as_symbol;
 
-    case nt_hash_entry:
-        fprintf(output, "entry(%p (%s, %p))",
-                node.reference,
-                (const char *) node.hash_entry->symbol->value,
-                node.hash_entry->value.reference);
-        return;
+    case nt_tuple:
+        text = "tuple";
+        goto as_symbol;
 
-    case nt_hash_block:
-        fprintf(output, "hash_block(%p (%u, %p))",
-                node.reference,
-                node.hash_block->size,
-                node.hash_block->next);
-        return;
+    case nt_expression:
+        text = "expression";
+        goto as_symbol;
 
-    case nt_hash:
-        fprintf(output, "hash(%p %u)",
-                node.reference,
-                node.hash->fullsize);
-        return;
+    case nt_form:
+        text = "form";
+        goto as_symbol;
 
-    case nt_set_cell:
-        fprintf(output, "cell(%p (%p, %p))",
-                node.reference,
-                node.set_cell->first.reference,
-                node.set_cell->rest);
-        return;
-
-    case nt_set_block:
-        fprintf(output, "set_block(%p (%u, %p))",
-                node.reference,
-                node.set_block->size,
-                node.set_block->next);
-        return;
-
-    case nt_set:
-        fprintf(output, "set(%p %u)",
-                node.reference,
-                node.set->fullsize);
-        return;
-#endif
+    case nt_fixed:
+        text = "fixed";
+        goto as_symbol;
     }
 
-    fprintf(output, "type[%d](%p)",
-            getKind(node),
-            node.reference);
+ as_symbol:
+    symbol_Convert(text, result.symbol);
     return;
-}
-#endif
 
-const char* node_type_Name(enum node_type type)
-{
-    switch (type) {
-    case nt_unknown:       return "unknown";
-    case nt_count:         return "count";
-    case nt_integer:       return "integer";
-    case nt_pair:          return "pair";
-    case nt_primitive:     return "primitive";
-    case nt_symbol:        return "symbol";
-    case nt_text:          return "text";
-    case nt_tuple:         return "tuple";
-
-    case nt_expression:    return "expression";
-    case nt_form:          return "form";
-    case nt_fixed:         return "fixed";
-
-#if 0
-    case nt_input:         return "input";
-    case nt_output:        return "output";
-
-    case nt_hash:          return "hash";
-    case nt_hash_block:    return "hash_block";
-    case nt_hash_entry:    return "hash_entry";
-
-    case nt_set:           return "set";
-    case nt_set_block:     return "set_block";
-    case nt_set_cell:      return "set_cell";
-#endif
-    }
-
-    return "undefined";
+ as_self:
+    ASSIGN(result, value);
+    return;
 }
 
 extern void debug_Message(const char *filename, unsigned int linenum,

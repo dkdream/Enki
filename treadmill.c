@@ -62,6 +62,10 @@
  **     if we are working with a node it must be black or gray.
  **   end
  ***/
+#ifdef debug_Treadmill
+#define debug_THIS
+#endif
+
 #include "treadmill.h"
 #include "all_types.inc"
 #include "node.h"
@@ -79,6 +83,10 @@ static inline void fast_lock(int *address) {
 
 static inline void fast_unlock(int *address) {
     return;
+}
+
+static Target *clink_Slots(Clink *link) {
+    return (Target *)(link + 1);
 }
 
 extern inline bool initialize_StartNode(const Space space, const Header) __attribute__((always_inline));
@@ -391,6 +399,7 @@ extern bool space_Init(const Space space) {
 
     space->start_clinks.before = &space->start_clinks;
     space->start_clinks.after  = &space->start_clinks;
+    space->start_clinks.index  = ROOT_COUNT;
     space->start_clinks.index  = 0;
 
     return true;
@@ -496,10 +505,11 @@ extern bool space_Flip(const Space space) {
 
     /* CLINK_LOCK */
     do {
+        const unsigned max = start->max;
         unsigned size = start->index;
-        Target *slots = start->array;
+        Target *slots = clink_Slots(start);
 
-        if (size > CLINK_COUNT) {
+        if (size > max) {
             VM_ERROR("invalid clink (%p)", start);
         }
 
@@ -523,16 +533,19 @@ extern bool space_Flip(const Space space) {
     return true;
 }
 
-extern bool clink_Begin(Clink *link) {
-    if (!link)     return false;
+extern void clink_Init(Clink *link, unsigned max) {
+    if (!link) return;
 
     link->before = link;
     link->after  = link;
+    link->max    = max;
     link->index  = 0;
+    link->before = 0;
+    link->after  = 0;
 
     const Space space = _zero_space;
 
-    if (!space) return true;
+    if (!space) return;
 
     /* CLINK_LOCK */
 
@@ -546,27 +559,29 @@ extern bool clink_Begin(Clink *link) {
     before->after = link;
 
     /* CLINK_UNLOCK */
-
-    return true;
 }
 
 extern bool clink_Manage(Clink *link, Target slot) {
     if (!link)           return false;
     if (!slot.reference) return false;
-    if (CLINK_COUNT <= link->index) return false;
-    link->array[link->index] = slot;
+    if (!link->before)   return false;
+    if (link->max <= link->index) return false;
+
+    Target *array = clink_Slots(link);
+
+    array[link->index] = slot;
+
     ++(link->index);
+
     return true;
 }
 
-extern bool clink_End(Clink *link) {
-    if (!link) return false;
+extern void clink_Final(Clink *link) {
+    if (!link)         return;
+    if (!link->before) return;
+    if (!link->after)  return;
 
     link->index = 0;
-
-    const Space space = _zero_space;
-
-    if (!space) return true;
 
     bool error = false;
 
@@ -588,9 +603,9 @@ extern bool clink_End(Clink *link) {
 
     /* CLINK_UNLOCK */
 
-    if (error) VM_ERROR("clink is not linked corectly");
-
-    return true;
+    if (error) {
+        VM_ERROR("clink is not linked corectly");
+    }
 }
 
 /*****************

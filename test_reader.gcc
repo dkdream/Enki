@@ -26,7 +26,7 @@ int main(int argc, char **argv)
 
     Reference target;
 
-    while (read(data, &target)) {
+    while (readExpr(data, &target)) {
         dump(stdout, target);
         printf("\n");
         prettyPrint(stdout, target);

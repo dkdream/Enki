@@ -11,6 +11,7 @@
 #include "symbol.h"
 #include "node.h"
 #include "treadmill.h"
+#include "dump.h"
 
 /* */
 #include <error.h>
@@ -252,7 +253,7 @@ extern void hash_Print(FILE* output, Hash table) {
             for ( ; list ; list = list->next) {
                 if (total) fprintf(output, " ");
                 fprintf(output, "%s -> ", symbol_Text(list->symbol));
-                node_Print(output, list->value);
+                dump(output, list->value);
                 total += 1;
             }
         }

@@ -9,8 +9,8 @@
 #include "reference.h"
 #include <stdio.h>
 
-extern bool read(FILE *fp, Target result);
-extern void replFile(FILE *stream);
+extern bool readExpr(FILE *fp, Target result);
+extern void readFile(FILE *stream);
 
 /***************************
  ** end of file

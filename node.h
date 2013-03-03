@@ -8,15 +8,9 @@
  **/
 #include "reference.h"
 
-#include <stdbool.h>
-#include <stdio.h>
-
-extern HashCode    node_HashCode(Node node);
-extern bool        node_Match(Node left, Node right);
-extern const char* node_type_Name(enum node_type type);
-extern void        node_Print(FILE* output, Node node);
-extern void        node_PrintFul(FILE* output, Node node);
-extern void        node_PrintTree(FILE* output, unsigned level, Node node);
+extern HashCode node_HashCode(Node node);
+extern bool     node_Match(Node left, Node right);
+extern void     node_TypeOf(Node value, Target result);
 
 /* marcos */
 

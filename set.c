@@ -9,6 +9,7 @@
 #include "set.h"
 #include "node.h"
 #include "treadmill.h"
+#include "dump.h"
 
 /* */
 #include <stdio.h>
@@ -371,7 +372,7 @@ extern void set_Print(FILE* output, Set set) {
             Set_cell list = here->list[index];
             for ( ; list ; list = list->rest) {
                 if (total) fprintf(output, " ");
-                node_Print(output, list->first);
+                dump(output, list->first);
                 total += 1;
             }
         }
