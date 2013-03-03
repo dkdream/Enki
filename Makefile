@@ -55,8 +55,9 @@ DEPENDS := $(C_SOURCES:%.c=.depends/%.d) $(MAINS:%.c=.depends/%.d)
 
 UNIT_TESTS := test_reader.gcc test_sizes.gcc
 
-all :: enki.vm libEnki.a 
+all :: enki
 
+enki :: enki.vm
 asm  :: $(ASMS)
 test :: $(RUNS)
 	@echo all test runs

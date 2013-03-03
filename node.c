@@ -85,7 +85,7 @@ extern void node_TypeOf(Node value, Target result)
 {
     const char* text = 0;
 
-    if (!isNil(value)) {
+    if (isNil(value)) {
         goto as_self;
     }
 

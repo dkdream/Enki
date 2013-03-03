@@ -313,6 +313,26 @@ extern void prettyPrint(FILE* output, Node node) {
                 fprintf(output, "]");
                 return;
             }
+
+        case nt_expression:
+            offset += 20;
+            fprintf(output, "expression(%p)",
+                    node.reference);
+            return;
+
+        case nt_form:
+            offset += 20;
+            fprintf(output, "form(%p)",
+                    node.reference);
+            return;
+
+        case nt_fixed:
+            offset += 20;
+            fprintf(output, "fixed(%p)",
+                    node.reference);
+            return;
+
+
         default:
             break;
         }

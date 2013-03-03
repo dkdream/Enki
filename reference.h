@@ -143,6 +143,7 @@ node_target {
     Input         *input;
     Output        *output;
 #endif
+
 #if 0
     Hash          *hash;
     Hash_block    *hash_block;

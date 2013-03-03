@@ -647,18 +647,14 @@ extern void readFile(FILE *stream)
 
         Node obj = NIL;
 
-        if (p_stages) {
-            printf("\n\n");
-        }
-
         if (!readExpr(stream, &obj)) break;
 
-        if (p_stages) {
-            printf("read: ");
-            prettyPrint(stdout, obj);
-            printf("\n");
-            fflush(stdout);
-        }
+#if 0
+        printf("read: ");
+        prettyPrint(stdout, obj);
+        printf("\n");
+        fflush(stdout);
+#endif
 
 
         GC_PROTECT(obj);
@@ -677,30 +673,16 @@ extern void readFile(FILE *stream)
 
         expand(obj, globals, &obj);
 
-        if (p_stages) {
-            printf("expanded: ");
-            prettyPrint(stdout, obj);
-            printf("\n");
-            fflush(stdout);
-        }
-
         encode(obj, globals, &obj);
-
-        if (p_stages) {
-            printf("encoded: ");
-            prettyPrint(stdout, obj);
-            printf("\n");
-            fflush(stdout);
-        }
 
         eval(obj, globals, &obj);
 
-        if (p_stages) {
-            printf("evaluated: ");
-            prettyPrint(stdout, obj);
-            printf("\n");
-            fflush(stdout);
-        }
+#if 0
+        printf("result ");
+        prettyPrint(stdout, obj);
+        printf("\n\n\n");
+        fflush(stdout);
+#endif
 
         if (stream == stdin) {
             printf(" => ");

@@ -336,6 +336,13 @@ static SUBR(eval_pair)
     pair_GetCar(obj.pair, &head);
     pair_GetCdr(obj.pair, &tail);
 
+#if 0
+    printf("eval_pair: ");
+    prettyPrint(stdout, obj);
+    printf("\n");
+#endif
+
+
     pushTrace(obj);
 
     // first eval the head
@@ -356,6 +363,13 @@ static SUBR(eval_pair)
     apply(head, tail, env, result);
 
  done:
+
+#if 0
+    printf("eval_pair => ");
+    prettyPrint(stdout, *result.reference);
+    printf("\n");
+#endif
+
     popTrace();
 }
 
@@ -488,6 +502,14 @@ static SUBR(type_of)
     checkArgs(args, "type_of", 1, nt_unknown);
     pair_GetCar(args.pair, &val);
     node_TypeOf(val, result);
+
+#if 0
+    printf("type_of: ");
+    dump(stdout, val);
+    printf(" is ");
+    dump(stdout, *result.reference);
+    printf("\n");
+#endif
 }
 
 static SUBR(com) {
@@ -600,6 +622,15 @@ static SUBR(dump)
     ASSIGN(result,NIL);
 }
 
+static SUBR(dumpln)
+{
+    Node value = NIL;
+    pair_GetCar(args.pair, &value);
+    prettyPrint(stdout, value);
+    printf("\n");
+    ASSIGN(result,NIL);
+}
+
 static void defineConstant(const char* name, const Node value) {
     Symbol label = 0;
 
@@ -709,6 +740,7 @@ void startEnkiLibrary() {
     MK_PRM(abort);
     MK_PRM(current_environment);
     MK_PRM(dump);
+    MK_PRM(dumpln);
 
     MK_CONST(t,true_v);
 }

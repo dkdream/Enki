@@ -1,0 +1,6 @@
+dump
+
+(dumpln (~ 1))
+(dumpln "1")
+(dumpln '1)
+(dumpln (type_of '1))

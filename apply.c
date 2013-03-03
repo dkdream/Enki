@@ -57,15 +57,15 @@ extern void popTrace() {
 
 extern void apply(Node fun, Node args, const Node env, Target result)
 {
-    for (;;) {
-#if 1
-        printf("appling: ");
+#if 0
+        printf("apply: ");
         prettyPrint(stdout, fun);
         printf(" to: ");
         prettyPrint(stdout, args);
         printf("\n");
 #endif
 
+    for (;;) {
         // Primitive -> Operator
         if (isKind(fun, nt_primitive)) {
             Operator function = fun.primitive->function;
@@ -93,9 +93,15 @@ extern void apply(Node fun, Node args, const Node env, Target result)
  error:
     fprintf(stderr, "\nerror: cannot apply: ");
     dump(stderr, fun);
-    //    fatal(0);
+    fatal(0);
 
  done:
+
+#if 0
+    printf("apply => ");
+    prettyPrint(stdout, *result.reference);
+    printf("\n");
+#endif
     return;
 }
 
@@ -107,7 +113,7 @@ extern void expand(const Node expr, const Node env, Target result)
     Node tail = NIL;
 
 #if 0
-    printf("expanding: ");
+    printf("expand: ");
     prettyPrint(stdout, list);
     printf("\n");
 #endif
@@ -150,6 +156,12 @@ extern void expand(const Node expr, const Node env, Target result)
     pair_Create(head, tail, result.pair);
 
  done:
+
+#if 0
+    printf("expand => ");
+    prettyPrint(stdout, *result.reference);
+    printf("\n");
+#endif
     return;
 }
 
@@ -160,8 +172,8 @@ extern void encode(const Node expr, const Node env, Target result)
     Node head = NIL;
     Node tail = NIL;
 
-#if 1
-    printf("encoding: ");
+#if 0
+    printf("encode: ");
     prettyPrint(stdout, list);
     printf("\n");
 #endif
@@ -216,12 +228,25 @@ extern void encode(const Node expr, const Node env, Target result)
     pair_Create(head, tail, result.pair);
 
  done:
+
+#if 0
+    printf("encode => ");
+    prettyPrint(stdout, *result.reference);
+    printf("\n");
+#endif
+
     return;
 }
 
 extern void eval(const Node expr, const Node env, Target result)
 {
     pushTrace(expr);
+
+#if 0
+    printf("eval: ");
+    prettyPrint(stdout, expr);
+    printf("\n");
+#endif
 
     Primitive evaluator = 0;
 
@@ -246,6 +271,13 @@ extern void eval(const Node expr, const Node env, Target result)
     apply(evaluator, args, env, result);
 
  done:
+
+#if 0
+    printf("eval => ");
+    prettyPrint(stdout, *result.reference);
+    printf("\n");
+#endif
+
     popTrace();
 }
 

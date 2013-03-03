@@ -7,6 +7,8 @@
  **/
 #include "pair.h"
 #include "treadmill.h"
+#include "debug.h"
+#include "apply.h"
 
 extern bool pair_Create(const Node car, const Node cdr, Pair* target) {
     if (!node_Allocate(_zero_space,
@@ -290,25 +292,56 @@ extern bool list_Map(Operator func, Pair pair, const Node env, Pair* target) {
         return true;
     }
 
-    Pair first = 0;
+    if (!func) {
+        fatal("\nerror: list_Map applied to a null function");
+        return false;
+    }
 
-    if (!pair_Create(NIL,NIL, &first)) return false;
+#if 0
+    printf("list_Map: %p", func);
+    printf(" to ");
+    prettyPrint(stdout, pair);
+    printf("\n");
+#endif
 
-    Pair last = first;
 
-    for (; isKind(pair, nt_pair) ;) {
-        Node input  = pair->car;
-        Node output = NIL;
+    Pair first  = 0;
+    Pair last   = 0;
+    Node input  = NIL;
+    Node output = NIL;
+
+    input  = pair->car;
+    output = NIL;
+
+    func(input, env, &output);
+
+    if (!pair_Create(output,NIL, &first)) return false;
+    if (!pair_SetCar(first, output)) return false;
+
+    last = first;
+
+    for (; isKind(pair->cdr.pair, nt_pair) ;) {
+        Pair hold = 0;
+
+        pair   = pair->cdr.pair;
+        input  = pair->car;
+        output = NIL;
 
         func(input, env, &output);
-        if (!pair_SetCar(last, output)) return false;
 
-        Pair hold = 0;
-        if (!pair_Create(NIL,NIL, &hold)) return false;
-        if (!pair_SetCdr(last, hold))     return false;
+        if (!pair_Create(output,NIL, &hold)) return false;
+        if (!pair_SetCdr(last, hold))        return false;
+
         last = hold;
-        pair = pair->cdr.pair;
     }
+
+#if 0
+    printf("list_Map => ");
+    prettyPrint(stdout, first);
+    printf("\n");
+#endif
+
+    *target = first;
 
     return true;
 }
