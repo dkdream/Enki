@@ -24,8 +24,6 @@ dump
 
 (dumpln (global_environment))
 
-(foo bar)
-
 (exit 0)
 
 ((nil)

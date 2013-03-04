@@ -530,8 +530,8 @@ static SUBR(com) {
  later we can re-use the defining macro to add definitions to Enki
 */
 #define _do_binary() \
-    _do(add,     +)  _do(mul,     *)  _do(div,     /)  _do(mod,  %)     \
-    _do(bitand,  &)  _do(bitor,   |)  _do(bitxor,  ^)  _do(shl, <<)  _do(shr, >>)
+    _do(sub,  -) _do(add, +) _do(mul, *)  _do(div, /)  _do(mod,  %) \
+    _do(bitand, &) _do(bitor, |) _do(bitxor, ^) _do(shl, <<)  _do(shr, >>)
 
 #define _do(NAME, OP) \
 static SUBR(NAME) \
@@ -547,7 +547,7 @@ _do_binary()
 #undef _do
 
 #define _do_relation() \
-    _do(lt, <)  _do(le, <=)  _do(ge, >=)  _do(gt, >)
+    _do(lt, <) _do(le, <=) _do(ge, >=) _do(gt, >)
 
 #define _do(NAME, OP) \
 static SUBR(NAME) \
