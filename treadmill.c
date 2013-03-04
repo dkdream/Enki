@@ -181,12 +181,31 @@ extern bool extract_From(const Header node) {
     return true;
 }
 
+static void release_Header(const Header node) {
+    if (!node)         return;
+    if (!node->inside) return;
 
-//extern inline bool darken_Node(const Node node) __attribute__((always_inline));
+    const Space space = node->space;
+
+    if (!space)  return;
+    if (node->space == space->visiable) {
+        VM_ERROR("releasing a dark node");
+    }
+
+    extract_From(node);
+
+    //    VM_TRACE("releasing %p", node);
+
+    free(node);
+}
+
 extern bool darken_Node(const Node node) {
     if (!node.reference) return true;
 
     const Header header = asHeader(node);
+
+    if (!header->inside) return true;
+
     const Space  space = header->space;
 
     if (!space) return true;
@@ -221,22 +240,24 @@ extern bool darken_Node(const Node node) {
     }
 
 #ifndef OPTION_TWO
-        if (!insert_After(top, header)) {
-            return false;
-        }
+    if (!insert_After(top, header)) {
+        return false;
+    }
 #else
-        if (!insert_Before(scan, header)) {
-            return false;
-        }
+    if (!insert_Before(scan, header)) {
+        return false;
+    }
 #endif
 
+    space->count += 1;
     header->color = space->visiable;
     return true;
 }
 
 extern inline bool scan_Node(const Header header) __attribute__((always_inline));
 extern inline bool scan_Node(const Header header) {
-    if (!header) return false;
+    if (!header)         return false;
+    if (!header->inside) return true;
 
     const Space space = header->space;
 
@@ -276,20 +297,6 @@ extern inline bool scan_Node(const Header header) {
     return true;
 }
 
-extern bool node_ExternalInit(const EA_Type type, const Header result) {
-    if (!result) return false;
-
-    result->count  = 0;
-    result->color  = nc_unknown;
-    result->atom   = 1;
-    result->inside = 0;
-    result->prefix = 0;
-    result->space  = 0;
-    result->before = result->after = 0;
-
-    return true;
-}
-
 static inline bool space_CanFlip(const Space space) {
     const Header scan = space->scan;
     const Header top  = space->top;
@@ -306,8 +313,8 @@ extern bool node_Allocate(const Space space,
 
     bool inside = (!space ? false : true);
 
-    if (space) {
-        unsigned count = 100;
+    if (inside) {
+        unsigned count = space->count / 30;
         // scan first
         if (!space_Scan(space, count)) {
             return false;
@@ -327,7 +334,7 @@ extern bool node_Allocate(const Space space,
         }
     }
 
-    const Header header = fresh_tuple(inside, toCount(size_in_char), prefix_in_char);
+    const Header header = fresh_tuple(inside, size_in_char, prefix_in_char);
 
     VM_DEBUG(4, "allocating header %p (%d)[%d] for node %p size %d from space %p",
              header,
@@ -351,6 +358,8 @@ extern bool node_Allocate(const Space space,
                  space);
         return false;
     }
+
+    space->count += 1;
 
     target.reference[0] = asReference(header);
 
@@ -400,7 +409,7 @@ extern bool space_Init(const Space space) {
 
     space->start_clinks.before = &space->start_clinks;
     space->start_clinks.after  = &space->start_clinks;
-    space->start_clinks.index  = ROOT_COUNT;
+    space->start_clinks.max    = ROOT_COUNT;
     space->start_clinks.index  = 0;
 
     return true;
@@ -410,6 +419,8 @@ extern bool space_Scan(const Space space, unsigned int upto) {
     if (!space) return false;
 
     VM_DEBUG(5, "scan space %p %u", space, upto);
+
+    if (1 > upto) return true;
 
     for ( ; 0 < upto ; --upto) {
         const Header scan = space->scan;
@@ -432,16 +443,19 @@ extern bool space_Scan(const Space space, unsigned int upto) {
 extern bool space_Flip(const Space space) {
     if (!space) return false;
 
-    Header top    = space->top;
-    Header scan   = space->scan;
+    const Header top  = space->top;
+    const Header scan = space->scan;
 
     if (scan != top) return true;
 
-    VM_DEBUG(5, "flip space %p begin", space);
+    //    VM_TRACE("flip space %p(%ld) begin", space, space->count);
 
-    Header bottom = space->bottom;
-    Header free   = space->free;
-    Header root   = &(space->start_root);
+    space->count = 0;
+
+    const Header bottom = space->bottom;
+    const Header root   = &(space->start_root);
+
+    Header free = space->free;
 
     if (root->space != space) {
         VM_ERROR("%s", "the start root is NOT in its allocated space !!!");
@@ -455,57 +469,74 @@ extern bool space_Flip(const Space space) {
     // set root to new visiable
     root->color = space->visiable = space_Hidden(space);
 
+    for (;;) {
+        const Header hold = free;
+
+        if (hold == bottom) break;
+
+        free = hold->after;
+
+        release_Header(hold);
+    }
+
+    //    VM_TRACE("moving root (1)");
+
     // extract the root from the old black chain
     if (!extract_From(root)) {
         VM_ERROR("unable to extract the start root from old black");
         return false;
     }
 
-    // if there are no white node this is simple
-    bool simple = (free == bottom);
-
-    if (simple) {
-        // set free to the head of the clear chain
-        free = bottom->after;
-    }
-
-    // add the root to the front of the new gray
     if (!insert_Before(free, root)) {
-        VM_ERROR("unable to add the start root from new grep");
+        VM_ERROR("unable to insert the root into new gray");
         return false;
     }
 
-    // swap top and bottom (roll the wheel)
-    // changes black to clean
-    // -- if this is simple this also changes clear to white
-    space->top    = bottom;
-    space->bottom = top;
+    space->scan = root; // set the start of the new gray chain
 
-    if (simple) {
-        space->scan = root; // set the start of the new gray chain
-        VM_DEBUG(5, "flip space %p end", space);
-        return true;
+    // check if the old white chain is empty
+    if (free == bottom) {
+        // check if the old clear chain is not empty
+        if (bottom->after != top) {
+            free = bottom->after;
+        }
     }
 
-    // concatinate the old white and old clear chains
+    space->free = free;
+
+    //    VM_TRACE("moving bottom (2)");
+
+    // concatinate the old white and old clear chains into new white chain
     if (!extract_From(bottom)) {
         VM_ERROR("unable concatinate old white and old clear");
         return false;
     }
 
-    // seperate the new gray from the new clear
-    if (!insert_Before(root, bottom)) {
-        VM_ERROR("unable seperate new gray from new clear");
+    // empty old clear list
+    if (!insert_Before(top, bottom)) {
+        VM_ERROR("unable to create empty clear list");
         return false;
     }
 
-    space->scan = root; // set the start of the new gray chain
+    //    VM_TRACE("moving top (3)");
+
+    if (!extract_From(top)) {
+        VM_ERROR("unable ot extract the top");
+        return false;
+    }
+
+    // make the old black chain gray
+    if (!insert_Before(root, top)) {
+        VM_ERROR("unable to change old black to new gray");
+        return false;
+    }
 
     Clink *start = &space->start_clinks;
     Clink *end   = &space->start_clinks;
 
     /* CLINK_LOCK */
     do {
+        //        VM_TRACE("scaning clink %p(%d,%d)", start, start->max, start->index);
         const unsigned max = start->max;
         unsigned size = start->index;
         Target *slots = clink_Slots(start);
@@ -515,14 +546,14 @@ extern bool space_Flip(const Space space) {
         }
 
         for (; 0 < size-- ;) {
-            if (!slots[size].reference) continue;
+            if (!slots[size].reference) {
+                VM_TRACE("slot is empty");
+                continue;
+            }
 
             Reference value = slots[size].reference[0];
 
-            VM_DEBUG(4, "darkening root node %p (%d) in space %p",
-                     value,
-                     getKind(value),
-                     space);
+            //            VM_TRACE("darkening root node %p (%d) in space %p", value, getKind(value), space);
 
             darken_Node(value);
         }
