@@ -3,4 +3,5 @@
   (dumpln (current_environment))
   (set qq-list 1)
   (dumpln (current_environment))
-  )
+  (set qq-list)
+  (dumpln (current_environment)))

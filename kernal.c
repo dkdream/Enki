@@ -101,11 +101,6 @@ static void eval_binding(Node binding, Node env, Target entry)
     list_GetItem(binding.pair, 0, &symbol);
     list_GetItem(binding.pair, 1, &expr);
 
-    if (isNil(expr)) {
-        pair_Create(symbol, NIL, entry.pair);
-        return;
-    }
-
     eval(expr, env, &value);
 
     pair_Create(symbol, value, entry.pair);
@@ -203,9 +198,7 @@ static SUBR(set)
     }
 
     eval(expr, env, &value);
-
     pair_SetCdr(entry, value);
-
     ASSIGN(result,value);
 }
 
