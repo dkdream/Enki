@@ -188,7 +188,7 @@ static void release_Header(const Header node) {
     const Space space = node->space;
 
     if (!space)  return;
-    if (node->space == space->visiable) {
+    if (node->color == space->visiable) {
         VM_ERROR("releasing a dark node");
     }
 

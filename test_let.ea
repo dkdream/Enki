@@ -1,0 +1,6 @@
+
+(let ((qq-list) (qq-element) (qq-object))
+  (dumpln (current_environment))
+  (set qq-list 1)
+  (dumpln (current_environment))
+  )

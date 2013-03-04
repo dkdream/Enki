@@ -98,8 +98,13 @@ static void eval_binding(Node binding, Node env, Target entry)
     Node expr   = NIL;
     Node value  = NIL;
 
-    pair_GetCar(binding.pair, &symbol);
-    pair_GetCdr(binding.pair, &expr);
+    list_GetItem(binding.pair, 0, &symbol);
+    list_GetItem(binding.pair, 1, &expr);
+
+    if (isNil(expr)) {
+        pair_Create(symbol, NIL, entry.pair);
+        return;
+    }
 
     eval(expr, env, &value);
 
@@ -190,7 +195,7 @@ static SUBR(set)
 
     Pair entry;
 
-    if (alist_Entry(env.pair, symbol, &entry)) {
+    if (!alist_Entry(env.pair, symbol, &entry)) {
         fprintf(stderr, "\nerror: cannot set undefined variable: ");
         dump(stderr, symbol);
         fprintf(stderr, "\n");
@@ -237,7 +242,10 @@ static SUBR(let)
     pair_GetCdr(args.pair, &body);
 
     list_Map(eval_binding, bindings.pair, env, &(env2.pair));
+
+
     list_SetEnd(env2.pair, env);
+
     eval_begin(body, env2, result);
 }
 
