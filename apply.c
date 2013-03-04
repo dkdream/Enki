@@ -34,15 +34,17 @@ extern void fatal(const char *reason, ...)
 
     if (!traceStack) exit(1);
 
-    for(; traceStack ;) {
+    int inx = 0;
+    for(; traceStack ; ++inx) {
         Node value;
         if (pair_GetCar(traceStack, &value)) {
-            //printf("%3d: ", inx);
-            dump(stdout, value);
-            printf("\n");
+            fprintf(stderr, "%3d: ", inx);
+            prettyPrint(stderr, value);
+            fprintf(stderr, "\n");
         }
         if (!pair_GetCdr(traceStack, &traceStack)) break;
     }
+    fprintf(stderr, "\n");
 
     exit(1);
 }

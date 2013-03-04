@@ -616,7 +616,7 @@ static SUBR(assert)
         fprintf(stderr, "not iso: ");
         print(stderr, left);
         fprintf(stderr, " to: ");
-        print(stderr, left);
+        print(stderr, right);
         fprintf(stderr, "\n");
         fatal(0);
     }
