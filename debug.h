@@ -14,6 +14,7 @@ extern void debug_Message(const char *filename, unsigned int linenum, bool newli
 #undef VM_ON_DEBUG
 
 #define VM_ERROR(args...) error_at_line(1, 0,  __FILE__,  __LINE__, args)
+#define VM_TRACE(args...) debug_Message(__FILE__,  __LINE__, true, args)
 
 #ifdef debug_THIS
 #define VM_DEBUG(level, args...) ({ typeof (level) hold__ = (level); if (hold__ <= ea_global_debug) debug_Message(__FILE__,  __LINE__, true, args); })

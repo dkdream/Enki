@@ -32,7 +32,7 @@ static struct _internal_SymbolTable *_global_symboltable = 0;
 extern void init_global_symboltable() {
     if (_global_symboltable) return;
 
-    _empty_symbol = (Symbol) asReference(fresh_atom(sizeof(struct symbol)));
+    _empty_symbol = (Symbol) asReference(fresh_atom(0, sizeof(struct symbol)));
 
     setKind(_empty_symbol, nt_symbol);
 
@@ -136,7 +136,7 @@ extern bool symbol_Create(TextBuffer value, Symbol *target) {
 
     const unsigned int fullsize = (sizeof(struct symbol) + (size + 1));
 
-    Header entry = fresh_atom(fullsize);
+    Header entry = fresh_atom(0, fullsize);
 
     if (!entry) return false;
 

@@ -5,7 +5,6 @@
  ** Routine List:
  **    <routine-list-end>
  **/
-#define USE_SET
 #include "set.h"
 #include "node.h"
 #include "treadmill.h"
@@ -20,63 +19,72 @@
 
 /* */
 
-extern bool cell_Create(Node first, Set_cell rest, Set_cell* target);
-extern bool set_block_Create(const Space space, struct set_block **target);
-
-#if 0
-static inline bool cell_Create(Node first, Set_cell rest, Set_cell* target) {
+static inline bool cell_Create(Node first, Set_cell rest, Set_cell *result) {
     if (isNil(first)) return false;
+
+    Reference target;
+
     if (!node_Allocate(_zero_space,
                        false,
                        sizeof(struct set_cell),
                        0,
-                       target))
+                       &target))
         return false;
 
-    Set_cell result = *target;
+    Set_cell cell = target;
 
     darken_Node(first);
     darken_Node(rest);
 
-    result->first = first;
-    result->rest  = rest;
+    cell->first = first;
+    cell->rest  = rest;
+
+    *result = cell;
 
     return true;
 }
 
-static inline bool set_block_Create(const Space space, struct set_block **target) {
+static inline bool set_block_Create(const Space space, Set_block *result) {
+
+    Reference target;
+
     if (!node_Allocate(space,
                        false,
                        asSize(sizeof(struct set_block), sizeof(Set_cell) * SET_BLOCK_SIZE),
                        0,
-                       target))
+                       &target))
         return false;
 
-    struct set_block *result = *target;
-
-    result->size = SET_BLOCK_SIZE;
+    *result = target;
 
     return true;
 }
 
-extern bool set_Create(unsigned size, enum node_type type, Set *target) {
+extern bool set_Create(unsigned size, Set *result) {
+
+    Reference target;
+
     if (!node_Allocate(_zero_space,
                        false,
                        sizeof(struct set),
-                       0,
-                       target))
+                       sizeof(struct set_state),
+                       &target))
         return false;
 
-    Set result = *target;
+    Set set = target;
 
-    if (!set_block_Create(_zero_space, &result->first)) return false;
+    if (!set_block_Create(_zero_space, &(set->first))) return false;
 
-    result->type     = type;
-    result->fullsize = SET_BLOCK_SIZE;
+    Set_state state = set->state;
+
+    if (!state) return false;
+
+    state->fullsize = SET_BLOCK_SIZE;
+
+    *result = set;
 
     return true;
 }
-#endif
 
 static inline bool cell_Count(Set_cell at, unsigned int *count) {
     if (!count) return false;
@@ -116,14 +124,13 @@ static inline bool cell_Next(Set_cell current, Set_cell* target) {
 static inline bool allowInSet(Set set, Node value) {
     if (!set)         return false;
     if (isNil(value)) return false;
-    if (nt_unknown == set->type) return true;
-    return (set->type == getKind(value));
+    return true;
 }
 
 static inline bool matchSets(Set left, Set right) {
     if (!left)  return false;
     if (!right) return false;
-    return (left->type == right->type);
+    return true;
 }
 
 static inline bool hashForSet(Set set, Node value, HashCode *target) {
@@ -131,22 +138,7 @@ static inline bool hashForSet(Set set, Node value, HashCode *target) {
     if (!target)      return false;
     if (isNil(value)) return false;
 
-    HashCode hashcode = 0;
-    if (nt_unknown != set->type) {
-        if (set->type != getKind(value)) return false;
-        hashcode = node_HashCode(value);
-    } else {
-        union {
-            Node     input;
-            HashCode output;
-        } convert;
-
-        convert.output = 0;
-        convert.input  = value;
-        hashcode ^= convert.output;
-    }
-
-    *target = hashcode;
+    *target = node_HashCode(value);
 
     return true;
 }
@@ -155,32 +147,32 @@ static inline bool matchForSet(Set set, Node left, Node right) {
     if (!set)         return false;
     if (isNil(left))  return false;
     if (isNil(right)) return false;
-    if (nt_unknown == set->type) {
-        return (left.reference == right.reference);
-    } else {
-        return node_Match(left, right);
-    }
+    return node_Match(left, right);
 }
 
 extern bool set_Contains(Set set, Node value) {
     if (!allowInSet(set, value)) return false;
-    if (0 == set->fullsize)      return false;
-    if (0 == set->count)         return false;
+
+    Set_state state = set->state;
+
+    if (!state)            return false;
+    if (0 == state->count) return false;
 
     HashCode hashcode = 0;
 
     if (!hashForSet(set, value, &hashcode)) return false;
 
-    unsigned index = hashcode % set->fullsize;
-    Set_cell      list = (Set_cell)0;
+    unsigned index = hashcode % state->fullsize;
+    Set_cell  list = (Set_cell)0;
     Set_block here = set->first;
 
     for ( ; ; here = here->next) {
         if (!here) {
             return false;
         }
-        if (index < here->size) break;
-        index -= here->size;
+        long max = getCount(here) - 1;
+        if (index < max) break;
+        index -= max;
     }
 
     list = here->list[index];
@@ -196,13 +188,17 @@ extern bool set_Contains(Set set, Node value) {
 
 extern bool set_Add(Set set, Node value) {
     if (!allowInSet(set, value)) return false;
-    if (0 == set->fullsize)      return false;
+
+    Set_state state = set->state;
+
+    if (!state)               return false;
+    if (0 == state->fullsize) return false;
 
     HashCode hashcode = 0;
 
     if (!hashForSet(set, value, &hashcode)) return false;
 
-    unsigned index = hashcode % set->fullsize;
+    unsigned index = hashcode % state->fullsize;
     Set_cell *location = (Set_cell*)0;
     Set_block here = set->first;
 
@@ -210,8 +206,9 @@ extern bool set_Add(Set set, Node value) {
         if (!here) {
             return false;
         }
-        if (index < here->size) break;
-        index -= here->size;
+        long max = getCount(here) - 1;
+        if (index < max) break;
+        index -= max;
     }
 
     location = &(here->list[index]);
@@ -220,7 +217,7 @@ extern bool set_Add(Set set, Node value) {
 
     if (!list) {
         cell_Create(value, 0, location);
-        set->count += 1;
+        state->count += 1;
         return true;
     }
 
@@ -228,7 +225,7 @@ extern bool set_Add(Set set, Node value) {
         if (matchForSet(set, list->first, value)) return true;
         if (!list->rest) {
             cell_Create(value, 0, &list->rest);
-            set->count += 1;
+            state->count += 1;
             return true;
         }
     }
@@ -236,13 +233,16 @@ extern bool set_Add(Set set, Node value) {
 
 extern bool set_Remove(Set set, Node value) {
     if (!allowInSet(set, value)) return false;
-    if (0 == set->fullsize)      return false;
+
+    Set_state state = set->state;
+    if (!state)               return false;
+    if (0 == state->fullsize) return false;
 
     HashCode hashcode = 0;
 
     if (!hashForSet(set, value, &hashcode)) return false;
 
-    unsigned index = hashcode % set->fullsize;
+    unsigned index = hashcode % state->fullsize;
     Set_cell *location = (Set_cell*)0;
     Set_block here = set->first;
 
@@ -250,8 +250,9 @@ extern bool set_Remove(Set set, Node value) {
         if (!here) {
             return false;
         }
-        if (index < here->size) break;
-        index -= here->size;
+        long max = getCount(here) - 1;
+        if (index < max) break;
+        index -= max;
     }
 
     location = &(here->list[index]);
@@ -270,27 +271,35 @@ extern bool set_Remove(Set set, Node value) {
         }
     }
 
-    set->count -= 1;
+    state->count -= 1;
     *(location) = list->rest;
 
     return true;
 }
 
 extern bool set_Clone(Set source, Set *target) {
-    if (0 == source->fullsize) return false;
-    if (!set_Create(source->fullsize, source->type, target)) return false;
+    if (!source) return false;
+
+    Set_state state = source->state;
+    if (!state)               return false;
+    if (0 == state->fullsize) return false;
+    if (!set_Create(state->fullsize, target)) return false;
+
     return set_Union(*target, source);
 }
 
 extern bool set_Union(Set result, Set source) {
     if (!matchSets(result, source)) return false;
-    if (0 == source->fullsize)      return true;
+
+    Set_state state = source->state;
+    if (!state)               return false;
+    if (0 == state->fullsize) return false;
 
     Set_block block = source->first;
 
     for ( ; block ; block = block->next) {
-        unsigned int index = block->size;
-        Set_cell        *list  = block->list;
+        long      index = getCount(block) - 1;
+        Set_cell *list  = block->list;
         for ( ; 0 < index--; ) {
             Set_cell here = list[index];
             for ( ; here ; here = here->rest) {
@@ -304,19 +313,25 @@ extern bool set_Union(Set result, Set source) {
 
 extern bool set_Difference(Set result, Set source) {
     if (!matchSets(result, source)) return false;
-    if (0 == source->fullsize)      return true;
+
+    Set_state state = source->state;
+    if (!state)               return false;
+    if (0 == state->fullsize) return false;
+
+    state = result->state;
+    if (!state) return false;
 
     struct set_block *block = result->first;
 
     for ( ; block ; block = block->next) {
-        unsigned int index = block->size;
-        Set_cell         *list = block->list;
+        long      index = getCount(block) - 1;
+        Set_cell *list  = block->list;
         for ( ; 0 < index--; ) {
             Set_cell *location = &(list[index]);
             Set_cell      here = *location;
             for ( ; here ; here = here->rest) {
                 if (set_Contains(source, here->first)) {
-                    result->count -= 1;
+                    state->count -= 1;
                     *location = here->rest;
                     continue;
                 }
@@ -331,17 +346,20 @@ extern bool set_Difference(Set result, Set source) {
 extern bool set_Intersection(Set result, Set source) {
     if (!matchSets(result, source)) return false;
 
+    Set_state state = result->state;
+    if (!state) return false;
+
     Set_block block = result->first;
 
     for ( ; block ; block = block->next) {
-        unsigned int index = block->size;
-        Set_cell         *list = block->list;
+        long      index = getCount(block) - 1;
+        Set_cell *list  = block->list;
         for ( ; 0 < index--; ) {
             Set_cell *location = &(list[index]);
             Set_cell      here = *location;
             for ( ; here ; here = here->rest) {
                 if (!set_Contains(source, here->first)) {
-                    result->count -= 1;
+                    state->count -= 1;
                     *location = here->rest;
                     continue;
                 }
@@ -361,13 +379,15 @@ extern void set_Print(FILE* output, Set set) {
         return;
     }
 
+    Set_state state = set->state;
+
     fprintf(output, "set_%p{", set);
 
     unsigned int total = 0;
 
     Set_block here = set->first;
     for ( ; here ; here = here->next) {
-        unsigned index = here->size;
+        long index = getCount(here) - 1;
         for ( ; 0 < index ; --index) {
             Set_cell list = here->list[index];
             for ( ; list ; list = list->rest) {
@@ -379,7 +399,7 @@ extern void set_Print(FILE* output, Set set) {
     }
     fprintf(output, "}");
 
-    if (total != set->count) {
+    if (total != state->count) {
         //VM_ERROR("Set Count Error: seen %u cached %u", total, set->count);
     }
 }

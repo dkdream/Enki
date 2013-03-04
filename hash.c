@@ -18,79 +18,102 @@
 
 #define Hash_Block_Size 10
 
-extern bool entry_Create(Symbol symbol, Node value, Hash_entry next, Hash_entry* target);
-extern bool hash_block_Create(struct hash_block **target);
-
 /* */
-#if 0
-static inline bool entry_Create(Symbol symbol, Node value, Hash_entry next, Hash_entry* target) {
+static inline bool entry_Create(Symbol symbol, Node value, Hash_entry next, Hash_entry* result) {
+
+    Reference target;
+
     if (!node_Allocate(_zero_space,
                        false,
                        sizeof(struct hash_entry),
                        0,
-                       target))
+                       &target))
         return false;
 
-    Hash_entry result = *target;
+    Hash_entry entry = target;
 
-    result->next   = next;
-    result->symbol = symbol;
-    result->value  = value;
+    entry->next   = next;
+    entry->symbol = symbol;
+    entry->value  = value;
+
+    *result = entry;
 
     return true;
 }
 
-static inline bool hash_block_Create(struct hash_block **target) {
+static inline bool hash_block_Create(Hash_block *result) {
+    Reference target;
+
     if (!node_Allocate(_zero_space,
                        false,
                        asSize(sizeof(struct hash_block), sizeof(Hash_entry) * Hash_Block_Size),
                        0,
-                       target)) return false;
+                       &target)) return false;
 
-    struct hash_block *result = *target;
-
-    result->size = Hash_Block_Size;
+    *result = target;
 
     return true;
 }
 
-extern bool hash_Create(unsigned size, Hash *target) {
-    if (!node_Allocate(_zero_space,
-                       false,
-                       sizeof(struct hash),
-                       0,
-                       target))
-        return false;
-
-    Hash result = *target;
-
-    if (!hash_block_Create(&result->first)) return false;
-
-    result->count    = 0;
-    result->fullsize = Hash_Block_Size;
-
-    return true;
-}
-#endif
-
-extern bool hash_Find(Hash table, Symbol name, Node *target) {
-    if (!table)              return false;
-    if (!name)               return false;
-    if (1 > table->fullsize) return false;
-
-    unsigned  index = name->hashcode % table->fullsize;
-    Hash_entry      list = (Hash_entry)0;
-    Hash_block here = table->first;
-
+static inline Hash_entry getEntry(Hash_block here, unsigned index) {
     for ( ; ; here = here->next) {
         if (!here) {
             return false;
         }
-        if (index < here->size) break;
-        index -= here->size;
+        long max = getCount(here) - 1;
+        if (index < max) break;
+        index -= max;
+    }
+    return here->list[index];
+}
+
+static inline Hash_entry* refEntry(Hash_block here, unsigned index) {
+    for ( ; ; here = here->next) {
+        if (!here) {
+            return false;
+        }
+        long max = getCount(here) - 1;
+        if (index < max) break;
+        index -= max;
     }
 
-    list = here->list[index];
+    return &(here->list[index]);
+}
+
+
+extern bool hash_Create(unsigned size, Hash *result) {
+    Reference target;
+
+    if (!node_Allocate(_zero_space,
+                       false,
+                       sizeof(struct hash),
+                       sizeof(struct hash_state),
+                       &target))
+        return false;
+
+    Hash hash = target;
+
+    if (!hash_block_Create(&hash->first)) return false;
+
+    Hash_state state = hash->state;
+
+    state->count    = 0;
+    state->fullsize = Hash_Block_Size;
+
+    *result = hash;
+
+    return true;
+}
+
+extern bool hash_Find(Hash table, Symbol name, Node *target) {
+    if (!table)              return false;
+    if (!name)               return false;
+
+    Hash_state state = table->state;
+    if (1 > state->fullsize) return false;
+
+    unsigned  index = name->hashcode % state->fullsize;
+    Hash_entry list = getEntry(table->first, index);
 
     if (!list) return false;
 
@@ -108,26 +131,16 @@ extern bool hash_Change(Hash table, Symbol name, Node value) {
     if (!table)       return false;
     if (!name)        return false;
     if (isNil(value)) return false;
-    if (1 > table->fullsize) return false;
 
-    unsigned  index = name->hashcode % table->fullsize;
-    Hash_entry *location = (Hash_entry*)0;
-    Hash_block here = table->first;
+    Hash_state state = table->state;
+    if (1 > state->fullsize) return false;
 
-    for ( ; ; here = here->next) {
-        if (!here) {
-            return false;
-        }
-        if (index < here->size) break;
-        index -= here->size;
-    }
-
-    location = &(here->list[index]);
-
-    Hash_entry list = *(location);
+    unsigned    index    = name->hashcode % state->fullsize;
+    Hash_entry *location = refEntry(table->first, index);
+    Hash_entry  list     = *(location);
 
     if (!list) {
-        table->count += 1;
+        state->count += 1;
         return entry_Create(name, value, 0, location);
     }
 
@@ -137,7 +150,7 @@ extern bool hash_Change(Hash table, Symbol name, Node value) {
             return true;
         }
         if (!list->next) {
-            table->count += 1;
+            state->count += 1;
             return entry_Create(name, value, 0, &(list->next));
         }
     }
@@ -146,23 +159,13 @@ extern bool hash_Change(Hash table, Symbol name, Node value) {
 extern bool hash_Add(Hash table, Symbol name, Node value) {
     if (!table)              return false;
     if (!name)               return false;
-    if (1 > table->fullsize) return false;
 
-    unsigned  index = name->hashcode % table->fullsize;
-    Hash_entry *location = (Hash_entry*)0;
-    Hash_block here = table->first;
+    Hash_state state = table->state;
+    if (1 > state->fullsize) return false;
 
-    for ( ; ; here = here->next) {
-        if (!here) {
-            return false;
-        }
-        if (index < here->size) break;
-        index -= here->size;
-    }
-
-    location = &(here->list[index]);
-
-    Hash_entry list = *(location);
+    unsigned    index    = name->hashcode % state->fullsize;
+    Hash_entry *location =  refEntry(table->first, index);
+    Hash_entry  list     = *(location);
 
     for ( ; list ; list = list->next) {
         if (list->symbol == name) {
@@ -176,30 +179,20 @@ extern bool hash_Add(Hash table, Symbol name, Node value) {
         return false;
     }
 
-    table->count += 1;
+    state->count += 1;
     return true;
 }
 
 extern bool hash_Remove(Hash table, Symbol name) {
     if (!table) return false;
     if (!name)  return false;
-    if (1 > table->fullsize) return true;
 
-    unsigned  index = name->hashcode % table->fullsize;
-    Hash_entry *location = (Hash_entry*)0;
-    Hash_block here = table->first;
+    Hash_state state = table->state;
+    if (1 > state->fullsize) return false;
 
-    for ( ; ; here = here->next) {
-        if (!here) {
-            return false;
-        }
-        if (index < here->size) break;
-        index -= here->size;
-    }
-
-    location = &(here->list[index]);
-
-    Hash_entry list = *(location);
+    unsigned    index    = name->hashcode % state->fullsize;
+    Hash_entry *location = refEntry(table->first, index);
+    Hash_entry  list     = *(location);
 
     if (!list) return true;
 
@@ -213,7 +206,7 @@ extern bool hash_Remove(Hash table, Symbol name) {
         }
     }
 
-    table->count -= 1;
+    state->count -= 1;
     darken_Node(list->next);
     *(location) = list->next;
     return true;
@@ -222,14 +215,16 @@ extern bool hash_Remove(Hash table, Symbol name) {
 // expand the hash table (for faster access)
 extern bool hash_Expand(Hash table, unsigned size) {
     if (!table) return false;
-    if (size < table->fullsize) return true;
+    Hash_state state = table->state;
+    if (size < state->fullsize) return true;
     return false;
 }
 
 // contract the hash table (for sparce tables)
 extern bool hash_Contract(Hash table, unsigned size) {
     if (!table) return false;
-    if (size > table->fullsize) return true;
+    Hash_state state = table->state;
+    if (size < state->fullsize) return true;
     return false;
 }
 
@@ -241,13 +236,15 @@ extern void hash_Print(FILE* output, Hash table) {
         return;
     }
 
+    Hash_state state = table->state;
+
     fprintf(output, "hash_%p{", table);
 
     unsigned int total = 0;
 
     Hash_block here = table->first;
     for ( ; here ; here = here->next) {
-        unsigned index = here->size;
+        long index = getCount(here) - 1;
         for ( ; 0 < index ; --index) {
             Hash_entry list = here->list[index];
             for ( ; list ; list = list->next) {
@@ -260,7 +257,7 @@ extern void hash_Print(FILE* output, Hash table) {
     }
     fprintf(output, "}");
 
-    if (total != table->count) {
+    if (total != state->count) {
         //VM_ERROR("Hash Count Error: seen %u cached %u", total, table->count);
     }
 

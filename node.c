@@ -51,10 +51,6 @@ extern HashCode node_HashCode(Node node)
         result = node.integer->value;
         break;
 
-    case nt_count:
-        result ^= node.count->value;
-        break;
-
     default:
         convert.output = 0;
         convert.input  = node;
@@ -83,9 +79,6 @@ bool node_Match(Node left, Node right)
                            left.text->size);
     case nt_integer:
         return left.integer->value == right.integer->value;
-
-    case nt_count:
-        return left.count->value == right.count->value;
 
     default:
         return false;
@@ -121,9 +114,6 @@ bool node_Iso(long depth, Node left, Node right)
                            left.text->size);
     case nt_integer:
         return left.integer->value == right.integer->value;
-
-    case nt_count:
-        return left.count->value == right.count->value;
 
     case nt_pair:
         if (!node_Iso(depth - 1,
@@ -167,10 +157,6 @@ extern void node_TypeOf(Node value, Target result)
     switch (getKind(value)) {
     case nt_unknown:
         goto as_self;
-
-    case nt_count:
-        text = "count";
-        goto as_symbol;
 
     case nt_integer:
         text = "integer";

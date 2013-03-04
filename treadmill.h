@@ -101,6 +101,12 @@ enum gc_color {
 
 struct gc_header {
     struct {
+        struct gc_treadmill *space;
+        struct gc_header    *before;
+        struct gc_header    *after;
+    } __attribute__((__packed__));
+
+    struct {
         unsigned long count : BITS_PER_WORD - 12 __attribute__((__packed__));
         union {
             unsigned int flags : 12 __attribute__((__packed__));
@@ -113,13 +119,10 @@ struct gc_header {
             } __attribute__((__packed__));
         } __attribute__((__packed__));
     } __attribute__((__packed__));
-
-    struct gc_treadmill *space;
-    struct gc_header    *before;
-    struct gc_header    *after;
 };
 
 struct gc_treadmill {
+    unsigned long count;
     Color  visiable;
     Header free;   // start of the free    list
     Header bottom; // start of the hidden  list
@@ -180,6 +183,13 @@ extern inline Header asHeader(const Node value) {
     return (((Header)value.reference) - 1);
 }
 
+extern inline unsigned long getCount(const Node value) __attribute__((always_inline));
+extern inline unsigned long getCount(const Node value) {
+    if (!value.reference) return 0;
+    Header header = asHeader(value);
+    return (unsigned long)(header->count);
+}
+
 extern inline EA_Type getKind(const Node value) __attribute__((always_inline));
 extern inline EA_Type getKind(const Node value) {
     if (!value.reference) return nt_unknown;
@@ -230,10 +240,6 @@ extern inline Reference init_atom(Header header,
     header->count  = fullcount;
     header->color  = nc_unknown;
     header->atom   = 1;
-    header->inside = 0;
-    header->prefix = 0;
-    header->space  = 0;
-    header->before = header->after = 0;
 
     return asReference(header);
 }
@@ -250,10 +256,7 @@ extern inline Reference init_tuple(Header header,
     header->count  = fullcount;
     header->color  = nc_unknown;
     header->atom   = 1;
-    header->inside = 0;
     header->prefix = (prefix ? 1 : 0);
-    header->space  = 0;
-    header->before = header->after = 0;
 
     Reference reference = asReference(header);
 
@@ -265,8 +268,8 @@ extern inline Reference init_tuple(Header header,
     return asReference(header);
 }
 
-extern inline Header fresh_atom(unsigned long size_in_chars) __attribute__((always_inline));
-extern inline Header fresh_atom(unsigned long size_in_chars) {
+extern inline Header fresh_atom(bool, unsigned long) __attribute__((always_inline));
+extern inline Header fresh_atom(bool inside, unsigned long size_in_chars) {
     unsigned long fullcount = toCount(size_in_chars);
     unsigned long fullsize  = toSize(fullcount);
     fullsize += sizeof(struct gc_header);
@@ -278,20 +281,18 @@ extern inline Header fresh_atom(unsigned long size_in_chars) {
     header->count  = fullcount;
     header->color  = nc_unknown;
     header->atom   = 1;
-    header->inside = 0;
-    header->prefix = 0;
-    header->space  = 0;
-    header->before = header->after = 0;
+    header->inside = (inside ? 1 : 0);
 
     return header;
 }
 
-extern inline Header fresh_tuple(unsigned long, unsigned long) __attribute__((always_inline));
-extern inline Header fresh_tuple(unsigned long size_in_pointers,
+extern inline Header fresh_tuple(bool, unsigned long, unsigned long) __attribute__((always_inline));
+extern inline Header fresh_tuple(bool inside,
+                                 unsigned long size_in_chars,
                                  unsigned long prefix_in_chars)
 {
     bool prefix = (0 < prefix_in_chars);
-    unsigned long fullcount = size_in_pointers;
+    unsigned long fullcount = toCount(size_in_chars);
     unsigned long fullsize  = toSize(fullcount);
     fullsize += sizeof(struct gc_header);
 
@@ -306,11 +307,8 @@ extern inline Header fresh_tuple(unsigned long size_in_pointers,
 
     header->count  = fullcount;
     header->color  = nc_unknown;
-    header->atom   = 0;
-    header->inside = 0;
+    header->inside = (inside ? 1 : 0);
     header->prefix = (prefix ? 1 : 0);
-    header->space  = 0;
-    header->before = header->after = 0;
 
     if (prefix) {
         Reference *slots = asReference(header);

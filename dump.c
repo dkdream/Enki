@@ -94,11 +94,6 @@ extern bool print(FILE* output, Node node) {
                 node.integer->value);
         return true;
 
-    case nt_count:
-        fprintf(output, "%u",
-                node.count->value);
-        return true;
-
     case nt_primitive:
         fprintf(output, "%s(%p)",
                 (const char *) node.primitive->label->value,
@@ -161,11 +156,6 @@ extern bool dump(FILE* output, Node node) {
     case nt_integer:
         fprintf(output, "integer(%ld)",
                 node.integer->value);
-        return true;
-
-    case nt_count:
-        fprintf(output, "count(%u)",
-                node.count->value);
         return true;
 
     case nt_primitive:
@@ -283,12 +273,6 @@ extern void prettyPrint(FILE* output, Node node) {
         case nt_integer:
             offset += 10;
             fprintf(output, "%ld", node.integer->value);
-            return;
-
-        case nt_count:
-            offset += 10;
-            fprintf(output, "%u",
-                    node.count->value);
             return;
 
         case nt_primitive:

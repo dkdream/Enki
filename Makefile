@@ -57,13 +57,13 @@ UNIT_TESTS := test_reader.gcc test_sizes.gcc
 
 all :: enki
 
-enki :: enki.vm
+enki :: $(RUNS)
 asm  :: $(ASMS)
 test :: $(RUNS)
 	@echo all test runs
 
 units :: $(UNIT_TESTS:%.gcc=%.x)
-	echo  $(UNIT_TESTS:%.gcc=%.x)
+	ls -l $(UNIT_TESTS:%.gcc=%.x)
 
 install : install.bin install.inc install.lib
 
@@ -73,11 +73,15 @@ install.lib :: $(LIBDIR)/libEnki.a
 
 checkpoint : ; git checkpoint
 
+depends : $(DEPENDS)
+
 $(RUNS) : enki.vm
 
 clean ::
 	@rm -rf .depends
-	rm -f $(OBJS) $(ASMS) $(MAINS:%.c=%.o) enki.x test.x enki_ver.h
+	rm -f $(OBJS) $(ASMS) $(MAINS:%.c=%.o)
+	rm -f enki.x test.x enki_ver.h
+	rm -f $(RUNS)
 
 scrub :: 
 	@make clean

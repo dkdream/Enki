@@ -12,6 +12,11 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+typedef struct hash       *Hash;
+typedef struct hash_state *Hash_state;
+typedef struct hash_block *Hash_block;
+typedef struct hash_entry *Hash_entry;
+
 struct hash_entry {
     Hash_entry  next;
     Symbol      symbol;
@@ -19,15 +24,18 @@ struct hash_entry {
 };
 
 struct hash_block {
-    unsigned int size; // = (header.count - 1)?
-    Hash_block   next; // next block
-    Hash_entry   list[];
+    Hash_block next; // next block
+    Hash_entry list[];
+};
+
+struct hash_state {
+    unsigned int count;    // number of entries
+    unsigned int fullsize; // = sum(block[0..n].size)
 };
 
 struct hash {
-    unsigned int count;    // number of entries
-    unsigned int fullsize; // = sum(block[0..n].size)
-    Hash_block   first;
+    Hash_state state;
+    Hash_block first;
 };
 
 extern bool hash_Create(unsigned, Hash*);

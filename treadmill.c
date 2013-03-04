@@ -304,6 +304,8 @@ extern bool node_Allocate(const Space space,
 {
     if (!target.reference) return false;
 
+    bool inside = (!space ? false : true);
+
     if (space) {
         unsigned count = 100;
         // scan first
@@ -325,7 +327,7 @@ extern bool node_Allocate(const Space space,
         }
     }
 
-    const Header header = fresh_tuple(toCount(size_in_char), prefix_in_char);
+    const Header header = fresh_tuple(inside, toCount(size_in_char), prefix_in_char);
 
     VM_DEBUG(4, "allocating header %p (%d)[%d] for node %p size %d from space %p",
              header,
@@ -337,9 +339,8 @@ extern bool node_Allocate(const Space space,
 
     header->atom = (atom ? 1 : 0);
 
-    if (!space) return true;
+    if (!inside) return true;
 
-    header->inside = 1;
     header->color  = space->visiable;
     header->space  = space;
 
