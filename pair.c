@@ -335,6 +335,13 @@ extern bool list_Map(Operator func, Pair pair, const Node env, Pair* target) {
         last = hold;
     }
 
+    if (!isNil(pair->cdr.pair)) {
+        input  = pair->cdr;
+        output = NIL;
+        func(input, env, &output);
+        if (!pair_SetCdr(last, output)) return false;
+    }
+
 #if 0
     printf("list_Map => ");
     prettyPrint(stdout, first);
