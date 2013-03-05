@@ -1,4 +1,4 @@
-;;; -*- mode: Scheme; -*-
+;;; -*- mode: enki; -*-
 
 (define list (lambda args args))
 

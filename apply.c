@@ -5,6 +5,7 @@
  ** Routine List:
  **    <routine-list-end>
  **/
+#define debug_THIS
 #include "apply.h"
 #include "primitive.h"
 #include "reader.h"
@@ -13,6 +14,7 @@
 #include "pair.h"
 #include "symbol.h"
 #include "dump.h"
+#include "debug.h"
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -84,13 +86,13 @@ extern void popTrace() {
 
 extern void apply(Node fun, Node args, const Node env, Target result)
 {
-#if 0
-        printf("apply: ");
-        prettyPrint(stdout, fun);
-        printf(" to: ");
-        prettyPrint(stdout, args);
-        printf("\n");
-#endif
+    VM_ON_DEBUG(1, {
+            fprintf(stderr, "apply: ");
+            prettyPrint(stderr, fun);
+            fprintf(stderr, " to: ");
+            prettyPrint(stderr, args);
+            fprintf(stderr,"\n");
+        });
 
     for (;;) {
         // Primitive -> Operator
@@ -124,11 +126,12 @@ extern void apply(Node fun, Node args, const Node env, Target result)
 
  done:
 
-#if 0
-    printf("apply => ");
-    prettyPrint(stdout, *result.reference);
-    printf("\n");
-#endif
+    VM_ON_DEBUG(1, {
+            fprintf(stderr, "apply => ");
+            prettyPrint(stderr, *result.reference);
+            fprintf(stderr, "\n");
+        });
+
     return;
 }
 
@@ -139,11 +142,11 @@ extern void expand(const Node expr, const Node env, Target result)
     Node head = NIL;
     Node tail = NIL;
 
-#if 0
-    printf("expand: ");
-    prettyPrint(stdout, list);
-    printf("\n");
-#endif
+    VM_ON_DEBUG(1, {
+            fprintf(stderr, "expand: ");
+            prettyPrint(stderr, list);
+            fprintf(stderr, "\n");
+        });
 
     for (;;) {
         if (!isKind(list, nt_pair)) {
@@ -183,12 +186,11 @@ extern void expand(const Node expr, const Node env, Target result)
     pair_Create(head, tail, result.pair);
 
  done:
-
-#if 0
-    printf("expand => ");
-    prettyPrint(stdout, *result.reference);
-    printf("\n");
-#endif
+    VM_ON_DEBUG(1, {
+            fprintf(stderr, "expand => ");
+            prettyPrint(stderr, *result.reference);
+            fprintf(stderr, "\n");
+        });
     return;
 }
 
@@ -199,11 +201,11 @@ extern void encode(const Node expr, const Node env, Target result)
     Node head = NIL;
     Node tail = NIL;
 
-#if 0
-    printf("encode: ");
-    prettyPrint(stdout, list);
-    printf("\n");
-#endif
+    VM_ON_DEBUG(1, {
+            fprintf(stderr,"encode: ");
+            prettyPrint(stderr, list);
+            fprintf(stderr, "\n");
+        });
 
     if (!isKind(list, nt_pair)) {
         ASSIGN(result, list);
@@ -255,12 +257,11 @@ extern void encode(const Node expr, const Node env, Target result)
     pair_Create(head, tail, result.pair);
 
  done:
-
-#if 0
-    printf("encode => ");
-    prettyPrint(stdout, *result.reference);
-    printf("\n");
-#endif
+    VM_ON_DEBUG(1, {
+            fprintf(stderr, "encode => ");
+            prettyPrint(stderr, *result.reference);
+            fprintf(stderr, "\n");
+        });
 
     return;
 }
@@ -269,11 +270,11 @@ extern void eval(const Node expr, const Node env, Target result)
 {
     pushTrace(expr);
 
-#if 0
-    printf("eval: ");
-    prettyPrint(stdout, expr);
-    printf("\n");
-#endif
+    VM_ON_DEBUG(1, {
+            fprintf(stderr, "eval: ");
+            prettyPrint(stderr, expr);
+            fprintf(stderr, "\n");
+        });
 
     Primitive evaluator = 0;
 
@@ -299,11 +300,11 @@ extern void eval(const Node expr, const Node env, Target result)
 
  done:
 
-#if 0
-    printf("eval => ");
-    prettyPrint(stdout, *result.reference);
-    printf("\n");
-#endif
+    VM_ON_DEBUG(1, {
+            fprintf(stderr, "eval => ");
+            prettyPrint(stderr, *result.reference);
+            fprintf(stderr, "\n");
+        });
 
     popTrace();
 }
