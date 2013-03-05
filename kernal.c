@@ -35,15 +35,18 @@ Primitive  p_apply_expr = 0;
 Primitive  p_apply_form = 0;
 
 Symbol s_dot = 0;
+
+Symbol s_global = 0;
+Symbol s_current = 0;
+Symbol s_delay = 0;
+Symbol s_lambda = 0;
+Symbol s_nil = 0;
 Symbol s_quasiquote = 0;
 Symbol s_quote = 0;
+Symbol s_set = 0;
+Symbol s_t = 0;
 Symbol s_unquote = 0;
 Symbol s_unquote_splicing = 0;
-Symbol s_delay = 0;
-Symbol s_t = 0;
-Symbol s_nil = 0;
-Symbol s_lambda = 0;
-Symbol s_set = 0;
 
 #define SUBR(NAME) void opr_##NAME(Node args, Node env, Target result)
 
@@ -343,7 +346,6 @@ static SUBR(eval_pair)
     printf("\n");
 #endif
 
-
     pushTrace(obj);
 
     // first eval the head
@@ -641,14 +643,16 @@ static SUBR(abort)
     fatal("aborted");
 }
 
-static SUBR(current_environment)
+static SUBR(environment)
 {
-    ASSIGN(result, env);
-}
+    Node value = NIL;
+    fetchArgs(args, &value, 0);
 
-static SUBR(global_environment)
-{
-    pair_GetCdr(enki_globals.pair, result);
+    if (isIdentical(value, s_current)) {
+         ASSIGN(result, env);
+    } else {
+        pair_GetCdr(enki_globals.pair, result);
+    }
 }
 
 static SUBR(dump)
@@ -751,39 +755,42 @@ void startEnkiLibrary() {
 
     symbol_Convert(".", &s_dot);
 
+    MK_SYM(current);
+    MK_SYM(delay);
+    MK_SYM(global);
+    MK_SYM(lambda);
+    MK_SYM(nil);
     MK_SYM(quasiquote);
     MK_SYM(quote);
+    MK_SYM(set);
+    MK_SYM(t);
     MK_SYM(unquote);
     MK_SYM(unquote_splicing);
-    MK_SYM(delay);
-    MK_SYM(t);
-    MK_SYM(nil);
-    MK_SYM(lambda);
-    MK_SYM(set);
+
 
     f_quote = MK_FXD(quote);
 
-    MK_FXD(if);
     MK_FXD(and);
+    MK_FXD(define);
+    MK_FXD(if);
+    MK_FXD(lambda);
+    MK_FXD(let);
     MK_FXD(or);
     MK_FXD(set);
-    MK_FXD(define);
-    MK_FXD(let);
     MK_FXD(while);
-    MK_FXD(lambda);
 
     MK_PRM(gensym);
     MK_PRM(find);
 
-    p_eval_symbol = MK_PRM(eval_symbol);
-    p_eval_pair   = MK_PRM(eval_pair);
-    p_apply_expr  = MK_PRM(apply_expr);
-    p_apply_form  = MK_PRM(apply_form);
+    p_eval_symbol = MK_OPR(eval-symbol,eval_symbol);
+    p_eval_pair   = MK_OPR(eval-pair,eval_pair);
+    p_apply_expr  = MK_OPR(apply-expr,apply_expr);
+    p_apply_form  = MK_OPR(apply-form,apply_form);
 
     MK_PRM(form);
     MK_PRM(eval);
     MK_PRM(apply);
-    MK_PRM(type_of);
+    MK_OPR(type-of, type_of);
 
     MK_OPR(~,com);
 
@@ -800,8 +807,7 @@ void startEnkiLibrary() {
     MK_PRM(assert);
     MK_PRM(exit);
     MK_PRM(abort);
-    MK_PRM(current_environment);
-    MK_PRM(global_environment);
+    MK_PRM(environment);
     MK_PRM(dump);
     MK_PRM(dumpln);
     MK_PRM(print);

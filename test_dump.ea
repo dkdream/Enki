@@ -3,26 +3,27 @@ dump
 (dumpln (~ 1))
 (dumpln "1")
 (dumpln '1)
-(dumpln (type_of '1))
+(dumpln (type-of '1))
 (dumpln nil)
 
-(assert 'integer (type_of 1))
-(assert 'text    (type_of "1"))
-(assert 'symbol  (type_of 'val))
-(assert nil      (type_of nil))
-(assert 'primitive (type_of println))
-(assert 'fixed    (type_of let))
+(assert 'integer (type-of 1))
+(assert 'text    (type-of "1"))
+(assert 'symbol  (type-of 'val))
+(assert nil      (type-of nil))
+(assert 'primitive (type-of println))
+(assert 'fixed    (type-of let))
 
 (define fooness 'fooness)
 (define barness (lambda (ok)
                   (dumpln ok)
-                  (println (type_of ok))
+                  (println (type-of ok))
                   1
                   ))
 
 (println (barness "testing"))
 
-(dumpln (global_environment))
+(let ((xxx 1)(yyy 2))
+  (dumpln (environment)))
 
 (exit 0)
 
@@ -54,7 +55,7 @@ dump
  (* . primitive(0x8703e59 *))
  (+ . primitive(0x8703dc9 +))
  (~ . primitive(0x8703d39 ~))
- (type_of . primitive(0x8703ca9 type_of))
+ (type-of . primitive(0x8703ca9 type-of))
  (apply . primitive(0x8703c19 apply))
  (eval . primitive(0x8703b89 eval))
  (form . primitive(0x8703af9 form))
