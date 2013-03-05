@@ -79,8 +79,8 @@ $(RUNS) : enki.vm
 
 clean ::
 	@rm -rf .depends
-	rm -f $(OBJS) $(ASMS) $(MAINS:%.c=%.o)
-	rm -f enki.x test.x enki_ver.h
+	rm -f $(OBJS) $(ASMS) $(MAINS:%.c=%.o) $(UNIT_TESTS:%.gcc=%.x)
+	rm -f enki.x test.x enki.vm enki_ver.h
 	rm -f $(RUNS)
 
 scrub :: 
