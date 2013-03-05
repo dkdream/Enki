@@ -14,6 +14,7 @@
 #include <stdbool.h>
 #include <error.h>
 #include <stdarg.h>
+#include <stdio.h>
 
 static bool __initialized = false;
 
@@ -314,6 +315,9 @@ static SUBR(quote)
 static SUBR(lambda)
 {
     pair_Create(args, env, result.pair);
+    fprintf(stderr, "lambda:");
+    prettyPrint(stderr, args);
+    fprintf(stderr, "\n");
     setKind(*result.reference, nt_expression);
 }
 
@@ -416,6 +420,7 @@ static SUBR(apply_expr)
     pair_GetCar(defn.pair, &formals);
     pair_GetCdr(defn.pair, &body);
 
+    Node vars  = formals;
     Node vlist = arguments;
 
     // bind parameters to values
@@ -425,10 +430,10 @@ static SUBR(apply_expr)
         Node val = NIL;
 
         if (!isKind(vlist, nt_pair)) {
-            fprintf(stderr, "\nerror: too few arguments applying ");
-            dump(stderr, fun);
-            fprintf(stderr, "\n to ");
-            dump(stderr, arguments);
+            fprintf(stderr, "\nerror: too few arguments params: ");
+            prettyPrint(stderr, vars);
+            fprintf(stderr, " args: ");
+            prettyPrint(stderr, arguments);
             fprintf(stderr, "\n");
             fatal(0);
         }
@@ -453,10 +458,10 @@ static SUBR(apply_expr)
 
     // check --
     if (!isNil(vlist)) {
-        fprintf(stderr, "\nerror: too many arguments applying ");
-        dump(stderr, fun);
-        fprintf(stderr, "\n to ");
-        dump(stderr, arguments);
+        fprintf(stderr, "\nerror: too many arguments params: ");
+        prettyPrint(stderr, vars);
+        fprintf(stderr, " args: ");
+        prettyPrint(stderr, arguments);
         fprintf(stderr, "\n");
         fatal(0);
     }
@@ -500,18 +505,19 @@ static SUBR(form)
     pair_GetCar(args.pair, &func);
 
     pair_Create(func, NIL, result.pair);
+
     setKind(*(result.pair), nt_form);
 }
 
 static SUBR(type_of)
 {
     Node val = NIL;
-    checkArgs(args, "type_of", 1, nt_unknown);
+    checkArgs(args, "type-of", 1, nt_unknown);
     pair_GetCar(args.pair, &val);
     node_TypeOf(val, result);
 
 #if 0
-    printf("type_of: ");
+    printf("type-of: ");
     dump(stdout, val);
     printf(" is ");
     dump(stdout, *result.reference);
@@ -737,6 +743,21 @@ static SUBR(level)
     ASSIGN(result,value);
 }
 
+static SUBR(element) {
+    Node tuple; Node index; Node value;
+    int count = checkArgs(args, "element", 2, nt_unknown, nt_integer);
+
+    ASSIGN(result,NIL);
+
+    if (2 < count) {
+        fetchArgs(args, &tuple, &index, &value, 0);
+        tuple_SetItem(tuple.tuple, index.integer->value, value);
+    } else {
+        fetchArgs(args, &tuple, &index, 0);
+        tuple_GetItem(tuple.tuple, index.integer->value, result);
+    }
+}
+
 static void defineConstant(const char* name, const Node value) {
     Symbol label = 0;
 
@@ -856,6 +877,7 @@ void startEnkiLibrary() {
     MK_PRM(println);
     MK_PRM(debug);
     MK_PRM(level);
+    MK_OPR(%element,element);
 
     MK_CONST(t,true_v);
     MK_CONST(nil,NIL);

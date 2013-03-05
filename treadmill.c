@@ -179,6 +179,7 @@ extern bool extract_From(const Header node) {
     return true;
 }
 
+#if 0
 static void release_Header(const Header header) {
     if (!header)         return;
     if (!header->inside) return;
@@ -190,7 +191,7 @@ static void release_Header(const Header header) {
         VM_ERROR("releasing a dark header");
     }
 
-    // extract_From(header);
+    extract_From(header);
 
     VM_DEBUG(1, "releasing node %p (%d,%s,%s)[%d] (header %p) (space %p scan %p top %p)",
              asReference(header),
@@ -205,11 +206,12 @@ static void release_Header(const Header header) {
 
     header->live = 0;
 
-    // header->inside = 0;
-    // header->count  = 0;
-    // header->space  = 0;
-    // free(header);
+    header->inside = 0;
+    header->count  = 0;
+    header->space  = 0;
+    free(header);
 }
+#endif
 
 extern bool darken_Node(const Node node) {
     if (!node.reference) return true;
@@ -224,12 +226,6 @@ extern bool darken_Node(const Node node) {
 
     if (header->color == space->visiable) return true;
 
-    const Header scan = space->scan;
-    const Header top  = space->top;
-
-    const Header up   = &(space->start_up);
-    const Header down = &(space->start_down);
-
     VM_DEBUG(1, "darkening node %p (%d,%s,%s)[%d] (header %p) (space %p scan %p top %p)",
              node.reference,
              header->kind,
@@ -241,39 +237,58 @@ extern bool darken_Node(const Node node) {
              space->scan,
              space->top);
 
-    header->color = space->visiable;
+    const Header scan   = space->scan;
+    const Header top    = space->top;
+    const Header bottom = space->bottom;
+
+    const Header up   = &(space->start_up);
+    const Header down = &(space->start_down);
+    const Header root = &(space->start_root);
 
     if (header == up) {
-        return true;
+        VM_ERROR("darkening UP");
+        return false;
     }
 
     if (header == down) {
-        return true;
+        VM_ERROR("darkening DOWN");
+        return false;
     }
 
-    space->count += 1;
+    if (header == down) {
+        VM_ERROR("darkening DOWN");
+        return false;
+    }
+
+    if (header == root) {
+        VM_ERROR("darkening ROOT");
+        return false;
+    }
 
     if (header == top) {
+        VM_ERROR("darkening top");
+        return false;
+    }
+
+    if (header == bottom) {
+        VM_ERROR("darkening bottom");
         return false;
     }
 
     if (header == scan) {
+        VM_ERROR("darkening scan");
         return false;
     }
+
+    header->color = space->visiable;
+    space->count += 1;
 
     if (!extract_From(header)) {
         return false;
     }
-
-#ifndef OPTION_TWO
     if (!insert_After(top, header)) {
         return false;
     }
-#else
-    if (!insert_Before(scan, header)) {
-        return false;
-    }
-#endif
 
     return true;
 }
@@ -498,7 +513,8 @@ extern bool space_Flip(const Space space) {
     // set root to new visiable
     root->color = space->visiable = space_Hidden(space);
 
-    for (;0;) {
+#if 0
+    for (;;) {
         const Header hold = free;
 
         if (hold == bottom) break;
@@ -507,6 +523,17 @@ extern bool space_Flip(const Space space) {
 
         release_Header(hold);
     }
+#else
+    {
+        Header hold = free;
+
+        for (;;) {
+            if (hold == bottom) break;
+            hold->live = 0;
+            hold = hold->after;
+        }
+    }
+#endif
 
     VM_DEBUG(5, "moving root (1)");
 
