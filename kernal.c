@@ -18,7 +18,7 @@
 static bool __initialized = false;
 
 //
-unsigned int ea_global_debug = 5;
+unsigned int ea_global_debug = 0;
 
 //
 struct gc_treadmill enki_zero_space;
@@ -224,6 +224,10 @@ static SUBR(define)
     eval(expr, env, &value);
 
     defineValue(symbol, value);
+
+    fprintf(stderr, "defined: ");
+    print(stderr, symbol);
+    fprintf(stderr, "\n");
 
     ASSIGN(result, value);
 }
@@ -695,6 +699,44 @@ static SUBR(println)
     ASSIGN(result,NIL);
 }
 
+static SUBR(debug)
+{
+    Node value = NIL;
+    long level = 1;
+    if (isKind(args, nt_pair)) {
+        pair_GetCar(args.pair, &value);
+        if (isKind(value, nt_integer)) {
+            level = value.integer->value;
+            pair_GetCdr(args.pair, &args);
+        }
+    }
+    if (ea_global_debug <= level) {
+        while (isKind(args, nt_pair)) {
+            pair_GetCar(args.pair, &value);
+            pair_GetCdr(args.pair, &args);
+            print(stderr, value);
+        }
+        fprintf(stderr, "\n");
+    }
+    ASSIGN(result,NIL);
+}
+
+static SUBR(level)
+{
+    Node value = NIL;
+
+    integer_Create(ea_global_debug, &value.integer);
+
+    if (isKind(args, nt_pair)) {
+        pair_GetCar(args.pair, &value);
+        if (isKind(value, nt_integer)) {
+            ea_global_debug = value.integer->value;
+        }
+    }
+
+    ASSIGN(result,value);
+}
+
 static void defineConstant(const char* name, const Node value) {
     Symbol label = 0;
 
@@ -812,6 +854,8 @@ void startEnkiLibrary() {
     MK_PRM(dumpln);
     MK_PRM(print);
     MK_PRM(println);
+    MK_PRM(debug);
+    MK_PRM(level);
 
     MK_CONST(t,true_v);
     MK_CONST(nil,NIL);

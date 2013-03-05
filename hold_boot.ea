@@ -1,12 +1,14 @@
 ;;; -*- mode: Scheme; -*-
 
+(level 20)
+
 (define list (lambda args args))
 
 (define %define  define)
 (define %dump    dump)
 (define %form    form)
 (define %print   print)
-(define %type-of type_of)
+(define %type-of type-of)
 
 (define %error
   (lambda args
@@ -23,6 +25,8 @@
     (apply print args)
     (%print "\n")
     (abort)))
+
+(define pair? (lambda (x) (= (type-of x) 'pair)))
 
 (define cons (lambda (x y) 
                (let ((val (allocate 4 2)))

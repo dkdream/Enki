@@ -17,12 +17,33 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <execinfo.h>
 
 static Pair traceStack = 0;
+
+static void dump_c_stack()
+{
+    void *array[100];
+    size_t size;
+    char **strings;
+    size_t i;
+
+    size    = backtrace (array, 100);
+    strings = backtrace_symbols (array, size);
+
+    fprintf(stderr, "Obtained %zd stack frames.\n", size);
+
+    for (i = 0; i < size; i++)
+        fprintf(stderr, "%s\n", strings[i]);
+
+    free (strings);
+}
 
 // print error message followed be oop stacktrace
 extern void fatal(const char *reason, ...)
 {
+    fflush(stdout);
+
     if (reason) {
         va_list ap;
         va_start(ap, reason);
@@ -32,7 +53,10 @@ extern void fatal(const char *reason, ...)
         va_end(ap);
     }
 
-    if (!traceStack) exit(1);
+    if (!traceStack) {
+        dump_c_stack();
+        exit(1);
+    }
 
     int inx = 0;
     for(; traceStack ; ++inx) {
@@ -46,6 +70,7 @@ extern void fatal(const char *reason, ...)
     }
     fprintf(stderr, "\n");
 
+    dump_c_stack();
     exit(1);
 }
 

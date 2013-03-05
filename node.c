@@ -18,16 +18,6 @@
 #include <stdarg.h>
 /* */
 
-extern void debug_Message(const char *filename, unsigned int linenum,
-                          bool newline, const char *format, ...)
-{
-    va_list ap; va_start (ap, format);
-
-    printf("file %s line %u :: ", filename, linenum);
-    vprintf(format, ap);
-    if (newline) printf("\n");
-}
-
 extern HashCode node_HashCode(Node node)
 {
     if (!node.reference) return 0;

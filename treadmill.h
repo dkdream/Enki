@@ -113,6 +113,7 @@ struct gc_header {
             struct {
                 enum gc_color color  : 2;
                 unsigned int  atom   : 1; // is this a tuple of values
+                unsigned int  live   : 1; // is this alive
                 unsigned int  inside : 1; // is this inside a space (malloc/free by the treadmill)
                 unsigned int  prefix : 1; // the first slot is a pointer an atomic segment. (implies !atom)
                 unsigned int  kind   : 6; // the kind (used by c-code) (and prettyprint)
@@ -240,6 +241,7 @@ extern inline Reference init_atom(Header header,
     header->count  = fullcount;
     header->color  = nc_unknown;
     header->atom   = 1;
+    header->live   = 1;
 
     return asReference(header);
 }
@@ -256,6 +258,7 @@ extern inline Reference init_tuple(Header header,
     header->count  = fullcount;
     header->color  = nc_unknown;
     header->atom   = 1;
+    header->live   = 1;
     header->prefix = (prefix ? 1 : 0);
 
     Reference reference = asReference(header);
@@ -281,6 +284,7 @@ extern inline Header fresh_atom(bool inside, unsigned long size_in_chars) {
     header->count  = fullcount;
     header->color  = nc_unknown;
     header->atom   = 1;
+    header->live   = 1;
     header->inside = (inside ? 1 : 0);
 
     return header;
@@ -307,6 +311,7 @@ extern inline Header fresh_tuple(bool inside,
 
     header->count  = fullcount;
     header->color  = nc_unknown;
+    header->live   = 1;
     header->inside = (inside ? 1 : 0);
     header->prefix = (prefix ? 1 : 0);
 

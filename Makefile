@@ -37,7 +37,7 @@ TAILFLAGS += -fdelete-null-pointer-checks
 RUNFLAGS := 
 
 INCFLAGS := -I. $(COPPER_INC)
-DBFLAGS  := -ggdb -Wall -mtune=i686
+DBFLAGS  := -ggdb -Wall -mtune=i686 -rdynamic
 CFLAGS   := $(DBFLAGS) $(INCFLAG) $(TAILFLAGS)
 LIBFLAGS := $(COPPER_LIB)
 ARFLAGS  := rcu
