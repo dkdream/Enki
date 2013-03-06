@@ -5,7 +5,7 @@
  ** Routine List:
  **    <routine-list-end>
  **/
-#define debug_THIS
+//#define debug_THIS
 #include "apply.h"
 #include "primitive.h"
 #include "reader.h"
@@ -158,8 +158,20 @@ extern void expand(const Node expr, const Node env, Target result)
     return;
 }
 
+static void environ_Lambda(Node symbol, Node env, Target result)
+{
+    pair_Create(symbol, NIL, result.pair);
+}
+
+static void environ_Let(Node local, Node env, Target result)
+{
+    Node symbol;
+    pair_GetCar(local.pair, &symbol);
+    pair_Create(symbol, NIL, result.pair);
+}
+
 // translate know symbols to known values
-extern void encode(const Node expr, const Node env, Target result)
+extern void encode(const Node expr, Node env, Target result)
 {
     Node list = expr;
     Node head = NIL;
@@ -194,8 +206,24 @@ extern void encode(const Node expr, const Node env, Target result)
         }
     }
 
-    if (isIdentical(f_quote, head)) goto list_done;
+    if (isIdentical(f_quote, head))  goto list_done;
+#if 0
+    if (isIdentical(f_lambda, head)) {
+        Node args; Node lenv;
+        list_GetItem(list.pair, 2, &args);
+        list_Map(environ_Lambda, args.pair, env, &lenv);
+        list_SetEnd(lenv.pair, env);
+        env = lenv;
+    }
 
+    if (isIdentical(f_let, head)) {
+        Node locals; Node lenv;
+        list_GetItem(list.pair, 2, &locals);
+        list_Map(environ_Let, locals.pair, env, &lenv);
+        list_SetEnd(lenv.pair, env);
+        env = lenv;
+    }
+#endif
     /*
       this short cut will NOT work for
       (let ((let (lambda (let) let)))

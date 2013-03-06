@@ -31,6 +31,8 @@ Space _zero_space;
 Node       enki_globals = NIL; // nt_pair(nil, alist)
 Node            true_v  = NIL; // nt_unknown
 Node            f_quote = NIL; // nt_fixed
+Node           f_lambda = NIL; // nt_fixed
+Node              f_let = NIL; // nt_fixed
 Primitive p_eval_symbol = 0;
 Primitive   p_eval_pair = 0;
 Primitive  p_apply_expr = 0;
@@ -226,10 +228,6 @@ static SUBR(define)
     eval(expr, env, &value);
 
     defineValue(symbol, value);
-
-    fprintf(stderr, "defined: ");
-    print(stderr, symbol);
-    fprintf(stderr, "\n");
 
     ASSIGN(result, value);
 }
@@ -759,6 +757,30 @@ static SUBR(element) {
     }
 }
 
+static SUBR(cons) {
+    Node car; Node cdr;
+
+    checkArgs(args, "cons", 2, nt_unknown, nt_unknown);
+    fetchArgs(args, &car, &cdr, 0);
+
+    pair_Create(car, cdr, result.pair);
+}
+
+static SUBR(allocate) {
+    Node kind; Node size;
+    checkArgs(args, "allocate", 2, nt_symbol, nt_integer);
+
+    ASSIGN(result,NIL);
+
+    fetchArgs(args, &kind, &size, 0);
+
+    long slots = size.integer->value;
+
+    if (1 > slots) return;
+
+    tuple_Create(slots, result.tuple);
+}
+
 static void defineConstant(const char* name, const Node value) {
     Symbol label = 0;
 
@@ -832,13 +854,13 @@ void startEnkiLibrary() {
     MK_SYM(unquote_splicing);
 
 
-    f_quote = MK_FXD(quote);
+    f_quote  = MK_FXD(quote);
+    f_lambda = MK_FXD(lambda);
+    f_let    = MK_FXD(let);
 
     MK_FXD(and);
     MK_FXD(define);
     MK_FXD(if);
-    MK_FXD(lambda);
-    MK_FXD(let);
     MK_FXD(or);
     MK_FXD(set);
     MK_FXD(while);
@@ -879,6 +901,8 @@ void startEnkiLibrary() {
     MK_PRM(debug);
     MK_PRM(level);
     MK_OPR(%element,element);
+    MK_OPR(%allocate,allocate);
+    MK_OPR(%cons,cons);
 
     MK_CONST(t,true_v);
     MK_CONST(nil,NIL);

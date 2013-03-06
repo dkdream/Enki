@@ -45,7 +45,7 @@ extern bool alist_Set(Pair pair, const Node label, const Node value);
 extern bool alist_Add(Pair pair, const Node label, const Node value, Pair* target);
 
 //
-extern bool list_Map(Operator func, Pair pair, const Node env, Pair* target);
+extern bool list_Map(Operator func, Pair pair, const Node env, Target target);
 
 /***************************
  ** end of file

@@ -16,6 +16,8 @@ struct primitive {
 };
 
 extern Node      f_quote;       // quote a syntax tree
+extern Node      f_let;         // extend/overide enviroment
+extern Node      f_lambda;      //
 extern Primitive p_eval_symbol;
 extern Primitive p_eval_pair;
 extern Primitive p_apply_expr;

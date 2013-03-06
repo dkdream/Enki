@@ -281,9 +281,9 @@ extern bool alist_Add(Pair pair, const Node label, const Node value, Pair* targe
     return true;
 }
 
-extern bool list_Map(Operator func, Pair pair, const Node env, Pair* target) {
+extern bool list_Map(Operator func, Pair pair, const Node env, Target target) {
     if (!pair) {
-        *target = 0;
+        ASSIGN(target, NIL);
         return true;
     }
 
@@ -304,7 +304,7 @@ extern bool list_Map(Operator func, Pair pair, const Node env, Pair* target) {
         return true;
     }
 
-    Pair first  = 0;
+    Node first  = NIL;
     Pair last   = 0;
     Node input  = NIL;
     Node output = NIL;
@@ -314,10 +314,10 @@ extern bool list_Map(Operator func, Pair pair, const Node env, Pair* target) {
 
     func(input, env, &output);
 
-    if (!pair_Create(output,NIL, &first)) return false;
-    if (!pair_SetCar(first, output)) return false;
+    if (!pair_Create(output,NIL, &first.pair)) return false;
+    if (!pair_SetCar(first.pair, output)) return false;
 
-    last = first;
+    last = first.pair;
 
     for (; isKind(pair->cdr.pair, nt_pair) ;) {
         Pair hold = 0;
@@ -347,7 +347,7 @@ extern bool list_Map(Operator func, Pair pair, const Node env, Pair* target) {
     printf("\n");
 #endif
 
-    *target = first;
+    ASSIGN(target, first);
 
     return true;
 }
