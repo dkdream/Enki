@@ -11,6 +11,7 @@
 #include "text_buffer.h"
 #include "apply.h"
 #include "dump.h"
+#include "debug.h"
 
 /* */
 #include <string.h>

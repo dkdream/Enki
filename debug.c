@@ -6,6 +6,7 @@
  **    <routine-list-end>
  **/
 #include "debug.h"
+#include "apply.h"
 
 /* */
 #include <error.h>
@@ -15,6 +16,24 @@
 #include <stdio.h>
 #include <execinfo.h>
 /* */
+
+static void dump_c_stack()
+{
+    void *array[100];
+    size_t size;
+    char **strings;
+    size_t i;
+
+    size    = backtrace (array, 100);
+    strings = backtrace_symbols (array, size);
+
+    fprintf(stderr, "Obtained %zd stack frames.\n", size);
+
+    for (i = 0; i < size; i++)
+        fprintf(stderr, "%s\n", strings[i]);
+
+    free (strings);
+}
 
 extern void debug_Message(const char *filename, unsigned int linenum, bool newline, const char *format, ...)
 {
@@ -28,11 +47,6 @@ extern void debug_Message(const char *filename, unsigned int linenum, bool newli
 extern void error_Message(const char *filename, unsigned int linenum,
                           const char *format, ...)
 {
-    void *array[10];
-    size_t size;
-    char **strings;
-    size_t i;
-
     va_list ap; va_start (ap, format);
 
     fflush(stdout);
@@ -40,18 +54,32 @@ extern void error_Message(const char *filename, unsigned int linenum,
     vfprintf(stderr, format, ap);
     fprintf(stderr, "\n");
 
-    size    = backtrace (array, 100);
-    strings = backtrace_symbols (array, size);
-
-    fprintf(stderr, "Obtained %zd stack frames.\n", size);
-
-    for (i = 0; i < size; i++)
-        fprintf(stderr, "%s\n", strings[i]);
-
-    free (strings);
+    dump_enki_stack();
+    dump_c_stack();
 
     exit(1);
 }
+
+// print error message followed be oop stacktrace
+extern void fatal(const char *reason, ...)
+{
+    fflush(stdout);
+
+    if (reason) {
+        va_list ap;
+        va_start(ap, reason);
+        fprintf(stderr, "\nerror: ");
+        vfprintf(stderr, reason, ap);
+        fprintf(stderr, "\n");
+        va_end(ap);
+    }
+
+    dump_enki_stack();
+    dump_c_stack();
+    exit(1);
+}
+
+
 /*****************
  ** end of file **
  *****************/

@@ -287,11 +287,6 @@ extern bool list_Map(Operator func, Pair pair, const Node env, Pair* target) {
         return true;
     }
 
-    if (!isKind(pair, nt_pair)) {
-        *target = 0;
-        return true;
-    }
-
     if (!func) {
         fatal("\nerror: list_Map applied to a null function");
         return false;
@@ -304,6 +299,10 @@ extern bool list_Map(Operator func, Pair pair, const Node env, Pair* target) {
     printf("\n");
 #endif
 
+    if (!isKind(pair, nt_pair)) {
+        func(pair, env, target);
+        return true;
+    }
 
     Pair first  = 0;
     Pair last   = 0;

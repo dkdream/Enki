@@ -8,13 +8,12 @@
  **/
 #include "reference.h"
 
-extern void fatal(const char *reason, ...) __attribute__ ((noreturn format (printf, 1, 2)));
-
 extern void expand(const Node expr, const Node env, Target result);
 extern void encode(const Node expr, const Node env, Target result);
 extern void apply(Node fun, Node args, const Node env, Target result);
 extern void eval(const Node expr, const Node env, Target result);
 
+extern void dump_enki_stack();
 extern void pushTrace(const Node context);
 extern void popTrace();
 

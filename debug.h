@@ -8,8 +8,9 @@
 #include <stdbool.h>
 
 extern unsigned int ea_global_debug;
-extern void debug_Message(const char *filename, unsigned int linenum, bool newline, const char *format, ...);
-extern void error_Message(const char *filename, unsigned int linenum, const char *format, ...);
+extern void debug_Message(const char *filename, unsigned int linenum, bool newline, const char *format, ...) __attribute__ ((format (printf, 4, 5)));
+extern void error_Message(const char *filename, unsigned int linenum, const char *format, ...) __attribute__ ((noreturn format (printf, 3, 4)));
+extern void fatal(const char *reason, ...) __attribute__ ((noreturn format (printf, 1, 2)));
 
 #undef VM_ERROR
 #undef VM_DEBUG

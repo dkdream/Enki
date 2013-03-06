@@ -8,6 +8,7 @@
 
 #include "all_types.inc"
 #include "treadmill.h"
+#include "debug.h"
 
 /* */
 #include <string.h>

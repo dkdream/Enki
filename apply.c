@@ -19,48 +19,14 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
-#include <execinfo.h>
 
 static Pair traceStack = 0;
 
-static void dump_c_stack()
-{
-    void *array[100];
-    size_t size;
-    char **strings;
-    size_t i;
-
-    size    = backtrace (array, 100);
-    strings = backtrace_symbols (array, size);
-
-    fprintf(stderr, "Obtained %zd stack frames.\n", size);
-
-    for (i = 0; i < size; i++)
-        fprintf(stderr, "%s\n", strings[i]);
-
-    free (strings);
-}
-
-// print error message followed be oop stacktrace
-extern void fatal(const char *reason, ...)
-{
-    fflush(stdout);
-
-    if (reason) {
-        va_list ap;
-        va_start(ap, reason);
-        fprintf(stderr, "\nerror: ");
-        vfprintf(stderr, reason, ap);
-        fprintf(stderr, "\n");
-        va_end(ap);
-    }
-
-    if (!traceStack) {
-        dump_c_stack();
-        exit(1);
-    }
+extern void dump_enki_stack() {
+    if (!traceStack) return;
 
     int inx = 0;
+
     for(; traceStack ; ++inx) {
         Node value;
         if (pair_GetCar(traceStack, &value)) {
@@ -70,10 +36,8 @@ extern void fatal(const char *reason, ...)
         }
         if (!pair_GetCdr(traceStack, &traceStack)) break;
     }
-    fprintf(stderr, "\n");
 
-    dump_c_stack();
-    exit(1);
+    fprintf(stderr, "\n");
 }
 
 extern void pushTrace(const Node expr) {
