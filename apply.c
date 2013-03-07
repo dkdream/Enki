@@ -5,7 +5,7 @@
  ** Routine List:
  **    <routine-list-end>
  **/
-//#define debug_THIS
+#define debug_THIS
 #include "apply.h"
 #include "primitive.h"
 #include "reader.h"
@@ -171,7 +171,7 @@ static void environ_Let(Node local, Node env, Target result)
 }
 
 // translate know symbols to known values
-extern void encode(const Node expr, Node env, Target result)
+extern void encode(const Node expr, const Node env, Target result)
 {
     Node list = expr;
     Node head = NIL;
@@ -206,42 +206,65 @@ extern void encode(const Node expr, Node env, Target result)
         }
     }
 
-    if (isIdentical(f_quote, head))  goto list_done;
-#if 0
-    if (isIdentical(f_lambda, head)) {
-        Node args; Node lenv;
-        list_GetItem(list.pair, 2, &args);
-        list_Map(environ_Lambda, args.pair, env, &lenv);
-        list_SetEnd(lenv.pair, env);
-        env = lenv;
-    }
-
-    if (isIdentical(f_let, head)) {
-        Node locals; Node lenv;
-        list_GetItem(list.pair, 2, &locals);
-        list_Map(environ_Let, locals.pair, env, &lenv);
-        list_SetEnd(lenv.pair, env);
-        env = lenv;
-    }
-#endif
-    /*
-      this short cut will NOT work for
-      (let ((let (lambda (let) let)))
-          (let 1))
-
-      because it will be encoded as
-      (Fixed<let> ((Fixed<let> (Fixed<lambda> (Fixed<let>) let)))
-          (Fixed<let> 1))
-
-      instead of
-      (Fixed<let> ((let (Fixed<lambda> (let) let)))
-          (let 1))
-     */
-
     /* one way to fixed this problem is
        to give a Fixed value two slots
        one for the encode (encode pair) phase and
        one for the apply  (apply pair) phase */
+
+    if (isIdentical(f_quote, head))  goto list_done;
+
+    if (isIdentical(f_lambda, head)) {
+        Node args; Node body; Node lenv;
+
+        pair_GetCar(tail.pair, &args);
+        pair_GetCdr(tail.pair, &body);
+
+        VM_ON_DEBUG(1, {
+                fprintf(stderr,"params: ");
+                prettyPrint(stderr, args);
+                fprintf(stderr, "\n");
+            });
+
+        list_Map(environ_Lambda, args.pair, env, &lenv);
+
+        VM_ON_DEBUG(1, {
+                fprintf(stderr,"environ: ");
+                prettyPrint(stderr, lenv);
+                fprintf(stderr, "\n");
+            });
+
+        list_SetEnd(lenv.pair, env);
+
+        list_Map(encode, body.pair, lenv, &(body.pair));
+        pair_Create(args, body, &tail.pair);
+        goto list_done;
+    }
+
+
+    if (isIdentical(f_let, head)) {
+        Node locals; Node lenv;
+
+        pair_GetCar(tail.pair, &locals);
+
+        VM_ON_DEBUG(1, {
+                fprintf(stderr,"locals: ");
+                prettyPrint(stderr, locals);
+                fprintf(stderr, "\n");
+            });
+
+        list_Map(environ_Let, locals.pair, env, &lenv);
+
+        VM_ON_DEBUG(1, {
+                fprintf(stderr,"environ: ");
+                prettyPrint(stderr, lenv);
+                fprintf(stderr, "\n");
+            });
+        list_SetEnd(lenv.pair, env);
+
+        list_Map(encode, tail.pair, lenv, &(tail.pair));
+        goto list_done;
+    }
+
 
     list_Map(encode, tail.pair, env, &(tail.pair));
 

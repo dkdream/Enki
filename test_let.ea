@@ -2,9 +2,7 @@
 
 (level 1)
 
-(let ((qq-list) (qq-element) (qq-object))
-  (set qq-list 1)
-  (assert 1 qq-list)
-  (set qq-list)
-  (assert nil qq-list))
+(let ((let dumpln) (lambda println))
+  (lambda let)
+  (let lambda))
 

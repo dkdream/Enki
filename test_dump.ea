@@ -2,12 +2,9 @@ dump
 
 (dumpln (~ 1))
 (dumpln "1")
-(dumpln (environment))
 (dumpln '1)
 (dumpln (type-of '1))
 (dumpln nil)
-
-(dumpln (environment))
 
 (assert 'integer (type-of 1))
 (assert 'text    (type-of "1"))
@@ -15,8 +12,6 @@ dump
 (assert nil      (type-of nil))
 (assert 'primitive (type-of println))
 (assert 'fixed    (type-of let))
-
-(dumpln (environment))
 
 (define fooness 'fooness)
 (define barness (lambda (ok)
@@ -28,7 +23,7 @@ dump
 (println (barness "testing"))
 
 (let ((xxx 1)(yyy 2))
-  (dumpln (environment)))
+  (dumpln (environment 'current)))
 
 (exit 0)
 
