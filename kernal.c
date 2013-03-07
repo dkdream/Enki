@@ -781,6 +781,73 @@ static SUBR(allocate) {
     tuple_Create(slots, result.tuple);
 }
 
+static SUBR(list) {
+     ASSIGN(result,args);
+}
+
+static void environ_Lambda(Node symbol, Node env, Target result)
+{
+    pair_Create(symbol, NIL, result.pair);
+}
+
+static SUBR(encode_lambda) {
+    Node formals; Node body; Node lenv;
+
+    pair_GetCar(args.pair, &formals);
+    pair_GetCdr(args.pair, &body);
+
+    VM_ON_DEBUG(1, {
+            fprintf(stderr,"formals: ");
+            prettyPrint(stderr, formals);
+            fprintf(stderr, "\n");
+        });
+
+    list_Map(environ_Lambda, formals.pair, env, &lenv);
+
+    VM_ON_DEBUG(1, {
+            fprintf(stderr,"environ: ");
+            prettyPrint(stderr, lenv);
+            fprintf(stderr, "\n");
+        });
+
+    list_SetEnd(lenv.pair, env);
+
+    list_Map(encode, body.pair, lenv, &(body.pair));
+
+    pair_Create(args, body, result.pair);
+}
+
+static void environ_Let(Node local, Node env, Target result)
+{
+    Node symbol;
+    pair_GetCar(local.pair, &symbol);
+    pair_Create(symbol, NIL, result.pair);
+}
+
+static SUBR(encode_let) {
+    Node locals; Node lenv;
+
+    pair_GetCar(args.pair, &locals);
+
+    VM_ON_DEBUG(1, {
+            fprintf(stderr,"locals: ");
+            prettyPrint(stderr, locals);
+            fprintf(stderr, "\n");
+        });
+
+    list_Map(environ_Let, locals.pair, env, &lenv);
+
+    VM_ON_DEBUG(1, {
+            fprintf(stderr,"environ: ");
+            prettyPrint(stderr, lenv);
+            fprintf(stderr, "\n");
+        });
+
+    list_SetEnd(lenv.pair, env);
+
+    list_Map(encode, args.pair, lenv, result);
+}
+
 static void defineConstant(const char* name, const Node value) {
     Symbol label = 0;
 
@@ -903,6 +970,9 @@ void startEnkiLibrary() {
     MK_OPR(%element,element);
     MK_OPR(%allocate,allocate);
     MK_OPR(%cons,cons);
+    MK_OPR(%list,list);
+    MK_OPR(%encode_lambda,encode_lambda);
+    MK_OPR(%encode_let,encode_let);
 
     MK_CONST(t,true_v);
     MK_CONST(nil,NIL);

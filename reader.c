@@ -613,7 +613,7 @@ extern void readFile(FILE *stream)
 
     for (;;) {
         if (stream == stdin) {
-            printf(".");
+            printf("-] ");
             fflush(stdout);
         }
 
@@ -621,22 +621,12 @@ extern void readFile(FILE *stream)
 
         if (!readExpr(stream, &obj)) break;
 
-#if 0
-        printf("read: ");
-        prettyPrint(stdout, obj);
-        printf("\n");
-        fflush(stdout);
-#endif
-
-
-
-#if 0
-        if (opt_v) {
-            prettyPrint(stdout, obj);
-            printf("\n");
-            fflush(stdout);
-        }
-#endif
+        VM_ON_DEBUG(1, {
+                fprintf(stderr,"read: ");
+                prettyPrint(stderr, obj);
+                fprintf(stderr,"\n");
+                fflush(stderr);
+            });
 
         Node globals = NIL;
 
@@ -648,12 +638,12 @@ extern void readFile(FILE *stream)
 
         eval(obj, globals, &obj);
 
-#if 0
-        printf("result ");
-        prettyPrint(stdout, obj);
-        printf("\n\n\n");
-        fflush(stdout);
-#endif
+        VM_ON_DEBUG(1, {
+                fprintf(stderr, "result ");
+                prettyPrint(stderr, obj);
+                fprintf(stderr,"\n\n\n");
+                fflush(stderr);
+            });
 
         if (stream == stdin) {
             printf(" => ");

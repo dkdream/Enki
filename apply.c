@@ -22,6 +22,18 @@
 
 static Pair traceStack = 0;
 
+static void environ_Lambda(Node symbol, Node env, Target result)
+{
+    pair_Create(symbol, NIL, result.pair);
+}
+
+static void environ_Let(Node local, Node env, Target result)
+{
+    Node symbol;
+    pair_GetCar(local.pair, &symbol);
+    pair_Create(symbol, NIL, result.pair);
+}
+
 extern void dump_enki_stack() {
     if (!traceStack) return;
 
@@ -46,57 +58,6 @@ extern void pushTrace(const Node expr) {
 
 extern void popTrace() {
     pair_GetCdr(traceStack, &traceStack);
-}
-
-extern void apply(Node fun, Node args, const Node env, Target result)
-{
-    VM_ON_DEBUG(1, {
-            fprintf(stderr, "apply: ");
-            prettyPrint(stderr, fun);
-            fprintf(stderr, " to: ");
-            prettyPrint(stderr, args);
-            fprintf(stderr,"\n");
-        });
-
-    for (;;) {
-        // Primitive -> Operator
-        if (isKind(fun, nt_primitive)) {
-            Operator function = fun.primitive->function;
-            function(args, env, result);
-            goto done;
-        }
-
-        // Expression -> p_apply_expr
-        if (isKind(fun, nt_expression)) {
-            if (!pair_Create(fun, args, &(args.pair))) goto error;
-            fun.primitive = p_apply_expr;
-            continue;
-        }
-
-        // Form -> p_apply_form
-        if (isKind(fun, nt_form)) {
-            if (!pair_Create(fun, args, &(args.pair))) goto error;
-            fun.primitive = p_apply_form;
-            continue;
-        }
-
-        goto error;
-    }
-
- error:
-    fprintf(stderr, "\nerror: cannot apply: ");
-    dump(stderr, fun);
-    fatal(0);
-
- done:
-
-    VM_ON_DEBUG(1, {
-            fprintf(stderr, "apply => ");
-            prettyPrint(stderr, *result.reference);
-            fprintf(stderr, "\n");
-        });
-
-    return;
 }
 
 // expand all forms
@@ -158,19 +119,7 @@ extern void expand(const Node expr, const Node env, Target result)
     return;
 }
 
-static void environ_Lambda(Node symbol, Node env, Target result)
-{
-    pair_Create(symbol, NIL, result.pair);
-}
-
-static void environ_Let(Node local, Node env, Target result)
-{
-    Node symbol;
-    pair_GetCar(local.pair, &symbol);
-    pair_Create(symbol, NIL, result.pair);
-}
-
-// translate know symbols to known values
+// translate symbol in head position to known primitive/fixed functions
 extern void encode(const Node expr, const Node env, Target result)
 {
     Node list = expr;
@@ -322,6 +271,57 @@ extern void eval(const Node expr, const Node env, Target result)
         });
 
     popTrace();
+}
+
+extern void apply(Node fun, Node args, const Node env, Target result)
+{
+    VM_ON_DEBUG(1, {
+            fprintf(stderr, "apply: ");
+            prettyPrint(stderr, fun);
+            fprintf(stderr, " to: ");
+            prettyPrint(stderr, args);
+            fprintf(stderr,"\n");
+        });
+
+    for (;;) {
+        // Primitive -> Operator
+        if (isKind(fun, nt_primitive)) {
+            Operator function = fun.primitive->function;
+            function(args, env, result);
+            goto done;
+        }
+
+        // Expression -> p_apply_expr
+        if (isKind(fun, nt_expression)) {
+            if (!pair_Create(fun, args, &(args.pair))) goto error;
+            fun.primitive = p_apply_expr;
+            continue;
+        }
+
+        // Form -> p_apply_form
+        if (isKind(fun, nt_form)) {
+            if (!pair_Create(fun, args, &(args.pair))) goto error;
+            fun.primitive = p_apply_form;
+            continue;
+        }
+
+        goto error;
+    }
+
+ error:
+    fprintf(stderr, "\nerror: cannot apply: ");
+    dump(stderr, fun);
+    fatal(0);
+
+ done:
+
+    VM_ON_DEBUG(1, {
+            fprintf(stderr, "apply => ");
+            prettyPrint(stderr, *result.reference);
+            fprintf(stderr, "\n");
+        });
+
+    return;
 }
 
 /*****************
