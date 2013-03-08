@@ -75,6 +75,38 @@ static unsigned checkArgs(Node args, const char* name, unsigned min, ...)
     return count;
 }
 
+static void forceArgs(Node args, ...)
+{
+    va_list ap;
+    va_start(ap, args);
+
+    while (isKind(args, nt_pair)) {
+      Node holding = NIL;
+      Node *location = va_arg(ap, Node*);
+      
+      if (!location) goto done;
+      
+      pair_GetCar(args.pair, &holding);
+
+      if (isKind(holding, nt_delay)) {
+        *location = holding;
+      } else {
+        *location = holding;
+      }
+
+      pair_GetCdr(args.pair, &args);
+    }
+
+    for(;;) {
+        Node *location = va_arg(ap, Node*);
+        if (!location) goto done;
+        *location = NIL;
+    }
+
+ done:
+    va_end(ap);
+}
+
 static void fetchArgs(Node args, ...)
 {
     va_list ap;
@@ -185,8 +217,7 @@ static SUBR(set)
     Node expr   = NIL;
     Node value  = NIL;
 
-    list_GetItem(args.pair, 0, &symbol);
-    list_GetItem(args.pair, 1, &expr);
+    fetchArgs(args, &symbol, &expr, 0);
 
     if (!isKind(symbol, nt_symbol)) {
         fprintf(stderr, "\nerror: non-symbol identifier in set: ");
@@ -215,8 +246,7 @@ static SUBR(define)
     Node expr   = NIL;
     Node value  = NIL;
 
-    list_GetItem(args.pair, 0, &symbol);
-    list_GetItem(args.pair, 1, &expr);
+    fetchArgs(args, &symbol, &expr, 0);
 
     if (!isKind(symbol, nt_symbol)) {
         fprintf(stderr, "\nerror: non-symbol identifier in define: ");
@@ -255,8 +285,8 @@ static SUBR(while)
     Node body = NIL;
     Node val  = NIL;
 
-    list_GetItem(args.pair, 0, &tst);
-    list_GetItem(args.pair, 1, &body);
+    pair_GetCar(args.pair, &tst);
+    pair_GetCdr(args.pair, &body);
 
     for (;;) {
         eval(tst, env, &val);
@@ -285,8 +315,7 @@ static SUBR(find)
     Node tst = NIL;
     Node lst = NIL;
 
-    list_GetItem(args.pair, 0, &tst);
-    list_GetItem(args.pair, 0, &lst);
+    forceArgs(args, &tst, &lst, 0);
 
     while (isKind(lst, nt_pair)) {
         Node elm   = NIL;
@@ -472,7 +501,7 @@ static SUBR(apply_form)
 
 static SUBR(apply)
 {
-    Node func  = NIL;
+  Node func  = NIL;
     Node cargs = NIL;
     Node cenv  = NIL;
 
@@ -487,12 +516,14 @@ static SUBR(apply)
 
 static SUBR(form)
 {
-    Node func = NIL;
-    pair_GetCar(args.pair, &func);
+  Tuple tuple; Node func = NIL;
+  pair_GetCar(args.pair, &func);
 
-    pair_Create(func, NIL, result.pair);
+  tuple_Create(1, &tuple);
+  tuple_SetItem(tuple, 0, func);
+  setKind(tuple, nt_form);
 
-    setKind(*(result.pair), nt_form);
+  ASSIGN(result, (Node)tuple);
 }
 
 static SUBR(type_of)
@@ -501,21 +532,12 @@ static SUBR(type_of)
     checkArgs(args, "type-of", 1, nt_unknown);
     pair_GetCar(args.pair, &val);
     node_TypeOf(val, result);
-
-#if 0
-    printf("type-of: ");
-    dump(stdout, val);
-    printf(" is ");
-    dump(stdout, *result.reference);
-    printf("\n");
-#endif
 }
 
 static SUBR(com) {
     Node val = NIL;
     checkArgs(args, "~", 1, nt_integer);
-
-    pair_GetCar(args.pair, &val);
+    forceArgs(args, &val, 0);
 
     integer_Create(~(val.integer->value), result.integer);
 }
@@ -537,7 +559,7 @@ static SUBR(NAME) \
 { \
     Node left; Node right; \
     checkArgs(args, #OP, 2, nt_integer, nt_integer); \
-    fetchArgs(args, &left, &right, 0); \
+    forceArgs(args, &left, &right, 0); \
     integer_Create((left.integer->value) OP (right.integer->value), result.integer); \
 }
 
@@ -553,7 +575,7 @@ static SUBR(NAME) \
 { \
     Node left; Node right; \
     checkArgs(args, #OP, 2, nt_integer, nt_integer); \
-    fetchArgs(args, &left, &right, 0); \
+    forceArgs(args, &left, &right, 0); \
     if ((left.integer->value) OP (right.integer->value)) { \
         ASSIGN(result, true_v);                            \
     } else { \
@@ -569,7 +591,7 @@ static SUBR(eq)
 {
     Node left; Node right;
     checkArgs(args, "=", 2, nt_unknown, nt_unknown);
-    fetchArgs(args, &left, &right, 0);
+    forceArgs(args, &left, &right, 0);
 
     if (node_Match(left,right)) {
         ASSIGN(result, true_v);
@@ -581,7 +603,7 @@ static SUBR(neq)
 {
     Node left; Node right;
     checkArgs(args, "!=", 2, nt_unknown, nt_unknown);
-    fetchArgs(args, &left, &right, 0);
+    forceArgs(args, &left, &right, 0);
 
     if (node_Match(left,right)) {
         ASSIGN(result, NIL);
@@ -594,7 +616,7 @@ static SUBR(iso)
 {
     Node depth; Node left; Node right;
     checkArgs(args, "iso", 3, nt_integer, nt_unknown, nt_unknown);
-    fetchArgs(args, &depth, &left, &right, 0);
+    forceArgs(args, &depth, &left, &right, 0);
 
     if (node_Iso(depth.integer->value, left,right)) {
         ASSIGN(result, true_v);
@@ -607,7 +629,7 @@ static SUBR(assert)
 {
     Node left; Node right;
     checkArgs(args, "assert", 2, nt_unknown, nt_unknown);
-    fetchArgs(args, &left, &right, 0);
+    forceArgs(args, &left, &right, 0);
 
     if (node_Iso(20, left,right)) {
         ASSIGN(result, true_v);
@@ -624,8 +646,7 @@ static SUBR(assert)
 static SUBR(exit)
 {
     Node value = NIL;
-
-    pair_GetCar(args.pair, &value);
+    forceArgs(args, &value, 0);
 
     if (isKind(value, nt_integer)) {
         exit(value.integer->value);
@@ -642,7 +663,7 @@ static SUBR(abort)
 static SUBR(environment)
 {
     Node value = NIL;
-    fetchArgs(args, &value, 0);
+    forceArgs(args, &value, 0);
 
     if (isIdentical(value, s_current)) {
          ASSIGN(result, env);
@@ -736,10 +757,10 @@ static SUBR(element) {
     ASSIGN(result,NIL);
 
     if (2 < count) {
-        fetchArgs(args, &tuple, &index, &value, 0);
+        forceArgs(args, &tuple, &index, &value, 0);
         tuple_SetItem(tuple.tuple, index.integer->value, value);
     } else {
-        fetchArgs(args, &tuple, &index, 0);
+        forceArgs(args, &tuple, &index, 0);
         tuple_GetItem(tuple.tuple, index.integer->value, result);
     }
 }
@@ -748,7 +769,7 @@ static SUBR(cons) {
     Node car; Node cdr;
 
     checkArgs(args, "cons", 2, nt_unknown, nt_unknown);
-    fetchArgs(args, &car, &cdr, 0);
+    forceArgs(args, &car, &cdr, 0);
 
     pair_Create(car, cdr, result.pair);
 }
@@ -759,7 +780,7 @@ static SUBR(allocate) {
 
     ASSIGN(result,NIL);
 
-    fetchArgs(args, &kind, &size, 0);
+    forceArgs(args, &kind, &size, 0);
 
     long slots = size.integer->value;
 
@@ -926,14 +947,14 @@ void startEnkiLibrary() {
     MK_PRM(gensym);
     MK_PRM(find);
 
-    p_eval_symbol = MK_OPR(eval-symbol,eval_symbol);
-    p_eval_pair   = MK_OPR(eval-pair,eval_pair);
-    p_apply_expr  = MK_OPR(apply-expr,apply_expr);
-    p_apply_form  = MK_OPR(apply-form,apply_form);
+    p_eval_symbol = MK_OPR(%eval-symbol,eval_symbol);
+    p_eval_pair   = MK_OPR(%eval-pair,eval_pair);
+    p_apply_expr  = MK_OPR(%apply-expr,apply_expr);
+    p_apply_form  = MK_OPR(%apply-form,apply_form);
 
-    MK_PRM(form);
-    MK_PRM(eval);
-    MK_PRM(apply);
+    MK_OPR(%form,form);
+    MK_OPR(%eval,eval);
+    MK_OPR(%apply,apply);
     MK_OPR(type-of, type_of);
 
     MK_OPR(~,com);
@@ -961,9 +982,9 @@ void startEnkiLibrary() {
     MK_OPR(%element,element);
     MK_OPR(%allocate,allocate);
     MK_OPR(%cons,cons);
-    MK_OPR(%list,encode_quote);
-    MK_OPR(%encode_lambda,encode_lambda);
-    MK_OPR(%encode_let,encode_let);
+    MK_OPR(%encode-quote,encode_quote);
+    MK_OPR(%encode-lambda,encode_lambda);
+    MK_OPR(%encode-let,encode_let);
 
     MK_CONST(t,true_v);
     MK_CONST(nil,NIL);

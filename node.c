@@ -183,6 +183,10 @@ extern void node_TypeOf(Node value, Target result)
     case nt_fixed:
         text = "fixed";
         goto as_symbol;
+
+    case nt_delay:
+        text = "delay";
+        goto as_symbol;
     }
 
  as_self:

@@ -38,10 +38,11 @@ typedef enum node_type {
     nt_text,
     nt_tuple,      // fixed size tuple (like maru _Array)
 
-    // these use pairs
-    nt_expression, // to simulate maru Expr  (expr env)
-    nt_form,       // to simulate maru Form  (expr nil)
-    nt_fixed,      // to simulate maru Fixed (expr nil)
+    // these use tuples
+    nt_expression, // (expr env)
+    nt_form,       // (func)
+    nt_fixed,      // (eval encode)
+    nt_delay,      // (value expr env)
 } EA_Type;
 
 typedef unsigned long long HashCode;
@@ -89,10 +90,14 @@ node_target {
 
 typedef union node_target Target;
 
-#define NIL       ((Node)((Reference)0))
-#define NIL_CODE  ((Code)((Reference)0))
+#define NIL ((Node)((Reference)0))
 
-#define ASSIGN(target, node) (target.reference[0] = node.reference)
+#define ASSIGN(target, node) enki_assign(target, node)
+
+extern inline void enki_assign(Target var, const Node value)  __attribute__((always_inline));
+extern inline void enki_assign(Target var, const Node value) {
+  var.reference[0] = value.reference;
+}
 
 extern inline void enki_noop() __attribute__((always_inline));
 extern inline void enki_noop() { }

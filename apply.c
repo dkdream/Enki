@@ -224,29 +224,27 @@ extern void apply(Node fun, Node args, const Node env, Target result)
             fprintf(stderr,"\n");
         });
 
-    for (;;) {
-        // Primitive -> Operator
-        if (isKind(fun, nt_primitive)) {
-            Operator function = fun.primitive->function;
-            function(args, env, result);
-            goto done;
-        }
+    // Primitive -> Operator
+    if (isKind(fun, nt_primitive)) {
+      Operator function = fun.primitive->function;
+      function(args, env, result);
+      goto done;
+    }
+    
+    // Expression -> p_apply_expr
+    if (isKind(fun, nt_expression)) {
+      if (!pair_Create(fun, args, &(args.pair))) goto error;
+      Operator function = p_apply_expr->function;
+      function(args, env, result);
+      goto done;
+    }
 
-        // Expression -> p_apply_expr
-        if (isKind(fun, nt_expression)) {
-            if (!pair_Create(fun, args, &(args.pair))) goto error;
-            fun.primitive = p_apply_expr;
-            continue;
-        }
-
-        // Form -> p_apply_form
-        if (isKind(fun, nt_form)) {
-            if (!pair_Create(fun, args, &(args.pair))) goto error;
-            fun.primitive = p_apply_form;
-            continue;
-        }
-
-        goto error;
+    // Form -> p_apply_form
+    if (isKind(fun, nt_form)) {
+      if (!pair_Create(fun, args, &(args.pair))) goto error;
+      Operator function = p_apply_form->function;
+      function(args, env, result);
+      goto done;
     }
 
  error:
