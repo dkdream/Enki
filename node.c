@@ -22,31 +22,29 @@ extern HashCode node_HashCode(Node node)
 {
     if (!node.reference) return 0;
 
+    Node type = getType(node);
+
+    if (isIdentical(type, s_symbol)) {
+        return node.symbol->hashcode;
+    }
+
+    if (isIdentical(type, s_text)) {
+        return node.text->hashcode;
+    }
+
+    if (isIdentical(type, s_integer)) {
+        return node.integer->value;
+    }
+
     HashCode result = 0;
     union {
         Node input;
         HashCode output;
     } convert;
 
-    switch (getTribe(node)) {
-    case nt_symbol:
-        result = node.symbol->hashcode;
-        break;
-
-    case nt_text:
-        result = node.text->hashcode;
-        break;
-
-    case nt_integer:
-        result = node.integer->value;
-        break;
-
-    default:
-        convert.output = 0;
-        convert.input  = node;
-        result ^= convert.output;
-        break;
-    }
+    convert.output = 0;
+    convert.input  = node;
+    result ^= convert.output;
 
     return result;
 }
@@ -57,22 +55,22 @@ bool node_Match(Node left, Node right)
     if (0 == left.reference)  return false;
     if (0 == right.reference) return false;
 
-    EA_Type type = getTribe(left);
+    Node type = getType(left);
 
-    if (type != getTribe(right)) return false;
+    if (!isIdentical(type, getType(right))) return false;
 
-    switch (type) {
-    case nt_text:
+    if (isIdentical(type, s_text)) {
         if (left.text->size != right.text->size) return false;
         return 0 == memcmp(left.text->value,
                            right.text->value,
                            left.text->size);
-    case nt_integer:
-        return left.integer->value == right.integer->value;
-
-    default:
-        return false;
     }
+
+    if (isIdentical(type, s_integer)) {
+        return left.integer->value == right.integer->value;
+    }
+
+    return false;
 }
 
 bool node_Iso(long depth, Node left, Node right)
@@ -89,23 +87,24 @@ bool node_Iso(long depth, Node left, Node right)
     if (0 == left.reference)  return false;
     if (0 == right.reference) return false;
 
-    EA_Type type = getTribe(left);
+    Node type = getType(left);
 
-    if (type != getTribe(right)) return false;
+    if (!isIdentical(type, getType(right))) return false;
 
     if (1 > depth) return true;
 
-
-    switch (type) {
-    case nt_text:
+    if (isIdentical(type, s_text)) {
         if (left.text->size != right.text->size) return false;
         return 0 == memcmp(left.text->value,
                            right.text->value,
                            left.text->size);
-    case nt_integer:
-        return left.integer->value == right.integer->value;
+    }
 
-    case nt_pair:
+    if (isIdentical(type, s_integer)) {
+        return left.integer->value == right.integer->value;
+    }
+
+    if (isIdentical(type, s_pair)) {
         if (!node_Iso(depth - 1,
                       left.pair->car,
                       right.pair->car)) {
@@ -114,92 +113,46 @@ bool node_Iso(long depth, Node left, Node right)
         return node_Iso(depth,
                         left.pair->cdr,
                         right.pair->cdr);
-
-    case nt_tuple:
-        {
-            const unsigned lhs_max = asKind(left)->count;
-            const unsigned rhs_max = asKind(right)->count;
-            unsigned inx = 0;
-            if (lhs_max != rhs_max) return false;
-            for (; inx < lhs_max ; ++inx) {
-                if (!node_Iso(depth - 1,
-                              left.tuple->item[inx],
-                              right.tuple->item[inx])) {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-    default:
-        return false;
     }
+
+    if (isIdentical(type, s_tuple)) {
+        const unsigned lhs_max = asKind(left)->count;
+        const unsigned rhs_max = asKind(right)->count;
+        unsigned inx = 0;
+        if (lhs_max != rhs_max) return false;
+        for (; inx < lhs_max ; ++inx) {
+            if (!node_Iso(depth - 1,
+                          left.tuple->item[inx],
+                          right.tuple->item[inx])) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    return false;
 }
 
 extern void node_TypeOf(Node value, Target result)
 {
-    const char* text = 0;
-
     if (isNil(value)) {
-        goto as_self;
+        ASSIGN(result, value);
+        return;
     }
 
-    switch (getTribe(value)) {
-    case nt_unknown:
-        goto as_self;
-
-    case nt_integer:
-        text = "integer";
-        goto as_symbol;
-
-    case nt_pair:
-        text = "pair";
-        goto as_symbol;
-
-    case nt_primitive:
-        text = "primitive";
-        goto as_symbol;
-
-    case nt_symbol:
-        text = "symbol";
-        goto as_symbol;
-
-    case nt_text:
-        text = "text";
-        goto as_symbol;
-
-    case nt_tuple:
-        text = "tuple";
-        goto as_symbol;
-
-    case nt_expression:
-        text = "expression";
-        goto as_symbol;
-
-    case nt_form:
-        text = "form";
-        goto as_symbol;
-
-    case nt_fixed:
-        text = "fixed";
-        goto as_symbol;
-
-    case nt_delay:
-        text = "delay";
-        goto as_symbol;
-    }
-
- as_self:
     if (isIdentical(true_v, value)) {
-        text = "true";
-        goto as_symbol;
+        ASSIGN(result, s_true);
+        return;
     }
 
-    ASSIGN(result, value);
-    return;
+    Node type = getType(value);
 
- as_symbol:
-    symbol_Convert(text, result.symbol);
+    if (isNil(type)) {
+        ASSIGN(result, value);
+        return;
+    }
+
+    ASSIGN(result, type);
     return;
 }
 

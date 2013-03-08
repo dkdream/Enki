@@ -9,6 +9,7 @@
 #include "treadmill.h"
 #include "debug.h"
 #include "apply.h"
+#include "symbol.h"
 
 extern bool pair_Create(const Node car, const Node cdr, Pair* target) {
     if (!node_Allocate(_zero_space,
@@ -19,10 +20,10 @@ extern bool pair_Create(const Node car, const Node cdr, Pair* target) {
 
     Pair result = (*target);
 
-    if (!darken_Node(car)) return false;
-    if (!darken_Node(cdr)) return false;
+    darken_Node(car);
+    darken_Node(cdr);
 
-    setTribe(result, nt_pair);
+    setType(result, s_pair);
     result->car = car;
     result->cdr = cdr;
 
@@ -31,7 +32,9 @@ extern bool pair_Create(const Node car, const Node cdr, Pair* target) {
 
 extern bool pair_SetCar(Pair pair, const Node car) {
     if (!pair) return false;
-    if (!darken_Node(car)) return false;
+
+    darken_Node(pair);
+    darken_Node(car);
 
     pair->car = car;
 
@@ -40,7 +43,9 @@ extern bool pair_SetCar(Pair pair, const Node car) {
 
 extern bool pair_SetCdr(Pair pair, const Node cdr) {
     if (!pair) return false;
-    if (!darken_Node(cdr)) return false;
+
+    darken_Node(pair);
+    darken_Node(cdr);
 
     pair->cdr = cdr;
 
@@ -58,6 +63,8 @@ extern bool pair_GetCar(Pair pair, Target car) {
 extern bool pair_GetCdr(Pair pair, Target cdr) {
     if (!pair) return false;
 
+    darken_Node(pair);
+
     ASSIGN(cdr, pair->cdr);
 
     return true;
@@ -66,14 +73,17 @@ extern bool pair_GetCdr(Pair pair, Target cdr) {
 extern bool list_State(Pair pair, unsigned *count, bool *dotted) {
     if (!pair) return false;
 
+    darken_Node(pair);
+
     unsigned at = 0;
     for (; pair ; ++at) {
-        if (!isTribe(pair, nt_pair)) {
+        if (!isType(pair, s_pair)) {
             *count  = at;
             *dotted = true;
             return true;
         }
         pair = pair->cdr.pair;
+        darken_Node(pair);
     }
 
     *count  = at;
@@ -84,9 +94,12 @@ extern bool list_State(Pair pair, unsigned *count, bool *dotted) {
 extern bool list_UnDot(Pair pair) {
     if (!pair) return false;
 
+    darken_Node(pair);
+
     for (; pair ;) {
-        if (isTribe(pair->cdr, nt_pair)) {
+        if (isType(pair->cdr, s_pair)) {
             pair = pair->cdr.pair;
+            darken_Node(pair);
             continue;
         }
 
@@ -100,13 +113,16 @@ extern bool list_UnDot(Pair pair) {
 extern bool list_SetItem(Pair pair, unsigned index, const Node value) {
     if (!pair) return false;
 
-     for (; isTribe(pair, nt_pair) ; --index) {
+    darken_Node(pair);
+
+     for (; isType(pair, s_pair) ; --index) {
          if (0 < index) {
              pair = pair->cdr.pair;
+             darken_Node(pair);
              continue;
          }
 
-         if (!darken_Node(value)) return false;
+         darken_Node(value);
 
          pair->car = value;
          return true;
@@ -118,11 +134,16 @@ extern bool list_SetItem(Pair pair, unsigned index, const Node value) {
 extern bool list_GetItem(Pair pair, unsigned index, Target value) {
      if (!pair) return false;
 
-     for (; isTribe(pair, nt_pair) ; --index) {
+     darken_Node(pair);
+
+     for (; isType(pair, s_pair) ; --index) {
          if (0 < index) {
              pair = pair->cdr.pair;
+             darken_Node(pair);
              continue;
          }
+
+         darken_Node(pair->car);
 
          ASSIGN(value, pair->car);
          return true;
@@ -134,13 +155,14 @@ extern bool list_GetItem(Pair pair, unsigned index, Target value) {
 extern bool list_SetTail(Pair pair, unsigned index, const Node value) {
     if (!pair) return false;
 
-     for (; isTribe(pair, nt_pair) ; --index) {
+     for (; isType(pair, s_pair) ; --index) {
          if (0 < index) {
              pair = pair->cdr.pair;
+             darken_Node(pair);
              continue;
          }
 
-         if (!darken_Node(value)) return false;
+         darken_Node(value);
 
          pair->cdr = value;
          return true;
@@ -152,11 +174,16 @@ extern bool list_SetTail(Pair pair, unsigned index, const Node value) {
 extern bool list_GetTail(Pair pair, unsigned index, Target value) {
      if (!pair) return false;
 
-     for (; isTribe(pair, nt_pair) ; --index) {
+    darken_Node(pair);
+
+     for (; isType(pair, s_pair) ; --index) {
          if (0 < index) {
              pair = pair->cdr.pair;
+             darken_Node(pair);
              continue;
          }
+
+         darken_Node(pair->cdr);
 
          ASSIGN(value, pair->cdr);
          return true;
@@ -168,13 +195,16 @@ extern bool list_GetTail(Pair pair, unsigned index, Target value) {
 extern bool list_SetEnd(Pair pair, const Node value) {
      if (!pair) return false;
 
-     for (; isTribe(pair, nt_pair) ;) {
-         if (isTribe(pair->cdr, nt_pair)) {
+    darken_Node(pair);
+
+     for (; isType(pair, s_pair) ;) {
+         if (isType(pair->cdr, s_pair)) {
              pair = pair->cdr.pair;
-            continue;
+             darken_Node(pair);
+             continue;
          }
 
-         if (!darken_Node(value)) return false;
+         darken_Node(value);
 
          pair->cdr = value;
          return true;
@@ -186,11 +216,16 @@ extern bool list_SetEnd(Pair pair, const Node value) {
 extern bool list_GetEnd(Pair pair, Target value) {
      if (!pair) return false;
 
-     for (; isTribe(pair, nt_pair) ;) {
-         if (isTribe(pair->cdr, nt_pair)) {
+    darken_Node(pair);
+
+     for (; isType(pair, s_pair) ;) {
+         if (isType(pair->cdr, s_pair)) {
              pair = pair->cdr.pair;
+             darken_Node(pair);
              continue;
          }
+
+         darken_Node(pair->cdr);
 
          ASSIGN(value, pair->cdr);
          return true;
@@ -202,9 +237,10 @@ extern bool list_GetEnd(Pair pair, Target value) {
 extern bool alist_Entry(Pair pair, const Node label, Pair* value) {
     if (!pair) return false;
 
-    for (; isTribe(pair, nt_pair) ;) {
-        if (!isTribe(pair->car, nt_pair)) {
+    for (; isType(pair, s_pair) ;) {
+        if (!isType(pair->car, s_pair)) {
             pair = pair->cdr.pair;
+            darken_Node(pair);
             continue;
         }
 
@@ -212,8 +248,11 @@ extern bool alist_Entry(Pair pair, const Node label, Pair* value) {
 
         if (!isIdentical(label, entry->car)) {
             pair = pair->cdr.pair;
+            darken_Node(pair);
             continue;
         }
+
+        darken_Node(entry);
 
         *value = entry;
         return true;
@@ -226,9 +265,10 @@ extern bool alist_Entry(Pair pair, const Node label, Pair* value) {
 extern bool alist_Get(Pair pair, const Node label, Target value) {
     if (!pair) return false;
 
-    for (; isTribe(pair, nt_pair) ;) {
-        if (!isTribe(pair->car, nt_pair)) {
+    for (; isType(pair, s_pair) ;) {
+        if (!isType(pair->car, s_pair)) {
             pair = pair->cdr.pair;
+            darken_Node(pair);
             continue;
         }
 
@@ -236,8 +276,11 @@ extern bool alist_Get(Pair pair, const Node label, Target value) {
 
         if (!isIdentical(label, entry->car)) {
             pair = pair->cdr.pair;
+            darken_Node(pair);
             continue;
         }
+
+        darken_Node(entry->cdr);
 
         ASSIGN(value, entry->cdr);
         return true;
@@ -249,9 +292,10 @@ extern bool alist_Get(Pair pair, const Node label, Target value) {
 extern bool alist_Set(Pair pair, const Node label, const Node value) {
     if (!pair) return false;
 
-    for (; isTribe(pair, nt_pair) ;) {
-        if (!isTribe(pair->car, nt_pair)) {
+    for (; isType(pair, s_pair) ;) {
+        if (!isType(pair->car, s_pair)) {
             pair = pair->cdr.pair;
+            darken_Node(pair);
             continue;
         }
 
@@ -259,10 +303,11 @@ extern bool alist_Set(Pair pair, const Node label, const Node value) {
 
         if (!isIdentical(label, entry->car)) {
             pair = pair->cdr.pair;
+            darken_Node(pair);
             continue;
         }
 
-        if (!darken_Node(value)) return false;
+        darken_Node(value);
 
         entry->cdr = value;
         return true;
@@ -273,6 +318,10 @@ extern bool alist_Set(Pair pair, const Node label, const Node value) {
 
 extern bool alist_Add(Pair pair, const Node label, const Node value, Pair* target) {
     Pair entry = 0;
+
+    darken_Node(pair);
+    darken_Node(label);
+    darken_Node(value);
 
     if (!pair_Create(label, value, &entry)) return false;
     if (!pair_Create(entry, pair, target)) return false;
@@ -291,6 +340,9 @@ extern bool list_Map(Operator func, Pair pair, const Node env, Target target) {
         return false;
     }
 
+    darken_Node(pair);
+    darken_Node(env);
+
 #if 0
     printf("list_Map: %p", func);
     printf(" to ");
@@ -298,7 +350,7 @@ extern bool list_Map(Operator func, Pair pair, const Node env, Target target) {
     printf("\n");
 #endif
 
-    if (!isTribe(pair, nt_pair)) {
+    if (!isType(pair, s_pair)) {
         func(pair, env, target);
         return true;
     }
@@ -311,21 +363,29 @@ extern bool list_Map(Operator func, Pair pair, const Node env, Target target) {
     input  = pair->car;
     output = NIL;
 
+    darken_Node(input);
+
     func(input, env, &output);
+
+    darken_Node(output);
 
     if (!pair_Create(output,NIL, &first.pair)) return false;
     if (!pair_SetCar(first.pair, output)) return false;
 
     last = first.pair;
 
-    for (; isTribe(pair->cdr.pair, nt_pair) ;) {
+    for (; isType(pair->cdr.pair, s_pair) ;) {
         Pair hold = 0;
 
         pair   = pair->cdr.pair;
         input  = pair->car;
         output = NIL;
 
+        darken_Node(input);
+
         func(input, env, &output);
+
+        darken_Node(output);
 
         if (!pair_Create(output,NIL, &hold)) return false;
         if (!pair_SetCdr(last, hold))        return false;
@@ -336,7 +396,13 @@ extern bool list_Map(Operator func, Pair pair, const Node env, Target target) {
     if (!isNil(pair->cdr.pair)) {
         input  = pair->cdr;
         output = NIL;
+
+        darken_Node(input);
+
         func(input, env, &output);
+
+        darken_Node(output);
+
         if (!pair_SetCdr(last, output)) return false;
     }
 

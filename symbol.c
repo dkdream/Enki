@@ -14,7 +14,30 @@
 #include <stdio.h>
 
 /* */
-Symbol _empty_symbol = (Symbol)0;
+Symbol _empty_symbol = 0;
+Symbol s_dot = 0;
+Symbol s_global = 0;
+Symbol s_current = 0;
+Symbol s_lambda = 0;
+Symbol s_nil = 0;
+Symbol s_quasiquote = 0;
+Symbol s_quote = 0;
+Symbol s_set = 0;
+Symbol s_t = 0;
+Symbol s_true = 0;
+Symbol s_unquote = 0;
+Symbol s_unquote_splicing = 0;
+
+Symbol s_integer = 0;
+Symbol s_primitive = 0;
+Symbol s_symbol = 0;
+Symbol s_text = 0;
+Symbol s_tuple = 0;
+Symbol s_pair = 0;
+Symbol s_expression = 0;
+Symbol s_form = 0;
+Symbol s_fixed = 0;
+Symbol s_delay = 0;
 
 struct _internal_SymbolRow {
     unsigned lock;
@@ -29,12 +52,10 @@ struct _internal_SymbolTable {
 
 static struct _internal_SymbolTable *_global_symboltable = 0;
 
+#define MK_SYM(x) symbol_Convert(#x, &s_ ##x)
+
 extern void init_global_symboltable() {
     if (_global_symboltable) return;
-
-    _empty_symbol = (Symbol) asReference(fresh_atom(0, sizeof(struct symbol)));
-
-    setTribe(_empty_symbol, nt_symbol);
 
     const unsigned int rows = 1000;
     const unsigned int fullsize
@@ -48,6 +69,38 @@ extern void init_global_symboltable() {
     result->size = rows;
 
     _global_symboltable = result;
+
+    Header empty_symbol = fresh_atom(0, sizeof(struct symbol));
+
+    _empty_symbol = (Symbol)asReference(empty_symbol);
+
+    MK_SYM(symbol); // must be first;
+
+    empty_symbol->kind.type = (Node)s_symbol;
+
+    symbol_Convert(".", &s_dot);
+
+    MK_SYM(global);
+    MK_SYM(current);
+    MK_SYM(lambda);
+    MK_SYM(nil);
+    MK_SYM(quasiquote);
+    MK_SYM(quote);
+    MK_SYM(set);
+    MK_SYM(t);
+    MK_SYM(true);
+    MK_SYM(unquote);
+    MK_SYM(unquote_splicing);
+
+    MK_SYM(integer);
+    MK_SYM(primitive);
+    MK_SYM(text);
+    MK_SYM(tuple);
+    MK_SYM(pair);
+    MK_SYM(expression);
+    MK_SYM(form);
+    MK_SYM(fixed);
+    MK_SYM(delay);
 }
 
 extern void final_global_symboltable() {
@@ -140,11 +193,17 @@ extern bool symbol_Create(TextBuffer value, Symbol *target) {
 
     if (!entry) return false;
 
-    entry->after  = _global_symboltable->row[row].first;
+    Symbol result = (Symbol)asReference(entry);
 
-    Symbol result = (*target) = (Symbol)asReference(entry);
+    // assume s_symbol is constructed first
+    if (s_symbol) {
+        entry->kind.type = (Node)s_symbol;
+    } else {
+        entry->kind.type = (Node)result;
+    }
 
-    setTribe(result, nt_symbol);
+    entry->after = _global_symboltable->row[row].first;
+
     result->size     = size;
     result->hashcode = hashcode;
 
@@ -153,6 +212,8 @@ extern bool symbol_Create(TextBuffer value, Symbol *target) {
     ((char*)(result->value))[size] = 0;
 
     _global_symboltable->row[row].first = entry;
+
+    (*target) = result;
 
     return true;
 }

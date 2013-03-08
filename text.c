@@ -78,7 +78,8 @@ extern bool text_Create(TextBuffer value, Text *target) {
 
     Text result = *target;
 
-    setTribe(result, nt_text);
+    setType(result, s_text);
+
     result->size     = size;
     result->hashcode = hashcode;
 
@@ -114,7 +115,8 @@ extern bool text_Append(Text head, Text tail, Text *target) {
 
     Text result = *target;
 
-    setTribe(result, nt_text);
+    setType(result, s_text);
+
     result->size     = size;
     result->hashcode = hashcode;
 

@@ -7,6 +7,7 @@
  **/
 #include "primitive.h"
 #include "treadmill.h"
+#include "symbol.h"
 
 extern bool primitive_Create(Symbol label, Operator function, Primitive *target) {
     if (!function) return false;
@@ -20,7 +21,7 @@ extern bool primitive_Create(Symbol label, Operator function, Primitive *target)
 
     Primitive result = *target;
 
-    setTribe(result, nt_primitive);
+    setType(result, s_primitive);
     result->label    = label;
     result->function = function;
 

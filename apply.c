@@ -56,6 +56,9 @@ extern void expand(const Node expr, const Node env, Target result)
     Node head = NIL;
     Node tail = NIL;
 
+    darken_Node(expr);
+    darken_Node(env);
+
     VM_ON_DEBUG(1, {
             fprintf(stderr, "expand: ");
             prettyPrint(stderr, list);
@@ -63,7 +66,7 @@ extern void expand(const Node expr, const Node env, Target result)
         });
 
     for (;;) {
-        if (!isTribe(list, nt_pair)) {
+        if (!isType(list, s_pair)) {
             ASSIGN(result, list);
             goto done;
         }
@@ -78,7 +81,7 @@ extern void expand(const Node expr, const Node env, Target result)
         if (isIdentical(s_quote, head)) goto list_done;
 
         // check if the head is a reference
-        if (!isTribe(head, nt_symbol)) goto list_begin;
+        if (!isType(head, s_symbol)) goto list_begin;
 
         Node value = NIL;
 
@@ -86,7 +89,7 @@ extern void expand(const Node expr, const Node env, Target result)
         alist_Get(env.pair, head, &value);
 
         // check if the reference is a form
-        if (!isTribe(value, nt_form)) goto list_begin;
+        if (!isType(value, s_form)) goto list_begin;
 
         // apply the form function to the rest of the list
         apply(value, tail, env, &list);
@@ -115,13 +118,16 @@ extern void encode(const Node expr, const Node env, Target result)
     Node head = NIL;
     Node tail = NIL;
 
+    darken_Node(expr);
+    darken_Node(env);
+
     VM_ON_DEBUG(1, {
             fprintf(stderr,"encode: ");
             prettyPrint(stderr, list);
             fprintf(stderr, "\n");
         });
 
-    if (!isTribe(list, nt_pair)) {
+    if (!isType(list, s_pair)) {
         ASSIGN(result, list);
         goto done;
     }
@@ -131,20 +137,19 @@ extern void encode(const Node expr, const Node env, Target result)
 
     encode(head, env, &head);
 
-    if (isTribe(head, nt_symbol)) {
+    if (isType(head, s_symbol)) {
         Node value = NIL;
         // check if the enviroment
         alist_Get(env.pair, head, &value);
-        switch (getTribe(value)) {
-        case nt_fixed:
-        case nt_primitive:
+
+        if (isType(value, s_primitive)) {
             head = value;
-        default:
-            break;
+        } else if (isType(value, s_fixed)) {
+            head = value;
         }
     }
 
-    if (!isTribe(head, nt_fixed)) goto list_begin;
+    if (!isType(head, s_fixed)) goto list_begin;
 
     Node action = NIL;
 
@@ -175,6 +180,9 @@ extern void eval(const Node expr, const Node env, Target result)
 {
     pushTrace(expr);
 
+    darken_Node(expr);
+    darken_Node(env);
+
     VM_ON_DEBUG(1, {
             fprintf(stderr, "eval: ");
             prettyPrint(stderr, expr);
@@ -183,16 +191,15 @@ extern void eval(const Node expr, const Node env, Target result)
 
     Primitive evaluator = 0;
 
-    switch (getTribe(expr)) {
-    case nt_symbol:
-        evaluator = p_eval_symbol;
-        break;
-
-    case nt_pair:
+    if (isType(expr, s_pair)) {
         evaluator = p_eval_pair;
-        break;
+    }
 
-    default:
+    if (isType(expr, s_symbol)) {
+        evaluator = p_eval_symbol;
+    }
+
+    if (!evaluator) {
         ASSIGN(result, expr);
         goto done;
     }
@@ -216,6 +223,10 @@ extern void eval(const Node expr, const Node env, Target result)
 
 extern void apply(Node fun, Node args, const Node env, Target result)
 {
+    darken_Node(fun);
+    darken_Node(args);
+    darken_Node(env);
+
     VM_ON_DEBUG(1, {
             fprintf(stderr, "apply: ");
             prettyPrint(stderr, fun);
@@ -225,14 +236,14 @@ extern void apply(Node fun, Node args, const Node env, Target result)
         });
 
     // Primitive -> Operator
-    if (isTribe(fun, nt_primitive)) {
+    if (isType(fun, s_primitive)) {
       Operator function = fun.primitive->function;
       function(args, env, result);
       goto done;
     }
 
     // Expression -> p_apply_expr
-    if (isTribe(fun, nt_expression)) {
+    if (isType(fun, s_expression)) {
       if (!pair_Create(fun, args, &(args.pair))) goto error;
       Operator function = p_apply_expr->function;
       function(args, env, result);
@@ -240,7 +251,7 @@ extern void apply(Node fun, Node args, const Node env, Target result)
     }
 
     // Form -> p_apply_form
-    if (isTribe(fun, nt_form)) {
+    if (isType(fun, s_form)) {
       if (!pair_Create(fun, args, &(args.pair))) goto error;
       Operator function = p_apply_form->function;
       function(args, env, result);

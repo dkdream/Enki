@@ -9,6 +9,7 @@
 #include "all_types.inc"
 #include "treadmill.h"
 #include "text_buffer.h"
+#include "symbol.h"
 
 /* */
 #include <string.h>
@@ -69,8 +70,9 @@ extern bool print(FILE* output, Node node) {
         return true;
     }
 
-    switch (getTribe(node)) {
-    case nt_unknown:
+    Node type = getType(node);
+
+    if (isNil(type)) {
         if (isIdentical(node, true_v)) {
             fprintf(output, "t");
             return true;
@@ -78,47 +80,50 @@ extern bool print(FILE* output, Node node) {
         fprintf(output, "unknown(%p)",
                 node.reference);
         return true;
+    }
 
-    case nt_symbol:
+    if (isIdentical(type, s_symbol)) {
         fprintf(output, "%s",
                 (const char *) node.symbol->value);
         return true;
+    }
 
-    case nt_text:
+    if (isIdentical(type, s_text)) {
         fprintf(output, "%s",
                 (const char *) node.text->value);
         return true;
+    }
 
-    case nt_integer:
+    if (isIdentical(type, s_integer)) {
         fprintf(output, "%ld",
                 node.integer->value);
         return true;
+    }
 
-    case nt_primitive:
+    if (isIdentical(type, s_primitive)) {
         fprintf(output, "%s(%p)",
                 (const char *) node.primitive->label->value,
                 node.reference);
         return true;
+    }
 
-    case nt_pair:
+    if (isIdentical(type, s_pair)) {
         fprintf(output, "pair(%p (%p, %p))",
                 node.reference,
                 node.pair->car.reference,
                 node.pair->cdr.reference);
         return true;
+    }
 
-    case nt_tuple:
+    if (isIdentical(type, s_tuple)) {
         fprintf(output, "tuple(%p (size=%d))",
                 node.reference,
                 (unsigned) asKind(node.reference)->count);
         return true;
-
-    default:
-        break;
     }
 
-    fprintf(output, "type[%d](%p)",
-            getTribe(node),
+    fprintf(output, "type[%p](%p)",
+            type.reference,
             node.reference);
     return true;
 }
@@ -131,8 +136,9 @@ extern bool dump(FILE* output, Node node) {
         return true;
     }
 
-    switch (getTribe(node)) {
-    case nt_unknown:
+    Node type = getType(node);
+
+    if (isNil(type)) {
         if (isIdentical(node, true_v)) {
             fprintf(output, "t");
             return true;
@@ -140,49 +146,52 @@ extern bool dump(FILE* output, Node node) {
         fprintf(output, "unknown(%p)",
                 node.reference);
         return true;
+    }
 
-    case nt_symbol:
+    if (isIdentical(type, s_symbol)) {
         fprintf(output, "symbol(%llx,", node.symbol->hashcode);
         echo_string(output, (const char *) node.symbol->value);
         fprintf(output, ")");
         return true;
+    }
 
-    case nt_text:
+    if (isIdentical(type, s_text)) {
         fprintf(output, "text(%llx,\"", node.text->hashcode);
         echo_string(output, (const char *) node.text->value);
         fprintf(output, "\")");
         return true;
+    }
 
-    case nt_integer:
+    if (isIdentical(type, s_integer)) {
         fprintf(output, "integer(%ld)",
                 node.integer->value);
         return true;
+    }
 
-    case nt_primitive:
+    if (isIdentical(type, s_primitive)) {
         fprintf(output, "primitive(%p %s)",
                 node.reference,
                 (const char*)(node.primitive->label->value));
         return true;
+    }
 
-    case nt_pair:
+    if (isIdentical(type, s_pair)) {
         fprintf(output, "pair(%p (%p, %p))",
                 node.reference,
                 node.pair->car.reference,
                 node.pair->cdr.reference);
         return true;
+    }
 
-    case nt_tuple:
+    if (isIdentical(type, s_tuple)) {
         fprintf(output, "tuple(%p (size=%d))",
                 node.reference,
                 (unsigned) asKind(node.reference)->count);
         return true;
-
-    default:
-        break;
     }
 
-    fprintf(output, "type[%d](%p)",
-            getTribe(node),
+    fprintf(output, "type[%p](%p)",
+            type.reference,
             node.reference);
     return true;
 }
@@ -208,18 +217,14 @@ extern bool dumpTree(FILE* output, unsigned level, Node node) {
         dumpTree(output, level+1, value);
     }
 
-    switch (getTribe(node)) {
-    default:
-        return dump(output, node);
-
-    case nt_pair:
+    if (isType(node, s_pair)) {
         if (!dump(output,node)) return false;
         sub_tree(node.pair->car);
         sub_tree(node.pair->cdr);
         return true;
     }
 
-    return true;
+    return dump(output, node);
 }
 
 
@@ -247,8 +252,9 @@ extern void prettyPrint(FILE* output, Node node) {
             offset = 0;
         }
 
-        switch (getTribe(node)) {
-        case nt_unknown:
+        Node type = getType(node);
+
+        if (isNil(type)) {
             if (isIdentical(node, true_v)) {
                 offset += 2;
                 fprintf(output, "t");
@@ -257,91 +263,91 @@ extern void prettyPrint(FILE* output, Node node) {
             offset += 10;
             fprintf(output, "unknown(%p)", node.reference);
             return;
+        }
 
-        case nt_symbol:
+        if (isIdentical(type, s_symbol)) {
             offset += node.symbol->size + 1;
             echo_string(output, (const char *) node.symbol->value);
             return;
+        }
 
-        case nt_text:
+        if (isIdentical(type, s_text)) {
             offset += node.text->size + 3;
             fprintf(output, "\"");
             echo_string(output, (const char *) node.text->value);
             fprintf(output, "\"");
             return;
+        }
 
-        case nt_integer:
+        if (isIdentical(type, s_integer)) {
             offset += 10;
             fprintf(output, "%ld", node.integer->value);
             return;
+        }
 
-        case nt_primitive:
+        if (isIdentical(type, s_primitive)) {
             offset += 20;
             fprintf(output, "primitive(%p %s)",
                     node.reference,
                     (const char*)(node.primitive->label->value));
             return;
+        }
 
-        case nt_pair:
-            {
-                Node tail = node.pair->cdr;
-                fprintf(output, "(");
-                prettyPrint_intern(node.pair->car, level+1);
-                while (tail.reference) {
-                    EA_Type type = getTribe(tail);
-                    if (nt_pair == type) {
-                        fprintf(output, " ");
-                        prettyPrint_intern(tail.pair->car, level+1);
-                        tail = tail.pair->cdr;
-                        continue;
-                    }
-                    fprintf(output, " . ");
-                    prettyPrint_intern(tail, level+1);
-                    break;
+        if (isIdentical(type, s_pair)) {
+            Node tail = node.pair->cdr;
+            fprintf(output, "(");
+            prettyPrint_intern(node.pair->car, level+1);
+            while (tail.reference) {
+                if (isType(tail, s_pair)) {
+                    fprintf(output, " ");
+                    prettyPrint_intern(tail.pair->car, level+1);
+                    tail = tail.pair->cdr;
+                    continue;
                 }
-                fprintf(output, ")");
-                return;
+                fprintf(output, " . ");
+                prettyPrint_intern(tail, level+1);
+                break;
             }
+            fprintf(output, ")");
+            return;
+        }
 
-        case nt_tuple:
-            {
-                const unsigned max = asKind(node)->count;
-                unsigned inx = 0;
-                fprintf(output, "[");
-                for (; inx < max ;++inx) {
-                    if (0 < inx) fprintf(output, " ");
-                    prettyPrint_intern(node.tuple->item[inx], level+1);
-                }
-                fprintf(output, "]");
-                return;
+        if (isIdentical(type, s_tuple)) {
+            const unsigned max = asKind(node)->count;
+            unsigned inx = 0;
+            fprintf(output, "[");
+            for (; inx < max ;++inx) {
+                if (0 < inx) fprintf(output, " ");
+                prettyPrint_intern(node.tuple->item[inx], level+1);
             }
+            fprintf(output, "]");
+            return;
+        }
 
-        case nt_expression:
+        if (isIdentical(type, s_expression)) {
             offset += 20;
             fprintf(output, "expression(%p)",
                     node.reference);
             return;
+        }
 
-        case nt_form:
+        if (isIdentical(type, s_form)) {
             offset += 20;
             fprintf(output, "form(%p)",
                     node.reference);
             return;
+        }
 
-        case nt_fixed:
+        if (isIdentical(type, s_fixed)) {
             offset += 20;
             fprintf(output, "fixed(%p)",
                     node.reference);
             return;
-
-
-        default:
-            break;
         }
 
         offset += 20;
-        fprintf(output, "tribe[%d](%p)",
-                getTribe(node),
+        fprintf(output, "type[%p](%p)",
+                type.reference,
                 node.reference);
         return;
     }

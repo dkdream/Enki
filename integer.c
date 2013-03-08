@@ -8,6 +8,7 @@
  **/
 #include "integer.h"
 #include "treadmill.h"
+#include "symbol.h"
 
 extern bool integer_Create(long value, Integer *target) {
     if (!node_Allocate(_zero_space,
@@ -18,7 +19,8 @@ extern bool integer_Create(long value, Integer *target) {
 
     Integer result = *target;
 
-    setTribe(result, nt_integer);
+    setType(result, s_integer);
+
     result->value = value;
 
     return result;

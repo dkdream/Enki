@@ -110,7 +110,6 @@ struct gc_kind {
             unsigned int  atom   : 1; // is this a tuple of values
             unsigned int  live   : 1; // is this alive
             unsigned int  inside : 1; // is this inside a space (malloc/free by the treadmill)
-            unsigned int  tribe  : 7; // the tribe (used by c-code) (and prettyprint)
         } __attribute__((__packed__));
     } __attribute__((__packed__));
 };
@@ -216,29 +215,6 @@ extern inline unsigned long getCount(const Node value) {
     Kind kind = asKind(value);
     if (!kind) return 0;
     return (unsigned long)(kind->count);
-}
-
-extern inline EA_Type getTribe(const Node value) __attribute__((always_inline));
-extern inline EA_Type getTribe(const Node value) {
-    Kind kind = asKind(value);
-    if (!kind) return nt_unknown;
-    return kind->tribe;
-}
-
-extern inline bool setTribe(const Node value, EA_Type tribe) __attribute__((always_inline));
-extern inline bool setTribe(const Node value, EA_Type tribe) {
-    Kind kind = asKind(value);
-    if (!kind) return false;
-    kind->tribe = tribe;
-    return true;
-}
-
-extern inline bool isTribe(const Node value, const EA_Type tribe)  __attribute__((always_inline));
-extern inline bool isTribe(const Node value, const EA_Type tribe) {
-    if  (!value.reference) return false;
-    Kind kind = asKind(value);
-    if (!kind) return false;
-    return tribe == kind->tribe;
 }
 
 extern inline unsigned long asSize(unsigned base_sizeof, unsigned extend_sizeof)  __attribute__((always_inline));

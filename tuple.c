@@ -8,6 +8,8 @@
 #include "tuple.h"
 #include "pair.h"
 #include "treadmill.h"
+#include "symbol.h"
+
 #include <stdarg.h>
 
 extern bool tuple_Create(unsigned size, Tuple* target) {
@@ -21,7 +23,7 @@ extern bool tuple_Create(unsigned size, Tuple* target) {
 
     Tuple result = (*target);
 
-    setTribe(result, nt_tuple);
+    setType(result, s_tuple);
 
     unsigned inx = 0;
     for (; inx < size ;++inx) {
@@ -82,7 +84,7 @@ extern bool tuple_Fill(Tuple tuple, Pair list) {
 
     for (; inx < max ;++inx) {
         if (!list) return true;
-        if (nt_pair != getTribe(list)) return true;
+        if (!isType(list, s_pair)) return true;
 
         Node value = list->car;
 

@@ -23,17 +23,29 @@ struct symbol {
 };
 
 extern Symbol _empty_symbol;
-
 extern Symbol s_dot;
+extern Symbol s_global;
+extern Symbol s_current;
+extern Symbol s_lambda;
+extern Symbol s_nil;
 extern Symbol s_quasiquote;
 extern Symbol s_quote;
+extern Symbol s_set;
+extern Symbol s_t;
+extern Symbol s_true;
 extern Symbol s_unquote;
 extern Symbol s_unquote_splicing;
+
+extern Symbol s_integer;
+extern Symbol s_primitive;
+extern Symbol s_symbol;
+extern Symbol s_text;
+extern Symbol s_tuple;
+extern Symbol s_pair;
+extern Symbol s_expression;
+extern Symbol s_form;
+extern Symbol s_fixed;
 extern Symbol s_delay;
-extern Symbol s_t;
-extern Symbol s_nil;
-extern Symbol s_lambda;
-extern Symbol s_set;
 
 extern bool symbol_Create(TextBuffer value, Symbol*);
 extern bool symbol_Convert(const char* value, Symbol*);

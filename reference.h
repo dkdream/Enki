@@ -29,22 +29,6 @@
 #include <stdbool.h>
 #include <error.h>
 
-typedef enum node_type {
-    nt_unknown,
-    nt_integer,
-    nt_pair,
-    nt_primitive,  // like maru Subr
-    nt_symbol,
-    nt_text,
-    nt_tuple,      // fixed size tuple (like maru _Array)
-
-    // these use tuples
-    nt_expression, // (expr env)
-    nt_form,       // (func)
-    nt_fixed,      // (eval encode)
-    nt_delay,      // (value expr env)
-} EA_Type;
-
 typedef unsigned long long HashCode;
 typedef unsigned long      Size;
 

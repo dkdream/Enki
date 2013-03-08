@@ -366,8 +366,8 @@ extern bool node_Allocate(const Space space,
 
     if (!inside) return true;
 
-    header->kind.color  = space->visiable;
-    header->space  = space;
+    header->kind.color = space->visiable;
+    header->space      = space;
 
     // insert into the black chain
     if (!insert_Before(space->free, header)) {
@@ -450,7 +450,7 @@ extern bool space_Scan(const Space space, unsigned int upto) {
         space->scan = scan->before;
 
         if (!scan_Node(scan)) {
-            VM_ERROR("unable to scan node (%d) %p", getTribe(scan), scan);
+            VM_ERROR("unable to scan node %p", scan);
             return false;
         }
     }
