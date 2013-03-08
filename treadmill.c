@@ -174,39 +174,36 @@ extern bool extract_From(const Header node) {
     return true;
 }
 
-#if 0
 static void release_Header(const Header header) {
-    if (!header)         return;
-    if (!header->inside) return;
+    if (!header)              return;
+    if (!header->kind.inside) return;
 
     const Space space = header->space;
 
     if (!space)  return;
-    if (header->color == space->visiable) {
+    if (header->kind.color == space->visiable) {
         VM_ERROR("releasing a dark header");
     }
 
     extract_From(header);
 
-    VM_DEBUG(1, "releasing node %p (%d,%s,%s)[%d] (header %p) (space %p scan %p top %p)",
+    VM_DEBUG(1, "releasing node %p (%d,%s)[%d] (header %p) (space %p scan %p top %p)",
              asReference(header),
-             header->kind,
-             (header->live ? "l" : "d"),
-             (header->prefix ? "p" : "r"),
+             header->kind.tribe,
+             (header->kind.live ? "l" : "d"),
              header->kind.count,
              header,
              space,
              space->scan,
              space->top);
 
-    header->live = 0;
+    header->kind.live = 0;
 
-    header->inside = 0;
+    header->kind.inside = 0;
     header->kind.count  = 0;
-    header->space  = 0;
+    header->space       = 0;
     free(header);
 }
-#endif
 
 extern bool darken_Node(const Node node) {
     if (!node.reference) return true;
@@ -612,6 +609,8 @@ extern bool space_Flip(const Space space) {
 
     VM_DEBUG(5, "flip space %p end", space);
     return true;
+
+    (void)release_Header;
 }
 
 extern void clink_Init(Clink *link, unsigned max) {
