@@ -15,13 +15,12 @@ extern bool primitive_Create(Symbol label, Operator function, Primitive *target)
     if (!node_Allocate(_zero_space,
                        true,
                        sizeof(struct primitive),
-                       0,
                        target))
         return false;
 
     Primitive result = *target;
 
-    setKind(result, nt_primitive);
+    setTribe(result, nt_primitive);
     result->label    = label;
     result->function = function;
 

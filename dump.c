@@ -69,7 +69,7 @@ extern bool print(FILE* output, Node node) {
         return true;
     }
 
-    switch (getKind(node)) {
+    switch (getTribe(node)) {
     case nt_unknown:
         if (isIdentical(node, true_v)) {
             fprintf(output, "t");
@@ -110,7 +110,7 @@ extern bool print(FILE* output, Node node) {
     case nt_tuple:
         fprintf(output, "tuple(%p (size=%d))",
                 node.reference,
-                (unsigned) asHeader(node.reference)->count);
+                (unsigned) asKind(node.reference)->count);
         return true;
 
     default:
@@ -118,7 +118,7 @@ extern bool print(FILE* output, Node node) {
     }
 
     fprintf(output, "type[%d](%p)",
-            getKind(node),
+            getTribe(node),
             node.reference);
     return true;
 }
@@ -131,7 +131,7 @@ extern bool dump(FILE* output, Node node) {
         return true;
     }
 
-    switch (getKind(node)) {
+    switch (getTribe(node)) {
     case nt_unknown:
         if (isIdentical(node, true_v)) {
             fprintf(output, "t");
@@ -174,7 +174,7 @@ extern bool dump(FILE* output, Node node) {
     case nt_tuple:
         fprintf(output, "tuple(%p (size=%d))",
                 node.reference,
-                (unsigned) asHeader(node.reference)->count);
+                (unsigned) asKind(node.reference)->count);
         return true;
 
     default:
@@ -182,7 +182,7 @@ extern bool dump(FILE* output, Node node) {
     }
 
     fprintf(output, "type[%d](%p)",
-            getKind(node),
+            getTribe(node),
             node.reference);
     return true;
 }
@@ -208,7 +208,7 @@ extern bool dumpTree(FILE* output, unsigned level, Node node) {
         dumpTree(output, level+1, value);
     }
 
-    switch (getKind(node)) {
+    switch (getTribe(node)) {
     default:
         return dump(output, node);
 
@@ -247,7 +247,7 @@ extern void prettyPrint(FILE* output, Node node) {
             offset = 0;
         }
 
-        switch (getKind(node)) {
+        switch (getTribe(node)) {
         case nt_unknown:
             if (isIdentical(node, true_v)) {
                 offset += 2;
@@ -288,7 +288,7 @@ extern void prettyPrint(FILE* output, Node node) {
                 fprintf(output, "(");
                 prettyPrint_intern(node.pair->car, level+1);
                 while (tail.reference) {
-                    EA_Type type = getKind(tail);
+                    EA_Type type = getTribe(tail);
                     if (nt_pair == type) {
                         fprintf(output, " ");
                         prettyPrint_intern(tail.pair->car, level+1);
@@ -305,7 +305,7 @@ extern void prettyPrint(FILE* output, Node node) {
 
         case nt_tuple:
             {
-                const unsigned max = asHeader(node)->count;
+                const unsigned max = asKind(node)->count;
                 unsigned inx = 0;
                 fprintf(output, "[");
                 for (; inx < max ;++inx) {
@@ -340,8 +340,8 @@ extern void prettyPrint(FILE* output, Node node) {
         }
 
         offset += 20;
-        fprintf(output, "type[%d](%p)",
-                getKind(node),
+        fprintf(output, "tribe[%d](%p)",
+                getTribe(node),
                 node.reference);
         return;
     }

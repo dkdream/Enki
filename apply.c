@@ -63,7 +63,7 @@ extern void expand(const Node expr, const Node env, Target result)
         });
 
     for (;;) {
-        if (!isKind(list, nt_pair)) {
+        if (!isTribe(list, nt_pair)) {
             ASSIGN(result, list);
             goto done;
         }
@@ -78,7 +78,7 @@ extern void expand(const Node expr, const Node env, Target result)
         if (isIdentical(s_quote, head)) goto list_done;
 
         // check if the head is a reference
-        if (!isKind(head, nt_symbol)) goto list_begin;
+        if (!isTribe(head, nt_symbol)) goto list_begin;
 
         Node value = NIL;
 
@@ -86,7 +86,7 @@ extern void expand(const Node expr, const Node env, Target result)
         alist_Get(env.pair, head, &value);
 
         // check if the reference is a form
-        if (!isKind(value, nt_form)) goto list_begin;
+        if (!isTribe(value, nt_form)) goto list_begin;
 
         // apply the form function to the rest of the list
         apply(value, tail, env, &list);
@@ -121,7 +121,7 @@ extern void encode(const Node expr, const Node env, Target result)
             fprintf(stderr, "\n");
         });
 
-    if (!isKind(list, nt_pair)) {
+    if (!isTribe(list, nt_pair)) {
         ASSIGN(result, list);
         goto done;
     }
@@ -131,11 +131,11 @@ extern void encode(const Node expr, const Node env, Target result)
 
     encode(head, env, &head);
 
-    if (isKind(head, nt_symbol)) {
+    if (isTribe(head, nt_symbol)) {
         Node value = NIL;
         // check if the enviroment
         alist_Get(env.pair, head, &value);
-        switch (getKind(value)) {
+        switch (getTribe(value)) {
         case nt_fixed:
         case nt_primitive:
             head = value;
@@ -144,8 +144,8 @@ extern void encode(const Node expr, const Node env, Target result)
         }
     }
 
-    if (!isKind(head, nt_fixed)) goto list_begin;
-    
+    if (!isTribe(head, nt_fixed)) goto list_begin;
+
     Node action = NIL;
 
     tuple_GetItem(head.tuple, fxd_encode, &action);
@@ -183,7 +183,7 @@ extern void eval(const Node expr, const Node env, Target result)
 
     Primitive evaluator = 0;
 
-    switch (getKind(expr)) {
+    switch (getTribe(expr)) {
     case nt_symbol:
         evaluator = p_eval_symbol;
         break;
@@ -225,14 +225,14 @@ extern void apply(Node fun, Node args, const Node env, Target result)
         });
 
     // Primitive -> Operator
-    if (isKind(fun, nt_primitive)) {
+    if (isTribe(fun, nt_primitive)) {
       Operator function = fun.primitive->function;
       function(args, env, result);
       goto done;
     }
-    
+
     // Expression -> p_apply_expr
-    if (isKind(fun, nt_expression)) {
+    if (isTribe(fun, nt_expression)) {
       if (!pair_Create(fun, args, &(args.pair))) goto error;
       Operator function = p_apply_expr->function;
       function(args, env, result);
@@ -240,7 +240,7 @@ extern void apply(Node fun, Node args, const Node env, Target result)
     }
 
     // Form -> p_apply_form
-    if (isKind(fun, nt_form)) {
+    if (isTribe(fun, nt_form)) {
       if (!pair_Create(fun, args, &(args.pair))) goto error;
       Operator function = p_apply_form->function;
       function(args, env, result);

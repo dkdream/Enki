@@ -14,7 +14,6 @@ extern bool pair_Create(const Node car, const Node cdr, Pair* target) {
     if (!node_Allocate(_zero_space,
                        false,
                        sizeof(struct pair),
-                       0,
                        target))
         return false;
 
@@ -23,7 +22,7 @@ extern bool pair_Create(const Node car, const Node cdr, Pair* target) {
     if (!darken_Node(car)) return false;
     if (!darken_Node(cdr)) return false;
 
-    setKind(result, nt_pair);
+    setTribe(result, nt_pair);
     result->car = car;
     result->cdr = cdr;
 
@@ -69,7 +68,7 @@ extern bool list_State(Pair pair, unsigned *count, bool *dotted) {
 
     unsigned at = 0;
     for (; pair ; ++at) {
-        if (!isKind(pair, nt_pair)) {
+        if (!isTribe(pair, nt_pair)) {
             *count  = at;
             *dotted = true;
             return true;
@@ -86,7 +85,7 @@ extern bool list_UnDot(Pair pair) {
     if (!pair) return false;
 
     for (; pair ;) {
-        if (isKind(pair->cdr, nt_pair)) {
+        if (isTribe(pair->cdr, nt_pair)) {
             pair = pair->cdr.pair;
             continue;
         }
@@ -101,7 +100,7 @@ extern bool list_UnDot(Pair pair) {
 extern bool list_SetItem(Pair pair, unsigned index, const Node value) {
     if (!pair) return false;
 
-     for (; isKind(pair, nt_pair) ; --index) {
+     for (; isTribe(pair, nt_pair) ; --index) {
          if (0 < index) {
              pair = pair->cdr.pair;
              continue;
@@ -119,7 +118,7 @@ extern bool list_SetItem(Pair pair, unsigned index, const Node value) {
 extern bool list_GetItem(Pair pair, unsigned index, Target value) {
      if (!pair) return false;
 
-     for (; isKind(pair, nt_pair) ; --index) {
+     for (; isTribe(pair, nt_pair) ; --index) {
          if (0 < index) {
              pair = pair->cdr.pair;
              continue;
@@ -135,7 +134,7 @@ extern bool list_GetItem(Pair pair, unsigned index, Target value) {
 extern bool list_SetTail(Pair pair, unsigned index, const Node value) {
     if (!pair) return false;
 
-     for (; isKind(pair, nt_pair) ; --index) {
+     for (; isTribe(pair, nt_pair) ; --index) {
          if (0 < index) {
              pair = pair->cdr.pair;
              continue;
@@ -153,7 +152,7 @@ extern bool list_SetTail(Pair pair, unsigned index, const Node value) {
 extern bool list_GetTail(Pair pair, unsigned index, Target value) {
      if (!pair) return false;
 
-     for (; isKind(pair, nt_pair) ; --index) {
+     for (; isTribe(pair, nt_pair) ; --index) {
          if (0 < index) {
              pair = pair->cdr.pair;
              continue;
@@ -169,8 +168,8 @@ extern bool list_GetTail(Pair pair, unsigned index, Target value) {
 extern bool list_SetEnd(Pair pair, const Node value) {
      if (!pair) return false;
 
-     for (; isKind(pair, nt_pair) ;) {
-         if (isKind(pair->cdr, nt_pair)) {
+     for (; isTribe(pair, nt_pair) ;) {
+         if (isTribe(pair->cdr, nt_pair)) {
              pair = pair->cdr.pair;
             continue;
          }
@@ -187,8 +186,8 @@ extern bool list_SetEnd(Pair pair, const Node value) {
 extern bool list_GetEnd(Pair pair, Target value) {
      if (!pair) return false;
 
-     for (; isKind(pair, nt_pair) ;) {
-         if (isKind(pair->cdr, nt_pair)) {
+     for (; isTribe(pair, nt_pair) ;) {
+         if (isTribe(pair->cdr, nt_pair)) {
              pair = pair->cdr.pair;
              continue;
          }
@@ -203,8 +202,8 @@ extern bool list_GetEnd(Pair pair, Target value) {
 extern bool alist_Entry(Pair pair, const Node label, Pair* value) {
     if (!pair) return false;
 
-    for (; isKind(pair, nt_pair) ;) {
-        if (!isKind(pair->car, nt_pair)) {
+    for (; isTribe(pair, nt_pair) ;) {
+        if (!isTribe(pair->car, nt_pair)) {
             pair = pair->cdr.pair;
             continue;
         }
@@ -227,8 +226,8 @@ extern bool alist_Entry(Pair pair, const Node label, Pair* value) {
 extern bool alist_Get(Pair pair, const Node label, Target value) {
     if (!pair) return false;
 
-    for (; isKind(pair, nt_pair) ;) {
-        if (!isKind(pair->car, nt_pair)) {
+    for (; isTribe(pair, nt_pair) ;) {
+        if (!isTribe(pair->car, nt_pair)) {
             pair = pair->cdr.pair;
             continue;
         }
@@ -250,8 +249,8 @@ extern bool alist_Get(Pair pair, const Node label, Target value) {
 extern bool alist_Set(Pair pair, const Node label, const Node value) {
     if (!pair) return false;
 
-    for (; isKind(pair, nt_pair) ;) {
-        if (!isKind(pair->car, nt_pair)) {
+    for (; isTribe(pair, nt_pair) ;) {
+        if (!isTribe(pair->car, nt_pair)) {
             pair = pair->cdr.pair;
             continue;
         }
@@ -299,7 +298,7 @@ extern bool list_Map(Operator func, Pair pair, const Node env, Target target) {
     printf("\n");
 #endif
 
-    if (!isKind(pair, nt_pair)) {
+    if (!isTribe(pair, nt_pair)) {
         func(pair, env, target);
         return true;
     }
@@ -319,7 +318,7 @@ extern bool list_Map(Operator func, Pair pair, const Node env, Target target) {
 
     last = first.pair;
 
-    for (; isKind(pair->cdr.pair, nt_pair) ;) {
+    for (; isTribe(pair->cdr.pair, nt_pair) ;) {
         Pair hold = 0;
 
         pair   = pair->cdr.pair;

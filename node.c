@@ -28,7 +28,7 @@ extern HashCode node_HashCode(Node node)
         HashCode output;
     } convert;
 
-    switch (getKind(node)) {
+    switch (getTribe(node)) {
     case nt_symbol:
         result = node.symbol->hashcode;
         break;
@@ -57,9 +57,9 @@ bool node_Match(Node left, Node right)
     if (0 == left.reference)  return false;
     if (0 == right.reference) return false;
 
-    EA_Type type = getKind(left);
+    EA_Type type = getTribe(left);
 
-    if (type != getKind(right)) return false;
+    if (type != getTribe(right)) return false;
 
     switch (type) {
     case nt_text:
@@ -89,9 +89,9 @@ bool node_Iso(long depth, Node left, Node right)
     if (0 == left.reference)  return false;
     if (0 == right.reference) return false;
 
-    EA_Type type = getKind(left);
+    EA_Type type = getTribe(left);
 
-    if (type != getKind(right)) return false;
+    if (type != getTribe(right)) return false;
 
     if (1 > depth) return true;
 
@@ -117,8 +117,8 @@ bool node_Iso(long depth, Node left, Node right)
 
     case nt_tuple:
         {
-            const unsigned lhs_max = asHeader(left)->count;
-            const unsigned rhs_max = asHeader(right)->count;
+            const unsigned lhs_max = asKind(left)->count;
+            const unsigned rhs_max = asKind(right)->count;
             unsigned inx = 0;
             if (lhs_max != rhs_max) return false;
             for (; inx < lhs_max ; ++inx) {
@@ -144,7 +144,7 @@ extern void node_TypeOf(Node value, Target result)
         goto as_self;
     }
 
-    switch (getKind(value)) {
+    switch (getTribe(value)) {
     case nt_unknown:
         goto as_self;
 

@@ -80,15 +80,15 @@ static void forceArgs(Node args, ...)
     va_list ap;
     va_start(ap, args);
 
-    while (isKind(args, nt_pair)) {
+    while (isTribe(args, nt_pair)) {
       Node holding = NIL;
       Node *location = va_arg(ap, Node*);
-      
+
       if (!location) goto done;
-      
+
       pair_GetCar(args.pair, &holding);
 
-      if (isKind(holding, nt_delay)) {
+      if (isTribe(holding, nt_delay)) {
         *location = holding;
       } else {
         *location = holding;
@@ -112,7 +112,7 @@ static void fetchArgs(Node args, ...)
     va_list ap;
     va_start(ap, args);
 
-    while (isKind(args, nt_pair)) {
+    while (isTribe(args, nt_pair)) {
         Node *location = va_arg(ap, Node*);
 
         if (!location) goto done;
@@ -150,7 +150,7 @@ static void eval_begin(Node body, Node env, Target last)
     Node expr  = NIL;
     Node value = NIL;
 
-    while (isKind(body, nt_pair)) {
+    while (isTribe(body, nt_pair)) {
         pair_GetCar(body.pair, &expr);
         pair_GetCdr(body.pair, &body);
         eval(expr, env, &value);
@@ -185,7 +185,7 @@ static SUBR(and)
     Node expr = NIL;
     Node ans  = true_v;
 
-    for (; isKind(body, nt_pair) ;) {
+    for (; isTribe(body, nt_pair) ;) {
         pair_GetCar(body.pair, &expr);
         pair_GetCdr(body.pair, &body);
         eval(expr, env, &ans);
@@ -201,7 +201,7 @@ static SUBR(or)
     Node expr = NIL;
     Node ans  = NIL;
 
-    for (; isKind(body, nt_pair) ;) {
+    for (; isTribe(body, nt_pair) ;) {
         pair_GetCar(body.pair, &expr);
         pair_GetCdr(body.pair, &body);
         eval(expr, env, &ans);
@@ -219,7 +219,7 @@ static SUBR(set)
 
     fetchArgs(args, &symbol, &expr, 0);
 
-    if (!isKind(symbol, nt_symbol)) {
+    if (!isTribe(symbol, nt_symbol)) {
         fprintf(stderr, "\nerror: non-symbol identifier in set: ");
         dump(stderr, symbol);
         fprintf(stderr, "\n");
@@ -248,7 +248,7 @@ static SUBR(define)
 
     fetchArgs(args, &symbol, &expr, 0);
 
-    if (!isKind(symbol, nt_symbol)) {
+    if (!isTribe(symbol, nt_symbol)) {
         fprintf(stderr, "\nerror: non-symbol identifier in define: ");
         dump(stderr, symbol);
         fprintf(stderr, "\n");
@@ -317,7 +317,7 @@ static SUBR(find)
 
     forceArgs(args, &tst, &lst, 0);
 
-    while (isKind(lst, nt_pair)) {
+    while (isTribe(lst, nt_pair)) {
         Node elm   = NIL;
         Node check = NIL;
 
@@ -346,7 +346,7 @@ static SUBR(lambda)
     fprintf(stderr, "lambda:");
     prettyPrint(stderr, args);
     fprintf(stderr, "\n");
-    setKind(*result.reference, nt_expression);
+    setTribe(*result.reference, nt_expression);
 }
 
 static SUBR(eval_symbol)
@@ -357,7 +357,7 @@ static SUBR(eval_symbol)
 
     // lookup symbol in the current enviroment
     if (!alist_Get(env.pair, symbol, result)) {
-        if (!isKind(symbol, nt_symbol)) {
+        if (!isTribe(symbol, nt_symbol)) {
             fatal("undefined variable: <non-symbol>");
         } else {
             fatal("undefined variable: %s", symbol_Text(symbol.symbol));
@@ -381,7 +381,7 @@ static SUBR(eval_pair)
     // first eval the head
     eval(head, env, &head);
 
-    if (isKind(head, nt_fixed)) {
+    if (isTribe(head, nt_fixed)) {
         // apply Fixed to un-evaluated arguments
         Node func = NIL;
         tuple_GetItem(head.tuple, fxd_eval, &func);
@@ -440,11 +440,11 @@ static SUBR(apply_expr)
 
     // bind parameters to values
     // extending the closure enviroment
-    while (isKind(formals, nt_pair)) {
+    while (isTribe(formals, nt_pair)) {
         Node var = NIL;
         Node val = NIL;
 
-        if (!isKind(vlist, nt_pair)) {
+        if (!isTribe(vlist, nt_pair)) {
             fprintf(stderr, "\nerror: too few arguments params: ");
             prettyPrint(stderr, vars);
             fprintf(stderr, " args: ");
@@ -465,7 +465,7 @@ static SUBR(apply_expr)
 
     // bind (rest) parameter to remaining values
     // extending the closure enviroment
-    if (isKind(formals, nt_symbol)) {
+    if (isTribe(formals, nt_symbol)) {
         pair_Create(formals, vlist, &tmp.pair);
         pair_Create(tmp, cenv, &cenv.pair);
         vlist = NIL;
@@ -521,7 +521,7 @@ static SUBR(form)
 
   tuple_Create(1, &tuple);
   tuple_SetItem(tuple, 0, func);
-  setKind(tuple, nt_form);
+  setTribe(tuple, nt_form);
 
   ASSIGN(result, (Node)tuple);
 }
@@ -648,7 +648,7 @@ static SUBR(exit)
     Node value = NIL;
     forceArgs(args, &value, 0);
 
-    if (isKind(value, nt_integer)) {
+    if (isTribe(value, nt_integer)) {
         exit(value.integer->value);
     } else {
         exit(0);
@@ -692,7 +692,7 @@ static SUBR(dumpln)
 static SUBR(print)
 {
     Node value = NIL;
-    while (isKind(args, nt_pair)) {
+    while (isTribe(args, nt_pair)) {
         pair_GetCar(args.pair, &value);
         pair_GetCdr(args.pair, &args);
         print(stdout, value);
@@ -703,7 +703,7 @@ static SUBR(print)
 static SUBR(println)
 {
     Node value = NIL;
-    while (isKind(args, nt_pair)) {
+    while (isTribe(args, nt_pair)) {
         pair_GetCar(args.pair, &value);
         pair_GetCdr(args.pair, &args);
         print(stdout, value);
@@ -716,15 +716,15 @@ static SUBR(debug)
 {
     Node value = NIL;
     long level = 1;
-    if (isKind(args, nt_pair)) {
+    if (isTribe(args, nt_pair)) {
         pair_GetCar(args.pair, &value);
-        if (isKind(value, nt_integer)) {
+        if (isTribe(value, nt_integer)) {
             level = value.integer->value;
             pair_GetCdr(args.pair, &args);
         }
     }
     if (ea_global_debug <= level) {
-        while (isKind(args, nt_pair)) {
+        while (isTribe(args, nt_pair)) {
             pair_GetCar(args.pair, &value);
             pair_GetCdr(args.pair, &args);
             print(stderr, value);
@@ -740,9 +740,9 @@ static SUBR(level)
 
     integer_Create(ea_global_debug, &value.integer);
 
-    if (isKind(args, nt_pair)) {
+    if (isTribe(args, nt_pair)) {
         pair_GetCar(args.pair, &value);
-        if (isKind(value, nt_integer)) {
+        if (isTribe(value, nt_integer)) {
             ea_global_debug = value.integer->value;
         }
     }
@@ -861,7 +861,7 @@ static Node defineFixed(const char* name, Operator eval) {
     primitive_Create(label, eval, &prim);
 
     tuple_Create(1, &fixed);
-    setKind(fixed, nt_fixed);
+    setTribe(fixed, nt_fixed);
 
     tuple_SetItem(fixed, fxd_eval, prim);
 
@@ -878,11 +878,11 @@ static Node defineEFixed(const char* neval,  Operator oeval,
     Primitive prim  = 0;
 
     tuple_Create(2, &fixed);
-    setKind(fixed, nt_fixed);
+    setTribe(fixed, nt_fixed);
 
     if (nencode) {
       symbol_Convert(nencode, &label);
-      primitive_Create(label, oencode, &prim);      
+      primitive_Create(label, oencode, &prim);
       tuple_SetItem(fixed, fxd_encode, prim);
     }
 

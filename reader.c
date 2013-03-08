@@ -593,7 +593,7 @@ extern bool readExpr(FILE *fp, Target result)
         default:
             {
                 bool rtn = readSymbol(fp, chr, result);
-                if (nt_pair == getKind(*(result.reference))) {
+                if (nt_pair == getTribe(*(result.reference))) {
                     if (!list_UnDot(*(result.pair))) return false;
                 }
                 return rtn;

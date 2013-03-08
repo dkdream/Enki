@@ -88,18 +88,13 @@ static Target *clink_Slots(Clink *link) {
 }
 
 extern inline bool initialize_StartNode(const Space space, const Header) __attribute__((always_inline));
-extern inline bool initialize_StartNode(const Space space, const Header node) {
-    if (!node) return false;
+extern inline bool initialize_StartNode(const Space space, const Header header) {
+    if (!header) return false;
 
-    memset(node, 0, sizeof(struct gc_header));
+    init_atom(header,0);
 
-    node->count  = 0;
-    node->color  = nc_unknown;
-    node->atom   = 1;
-    node->inside = 0;
-    node->prefix = 0;
-    node->space  = space;
-    node->before = node->after = 0;
+    header->space  = space;
+    header->before = header->after = 0;
 
     return true;
 }
@@ -198,7 +193,7 @@ static void release_Header(const Header header) {
              header->kind,
              (header->live ? "l" : "d"),
              (header->prefix ? "p" : "r"),
-             header->count,
+             header->kind.count,
              header,
              space,
              space->scan,
@@ -207,7 +202,7 @@ static void release_Header(const Header header) {
     header->live = 0;
 
     header->inside = 0;
-    header->count  = 0;
+    header->kind.count  = 0;
     header->space  = 0;
     free(header);
 }
@@ -218,20 +213,20 @@ extern bool darken_Node(const Node node) {
 
     const Header header = asHeader(node);
 
-    if (!header->inside) return true;
+    if (!header->kind.inside) return true;
 
     const Space  space = header->space;
 
     if (!space) return true;
 
-    if (header->color == space->visiable) return true;
+    if (header->kind.color == space->visiable) return true;
 
     VM_DEBUG(1, "darkening node %p (%d,%s,%s)[%d] (header %p) (space %p scan %p top %p)",
              node.reference,
-             header->kind,
+             header->kind.tribe,
              (header->live ? "l" : "d"),
              (header->prefix ? "p" : "r"),
-             header->count,
+             header->kind.count,
              header,
              space,
              space->scan,
@@ -280,7 +275,7 @@ extern bool darken_Node(const Node node) {
         return false;
     }
 
-    header->color = space->visiable;
+    header->kind.color = space->visiable;
     space->count += 1;
 
     if (!extract_From(header)) {
@@ -295,41 +290,34 @@ extern bool darken_Node(const Node node) {
 
 extern inline bool scan_Node(const Header header) __attribute__((always_inline));
 extern inline bool scan_Node(const Header header) {
-    if (!header)         return false;
-    if (!header->inside) return true;
+    if (!header)              return false;
+    if (!header->kind.inside) return true;
 
     const Space space = header->space;
 
     if (!space) return true;
 
-    if (header->color != space->visiable) {
+    if (header->kind.color != space->visiable) {
         VM_ERROR("scan error: scanning a clear or white node %p", header);
         return false;
     }
 
-    if (header->atom) return true;
-    if (1 > header->count) return true;
+    if (header->kind.atom) return true;
+    if (1 > header->kind.count) return true;
 
     VM_DEBUG(5, "scanning header %p (%d)[%d] in space %p",
              header,
-             header->kind,
-             header->count,
+             header->kind.tribe,
+             header->kind.count,
              space);
 
     Reference *slot = (Reference*) asReference(header);
 
     VM_DEBUG(5, "scan reference (%p) begin", slot);
 
-    if (header->prefix) {
-        int inx;
-        for (inx = 1; inx < header->count; ++inx) {
-            if (!darken_Node(slot[inx])) return false;
-        }
-    } else {
-        int inx;
-        for (inx = 0; inx < header->count; ++inx) {
-            if (!darken_Node(slot[inx])) return false;
-        }
+    int inx;
+    for (inx = 0; inx < header->kind.count; ++inx) {
+        darken_Node(slot[inx]);
     }
 
     VM_DEBUG(5, "scan (%p) end", slot);
@@ -345,7 +333,6 @@ static inline bool space_CanFlip(const Space space) {
 extern bool node_Allocate(const Space space,
                           bool atom,
                           Size size_in_char,
-                          Size prefix_in_char,
                           Target target)
 {
     if (!target.reference) return false;
@@ -366,31 +353,23 @@ extern bool node_Allocate(const Space space,
         }
     }
 
-    if (0 < prefix_in_char) {
-        if (atom) {
-            VM_ERROR("unable to allocate an prefixed atomic node");
-            return false;
-        }
-    }
+    const Header header = fresh_tuple(inside, size_in_char);
 
-    const Header header = fresh_tuple(inside, size_in_char, prefix_in_char);
-
-    VM_DEBUG(1, "allocating node %p (%d,%s,%s)[%d] (header %p) (space %p scan %p top %p)",
+    VM_DEBUG(1, "allocating node %p (%d,%s)[%d] (header %p) (space %p scan %p top %p)",
              asReference(header),
-             header->kind,
-             (header->live ? "l" : "d"),
-             (header->prefix ? "p" : "r"),
-             header->count,
+             header->kind.tribe,
+             (header->kind.live ? "l" : "d"),
+             header->kind.count,
              header,
              space,
              space->scan,
              space->top);
 
-    header->atom = (atom ? 1 : 0);
+    header->kind.atom = (atom ? 1 : 0);
 
     if (!inside) return true;
 
-    header->color  = space->visiable;
+    header->kind.color  = space->visiable;
     header->space  = space;
 
     // insert into the black chain
@@ -434,9 +413,9 @@ extern bool space_Init(const Space space) {
     if (!insert_Before(down, root)) return false;
 
     // set root to visible
-    root->color = space->visiable;
-    up->color   = space_Hidden(space);
-    down->color = space_Hidden(space);
+    root->kind.color = space->visiable;
+    up->kind.color   = space_Hidden(space);
+    down->kind.color = space_Hidden(space);
 
     space->top    = up;
     space->scan   = root;
@@ -474,7 +453,7 @@ extern bool space_Scan(const Space space, unsigned int upto) {
         space->scan = scan->before;
 
         if (!scan_Node(scan)) {
-            VM_ERROR("unable to scan node (%d) %p", getKind(scan), scan);
+            VM_ERROR("unable to scan node (%d) %p", getTribe(scan), scan);
             return false;
         }
     }
@@ -507,11 +486,11 @@ extern bool space_Flip(const Space space) {
     }
 
     // set top and bottom to old visible (new hidden)
-    top->color    = space->visiable;
-    bottom->color = space->visiable;
+    top->kind.color    = space->visiable;
+    bottom->kind.color = space->visiable;
 
     // set root to new visiable
-    root->color = space->visiable = space_Hidden(space);
+    root->kind.color = space->visiable = space_Hidden(space);
 
 #if 0
     for (;;) {
@@ -529,7 +508,7 @@ extern bool space_Flip(const Space space) {
 
         for (;;) {
             if (hold == bottom) break;
-            hold->live = 0;
+            hold->kind.live = 0;
             hold = hold->after;
         }
     }
@@ -615,12 +594,11 @@ extern bool space_Flip(const Space space) {
             const Header    header = asHeader(value);
             const Space     space  = header->space;
 
-            VM_DEBUG(1, "dakening root node %p (%d,%s,%s)[%d] (header %p) (space %p scan %p top %p)",
+            VM_DEBUG(1, "dakening root node %p (%d,%s)[%d] (header %p) (space %p scan %p top %p)",
                      value,
-                     header->kind,
-                     (header->live ? "l" : "d"),
-                     (header->prefix ? "p" : "r"),
-                     header->count,
+                     header->kind.tribe,
+                     (header->kind.live ? "l" : "d"),
+                     header->kind.count,
                      header,
                      space,
                      space->scan,

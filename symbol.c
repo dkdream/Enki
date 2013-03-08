@@ -34,7 +34,7 @@ extern void init_global_symboltable() {
 
     _empty_symbol = (Symbol) asReference(fresh_atom(0, sizeof(struct symbol)));
 
-    setKind(_empty_symbol, nt_symbol);
+    setTribe(_empty_symbol, nt_symbol);
 
     const unsigned int rows = 1000;
     const unsigned int fullsize
@@ -144,7 +144,7 @@ extern bool symbol_Create(TextBuffer value, Symbol *target) {
 
     Symbol result = (*target) = (Symbol)asReference(entry);
 
-    setKind(result, nt_symbol);
+    setTribe(result, nt_symbol);
     result->size     = size;
     result->hashcode = hashcode;
 

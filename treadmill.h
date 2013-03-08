@@ -79,6 +79,7 @@
 
 typedef struct gc_clink      Clink;
 typedef enum   gc_color      Color;
+typedef struct gc_kind      *Kind;
 typedef struct gc_header    *Header;
 typedef struct gc_treadmill *Space;
 
@@ -99,27 +100,26 @@ enum gc_color {
 #define WORD_SIZE     (sizeof(long))
 #define POINTER_SIZE  (sizeof(Node))
 
-struct gc_header {
-    struct {
-        struct gc_treadmill *space;
-        struct gc_header    *before;
-        struct gc_header    *after;
-    } __attribute__((__packed__));
-
-    struct {
-        unsigned long count : BITS_PER_WORD - 12 __attribute__((__packed__));
-        union {
-            unsigned int flags : 12 __attribute__((__packed__));
-            struct {
-                enum gc_color color  : 2;
-                unsigned int  atom   : 1; // is this a tuple of values
-                unsigned int  live   : 1; // is this alive
-                unsigned int  inside : 1; // is this inside a space (malloc/free by the treadmill)
-                unsigned int  prefix : 1; // the first slot is a pointer an atomic segment. (implies !atom)
-                unsigned int  kind   : 6; // the kind (used by c-code) (and prettyprint)
-            } __attribute__((__packed__));
+struct gc_kind {
+    Node type;
+    unsigned long count : BITS_PER_WORD - 12 __attribute__((__packed__));
+    union {
+        unsigned int flags : 12 __attribute__((__packed__));
+        struct {
+            enum gc_color color  : 2;
+            unsigned int  atom   : 1; // is this a tuple of values
+            unsigned int  live   : 1; // is this alive
+            unsigned int  inside : 1; // is this inside a space (malloc/free by the treadmill)
+            unsigned int  tribe  : 7; // the tribe (used by c-code) (and prettyprint)
         } __attribute__((__packed__));
     } __attribute__((__packed__));
+};
+
+struct gc_header {
+    struct gc_treadmill *space;
+    struct gc_header    *before;
+    struct gc_header    *after;
+    struct gc_kind       kind;
 };
 
 struct gc_treadmill {
@@ -162,11 +162,7 @@ extern void clink_End(Clink *link)                 __attribute__((nonnull));
 //extern bool node_ExternalInit(const EA_Type, Header);
 
 extern bool darken_Node(const Node node);
-extern bool node_Allocate(Space space,
-                          bool atom,
-                          Size size_in_char,
-                          Size prefix_in_char,
-                          Target);
+extern bool node_Allocate(const Space space, bool atom, Size size_in_char, Target);
 
 extern bool insert_After(const Header mark, const Header node);
 extern bool insert_Before(const Header mark, const Header node);
@@ -184,33 +180,65 @@ extern inline Header asHeader(const Node value) {
     return (((Header)value.reference) - 1);
 }
 
-extern inline unsigned long getCount(const Node value) __attribute__((always_inline));
-extern inline unsigned long getCount(const Node value) {
-    if (!value.reference) return 0;
+extern inline Kind asKind(const Node value) __attribute__((always_inline));
+extern inline Kind asKind(const Node value) {
     Header header = asHeader(value);
-    return (unsigned long)(header->count);
+    if (!header) return (Kind)0;
+    return &(header->kind);
 }
 
-extern inline EA_Type getKind(const Node value) __attribute__((always_inline));
-extern inline EA_Type getKind(const Node value) {
-    if (!value.reference) return nt_unknown;
-    Header header = asHeader(value);
-    return header->kind;
+
+extern inline Node getType(const Node value) __attribute__((always_inline));
+extern inline Node getType(const Node value) {
+    Kind kind = asKind(value);
+    if (!kind) return NIL;
+    return kind->type;
 }
 
-extern inline bool setKind(const Node value, EA_Type kind) __attribute__((always_inline));
-extern inline bool setKind(const Node value, EA_Type kind) {
-    if (!value.reference) return false;
-    Header header = asHeader(value);
-    header->kind = kind;
+extern inline bool setType(const Node value, const Node type) __attribute__((always_inline));
+extern inline bool setType(const Node value, const Node type) {
+    Kind kind = asKind(value);
+    if (!kind) return false;
+    kind->type = type;
     return true;
 }
 
-extern inline bool isKind(const Node value, const EA_Type kind)  __attribute__((always_inline));
-extern inline bool isKind(const Node value, const EA_Type kind) {
+extern inline bool isType(const Node value, const Node type) __attribute__((always_inline));
+extern inline bool isType(const Node value, const Node type) {
+    Kind kind = asKind(value);
+    if (!kind) return false;
+    return kind->type.reference == type.reference;
+}
+
+
+extern inline unsigned long getCount(const Node value) __attribute__((always_inline));
+extern inline unsigned long getCount(const Node value) {
+    Kind kind = asKind(value);
+    if (!kind) return 0;
+    return (unsigned long)(kind->count);
+}
+
+extern inline EA_Type getTribe(const Node value) __attribute__((always_inline));
+extern inline EA_Type getTribe(const Node value) {
+    Kind kind = asKind(value);
+    if (!kind) return nt_unknown;
+    return kind->tribe;
+}
+
+extern inline bool setTribe(const Node value, EA_Type tribe) __attribute__((always_inline));
+extern inline bool setTribe(const Node value, EA_Type tribe) {
+    Kind kind = asKind(value);
+    if (!kind) return false;
+    kind->tribe = tribe;
+    return true;
+}
+
+extern inline bool isTribe(const Node value, const EA_Type tribe)  __attribute__((always_inline));
+extern inline bool isTribe(const Node value, const EA_Type tribe) {
     if  (!value.reference) return false;
-    Header header = asHeader(value);
-    return kind == header->kind;
+    Kind kind = asKind(value);
+    if (!kind) return false;
+    return tribe == kind->tribe;
 }
 
 extern inline unsigned long asSize(unsigned base_sizeof, unsigned extend_sizeof)  __attribute__((always_inline));
@@ -238,35 +266,27 @@ extern inline Reference init_atom(Header header,
     unsigned long fullcount = toCount(size_in_chars);
     memset(header, 0, sizeof(struct gc_header));
 
-    header->count  = fullcount;
-    header->color  = nc_unknown;
-    header->atom   = 1;
-    header->live   = 1;
+    header->kind.count  = fullcount;
+    header->kind.color  = nc_unknown;
+    header->kind.atom   = 1;
+    header->kind.live   = 1;
+    header->kind.inside = 0;
 
     return asReference(header);
 }
 
-extern inline Reference init_tuple(Header, bool, unsigned long) __attribute__((nonnull always_inline));
-extern inline Reference init_tuple(Header header,
-                                   bool prefix,
-                                   unsigned long size_in_pointers)
+extern inline Reference init_tuple(Header, unsigned long) __attribute__((nonnull always_inline));
+extern inline Reference init_tuple(Header header, unsigned long size_in_pointers)
 {
     unsigned long fullcount = size_in_pointers;
 
     memset(header, 0, sizeof(struct gc_header));
 
-    header->count  = fullcount;
-    header->color  = nc_unknown;
-    header->atom   = 1;
-    header->live   = 1;
-    header->prefix = (prefix ? 1 : 0);
-
-    Reference reference = asReference(header);
-
-    if (prefix) {
-        Reference *slots = reference;
-        slots[0] = (slots + (fullcount + 1));
-    }
+    header->kind.count  = fullcount;
+    header->kind.color  = nc_unknown;
+    header->kind.atom   = 1;
+    header->kind.live   = 1;
+    header->kind.inside = 0;
 
     return asReference(header);
 }
@@ -281,44 +301,30 @@ extern inline Header fresh_atom(bool inside, unsigned long size_in_chars) {
 
     memset(header, 0, fullsize);
 
-    header->count  = fullcount;
-    header->color  = nc_unknown;
-    header->atom   = 1;
-    header->live   = 1;
-    header->inside = (inside ? 1 : 0);
+    header->kind.count  = fullcount;
+    header->kind.color  = nc_unknown;
+    header->kind.atom   = 1;
+    header->kind.live   = 1;
+    header->kind.inside = (inside ? 1 : 0);
 
     return header;
 }
 
-extern inline Header fresh_tuple(bool, unsigned long, unsigned long) __attribute__((always_inline));
-extern inline Header fresh_tuple(bool inside,
-                                 unsigned long size_in_chars,
-                                 unsigned long prefix_in_chars)
+extern inline Header fresh_tuple(bool, unsigned long) __attribute__((always_inline));
+extern inline Header fresh_tuple(bool inside, unsigned long size_in_chars)
 {
-    bool prefix = (0 < prefix_in_chars);
     unsigned long fullcount = toCount(size_in_chars);
     unsigned long fullsize  = toSize(fullcount);
     fullsize += sizeof(struct gc_header);
-
-    if (prefix) {
-        fullsize += POINTER_SIZE;
-        fullsize += prefix_in_chars;
-    }
 
     Header header = (Header) malloc(fullsize);
 
     memset(header, 0, fullsize);
 
-    header->count  = fullcount;
-    header->color  = nc_unknown;
-    header->live   = 1;
-    header->inside = (inside ? 1 : 0);
-    header->prefix = (prefix ? 1 : 0);
-
-    if (prefix) {
-        Reference *slots = asReference(header);
-        slots[0] = (slots + (fullcount + 1));
-    }
+    header->kind.count  = fullcount;
+    header->kind.color  = nc_unknown;
+    header->kind.live   = 1;
+    header->kind.inside = (inside ? 1 : 0);
 
     return header;
 }

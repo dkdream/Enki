@@ -13,13 +13,12 @@ extern bool integer_Create(long value, Integer *target) {
     if (!node_Allocate(_zero_space,
                        true,
                        sizeof(struct integer),
-                       0,
                        target))
         return 0;
 
     Integer result = *target;
 
-    setKind(result, nt_integer);
+    setTribe(result, nt_integer);
     result->value = value;
 
     return result;

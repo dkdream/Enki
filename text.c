@@ -73,13 +73,12 @@ extern bool text_Create(TextBuffer value, Text *target) {
     if (!node_Allocate(_zero_space,
                        true,
                        asSize(sizeof(struct text), sizeof(unsigned long) * cells),
-                       0,
                        target))
         return false;
 
     Text result = *target;
 
-    setKind(result, nt_text);
+    setTribe(result, nt_text);
     result->size     = size;
     result->hashcode = hashcode;
 
@@ -110,12 +109,12 @@ extern bool text_Append(Text head, Text tail, Text *target) {
     if (!node_Allocate(_zero_space,
                        true,
                        asSize(sizeof(struct text), sizeof(unsigned long) * cells),
-                       0,
-                       target)) return false;
+                       target))
+        return false;
 
     Text result = *target;
 
-    setKind(result, nt_text);
+    setTribe(result, nt_text);
     result->size     = size;
     result->hashcode = hashcode;
 
