@@ -15,24 +15,13 @@
 #include "symbol.h"
 #include "dump.h"
 #include "debug.h"
+#include "tuple.h"
 
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
 
 static Pair traceStack = 0;
-
-static void environ_Lambda(Node symbol, Node env, Target result)
-{
-    pair_Create(symbol, NIL, result.pair);
-}
-
-static void environ_Let(Node local, Node env, Target result)
-{
-    Node symbol;
-    pair_GetCar(local.pair, &symbol);
-    pair_Create(symbol, NIL, result.pair);
-}
 
 extern void dump_enki_stack() {
     if (!traceStack) return;
@@ -155,66 +144,18 @@ extern void encode(const Node expr, const Node env, Target result)
         }
     }
 
-    /* one way to fixed this problem is
-       to give a Fixed value two slots
-       one for the encode (encode pair) phase and
-       one for the apply  (apply pair) phase */
+    if (!isKind(head, nt_fixed)) goto list_begin;
+    
+    Node action = NIL;
 
-    if (isIdentical(f_quote, head))  goto list_done;
+    tuple_GetItem(head.tuple, fxd_encode, &action);
 
-    if (isIdentical(f_lambda, head)) {
-        Node args; Node body; Node lenv;
+    if (isNil(action)) goto list_begin;
 
-        pair_GetCar(tail.pair, &args);
-        pair_GetCdr(tail.pair, &body);
+    apply(action, tail, env, &(tail.pair));
+    goto list_done;
 
-        VM_ON_DEBUG(1, {
-                fprintf(stderr,"params: ");
-                prettyPrint(stderr, args);
-                fprintf(stderr, "\n");
-            });
-
-        list_Map(environ_Lambda, args.pair, env, &lenv);
-
-        VM_ON_DEBUG(1, {
-                fprintf(stderr,"environ: ");
-                prettyPrint(stderr, lenv);
-                fprintf(stderr, "\n");
-            });
-
-        list_SetEnd(lenv.pair, env);
-
-        list_Map(encode, body.pair, lenv, &(body.pair));
-        pair_Create(args, body, &tail.pair);
-        goto list_done;
-    }
-
-
-    if (isIdentical(f_let, head)) {
-        Node locals; Node lenv;
-
-        pair_GetCar(tail.pair, &locals);
-
-        VM_ON_DEBUG(1, {
-                fprintf(stderr,"locals: ");
-                prettyPrint(stderr, locals);
-                fprintf(stderr, "\n");
-            });
-
-        list_Map(environ_Let, locals.pair, env, &lenv);
-
-        VM_ON_DEBUG(1, {
-                fprintf(stderr,"environ: ");
-                prettyPrint(stderr, lenv);
-                fprintf(stderr, "\n");
-            });
-        list_SetEnd(lenv.pair, env);
-
-        list_Map(encode, tail.pair, lenv, &(tail.pair));
-        goto list_done;
-    }
-
-
+ list_begin:
     list_Map(encode, tail.pair, env, &(tail.pair));
 
  list_done:

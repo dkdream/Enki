@@ -8,6 +8,7 @@
 #include "tuple.h"
 #include "pair.h"
 #include "treadmill.h"
+#include <stdarg.h>
 
 extern bool tuple_Create(unsigned size, Tuple* target) {
     if (1 > size) return false;
@@ -56,8 +57,12 @@ extern bool tuple_GetItem(Tuple tuple, unsigned index, Target value) {
 
     Header header = asHeader(tuple);
 
-    if (header->atom)           return false;
-    if (index >= header->count) return false;
+    if (header->atom) return false;
+
+    if (index >= header->count) {
+      ASSIGN(value, NIL);
+      return false;
+    }
 
     darken_Node(tuple);
 

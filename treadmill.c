@@ -610,6 +610,8 @@ extern bool space_Flip(const Space space) {
             }
 
             const Reference value  = slots[size].reference[0];
+
+#ifdef debug_THIS
             const Header    header = asHeader(value);
             const Space     space  = header->space;
 
@@ -623,7 +625,7 @@ extern bool space_Flip(const Space space) {
                      space,
                      space->scan,
                      space->top);
-
+#endif
             darken_Node(value);
         }
         start = start->after;

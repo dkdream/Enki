@@ -5,7 +5,7 @@
  ** Routine List:
  **    <routine-list-end>
  **/
-
+#define debug_THIS
 #include "all_types.inc"
 #include "treadmill.h"
 #include "debug.h"
@@ -347,12 +347,6 @@ static SUBR(eval_pair)
     pair_GetCar(obj.pair, &head);
     pair_GetCdr(obj.pair, &tail);
 
-#if 0
-    printf("eval_pair: ");
-    prettyPrint(stdout, obj);
-    printf("\n");
-#endif
-
     pushTrace(obj);
 
     // first eval the head
@@ -361,7 +355,7 @@ static SUBR(eval_pair)
     if (isKind(head, nt_fixed)) {
         // apply Fixed to un-evaluated arguments
         Node func = NIL;
-        pair_GetCar(head.pair, &func);
+        tuple_GetItem(head.tuple, fxd_eval, &func);
         apply(func, tail, env, result);
         goto done;
     }
@@ -373,13 +367,6 @@ static SUBR(eval_pair)
     apply(head, tail, env, result);
 
  done:
-
-#if 0
-    printf("eval_pair => ");
-    prettyPrint(stdout, *result.reference);
-    printf("\n");
-#endif
-
     popTrace();
 }
 
@@ -781,7 +768,7 @@ static SUBR(allocate) {
     tuple_Create(slots, result.tuple);
 }
 
-static SUBR(list) {
+static SUBR(encode_quote) {
      ASSIGN(result,args);
 }
 
@@ -796,25 +783,13 @@ static SUBR(encode_lambda) {
     pair_GetCar(args.pair, &formals);
     pair_GetCdr(args.pair, &body);
 
-    VM_ON_DEBUG(1, {
-            fprintf(stderr,"formals: ");
-            prettyPrint(stderr, formals);
-            fprintf(stderr, "\n");
-        });
-
     list_Map(environ_Lambda, formals.pair, env, &lenv);
-
-    VM_ON_DEBUG(1, {
-            fprintf(stderr,"environ: ");
-            prettyPrint(stderr, lenv);
-            fprintf(stderr, "\n");
-        });
 
     list_SetEnd(lenv.pair, env);
 
     list_Map(encode, body.pair, lenv, &(body.pair));
 
-    pair_Create(args, body, result.pair);
+    pair_Create(formals, body, result.pair);
 }
 
 static void environ_Let(Node local, Node env, Target result)
@@ -829,19 +804,7 @@ static SUBR(encode_let) {
 
     pair_GetCar(args.pair, &locals);
 
-    VM_ON_DEBUG(1, {
-            fprintf(stderr,"locals: ");
-            prettyPrint(stderr, locals);
-            fprintf(stderr, "\n");
-        });
-
     list_Map(environ_Let, locals.pair, env, &lenv);
-
-    VM_ON_DEBUG(1, {
-            fprintf(stderr,"environ: ");
-            prettyPrint(stderr, lenv);
-            fprintf(stderr, "\n");
-        });
 
     list_SetEnd(lenv.pair, env);
 
@@ -868,28 +831,57 @@ static Primitive definePrimitive(const char* name, Operator func) {
     return prim;
 }
 
-static Node defineFixed(const char* name, Operator func) {
-    Node      fixed = NIL;
+static Node defineFixed(const char* name, Operator eval) {
+    Tuple     fixed = 0;
     Symbol    label = 0;
     Primitive prim  = 0;
 
     symbol_Convert(name, &label);
-    primitive_Create(label, func, &prim);
+    primitive_Create(label, eval, &prim);
 
-    pair_Create(prim, NIL, &(fixed.pair));
-
+    tuple_Create(1, &fixed);
     setKind(fixed, nt_fixed);
+
+    tuple_SetItem(fixed, fxd_eval, prim);
 
     defineValue(label, fixed);
 
-    return fixed;
+    return (Node) fixed;
+}
+
+static Node defineEFixed(const char* neval,  Operator oeval,
+                         const char* nencode, Operator oencode)
+{
+    Tuple     fixed = 0;
+    Symbol    label = 0;
+    Primitive prim  = 0;
+
+    tuple_Create(2, &fixed);
+    setKind(fixed, nt_fixed);
+
+    if (nencode) {
+      symbol_Convert(nencode, &label);
+      primitive_Create(label, oencode, &prim);      
+      tuple_SetItem(fixed, fxd_encode, prim);
+    }
+
+    symbol_Convert(neval, &label);
+    primitive_Create(label, oeval, &prim);
+    tuple_SetItem(fixed, fxd_eval, prim);
+
+    defineValue(label, fixed);
+
+    return (Node) fixed;
 }
 
 #define MK_SYM(x)     symbol_Convert(#x, &s_ ##x)
 #define MK_CONST(x,y) defineConstant(#x, y);
 #define MK_PRM(x)     definePrimitive(#x, opr_ ## x)
 #define MK_FXD(x)     defineFixed(#x, opr_ ## x)
+#define MK_FXD(x)     defineFixed(#x, opr_ ## x)
+#define MK_EFXD(x,y)  defineEFixed(#x, opr_ ## x, #y, opr_ ## y)
 #define MK_OPR(x,y)   definePrimitive(#x, opr_ ## y)
+
 
 void startEnkiLibrary() {
     if (__initialized) return;
@@ -920,10 +912,9 @@ void startEnkiLibrary() {
     MK_SYM(unquote);
     MK_SYM(unquote_splicing);
 
-
-    f_quote  = MK_FXD(quote);
-    f_lambda = MK_FXD(lambda);
-    f_let    = MK_FXD(let);
+    f_quote  = MK_EFXD(quote,encode_quote);
+    f_lambda = MK_EFXD(lambda,encode_lambda);
+    f_let    = MK_EFXD(let,encode_let);
 
     MK_FXD(and);
     MK_FXD(define);
@@ -970,7 +961,7 @@ void startEnkiLibrary() {
     MK_OPR(%element,element);
     MK_OPR(%allocate,allocate);
     MK_OPR(%cons,cons);
-    MK_OPR(%list,list);
+    MK_OPR(%list,encode_quote);
     MK_OPR(%encode_lambda,encode_lambda);
     MK_OPR(%encode_let,encode_let);
 

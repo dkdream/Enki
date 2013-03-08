@@ -8,6 +8,11 @@
  **/
 #include "reference.h"
 
+typedef enum fixed_slots {
+  fxd_eval,
+  fxd_encode,
+} FXD_Slots;
+
 typedef void (*Operator)(Node args, Node env, Target result);
 
 struct primitive {
