@@ -15,6 +15,7 @@
 #include <stdbool.h>
 #include <error.h>
 
+#if 0
 #define SET_BLOCK_SIZE 10
 
 /* */
@@ -403,6 +404,7 @@ extern void set_Print(FILE* output, Set set) {
         //VM_ERROR("Set Count Error: seen %u cached %u", total, set->count);
     }
 }
+#endif
 
 /*****************
  ** end of file **

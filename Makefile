@@ -39,6 +39,7 @@ RUNFLAGS :=
 INCFLAGS := -I. $(COPPER_INC)
 DBFLAGS  := -ggdb -Wall -mtune=i686 -rdynamic
 CFLAGS   := $(DBFLAGS) $(INCFLAG) $(TAILFLAGS)
+SFLAGS   := $(DBFLAGS) -O3 -fdelete-null-pointer-checks -fverbose-asm
 LIBFLAGS := $(COPPER_LIB)
 ARFLAGS  := rcu
 
@@ -47,7 +48,7 @@ MAINS     := enki_main.c
 C_SOURCES := $(filter-out $(MAINS),$(notdir $(wildcard *.c)))
 H_SOURCES := $(filter-out enki.h, $(notdir $(wildcard *.h)))
 
-ASMS    := $(C_SOURCES:%.c=%.s)
+ASMS    := $(C_SOURCES:%.c=.assembly/%.s)
 OBJS    := $(C_SOURCES:%.c=%.o)
 TSTS    := $(notdir $(wildcard test*.ea))
 RUNS    := $(TSTS:test_%.ea=test_%.run)
@@ -55,7 +56,7 @@ DEPENDS := $(C_SOURCES:%.c=.depends/%.d) $(MAINS:%.c=.depends/%.d)
 
 UNIT_TESTS := test_reader.gcc test_sizes.gcc
 
-all :: enki
+all :: enki asm
 
 enki :: $(RUNS)
 asm  :: $(ASMS)
@@ -78,8 +79,8 @@ depends : $(DEPENDS)
 $(RUNS) : enki.vm
 
 clean ::
-	@rm -rf .depends
-	rm -f $(OBJS) $(ASMS) $(MAINS:%.c=%.o) $(UNIT_TESTS:%.gcc=%.x)
+	@rm -rf .depends .assembly
+	rm -f $(OBJS) $(MAINS:%.c=%.o) $(UNIT_TESTS:%.gcc=%.x)
 	rm -f enki.x test.x enki.vm enki_ver.h
 	rm -f $(RUNS)
 
@@ -159,8 +160,10 @@ enki_ver.h : FORCE
 	$(GCC) $(CFLAGS) -o $@ $+ libEnki.a
 
 .depends : ; @mkdir .depends
-
 .depends/%.d : %.c .depends ; @$(GCC) $(CFLAGS) -MM -MP -MG -MF $@ $<
+
+.assembly : ; @mkdir .assembly
+.assembly/%.s : %.c .assembly ; @$(GCC) $(SFLAGS) -S -fverbose-asm -o $@ $<
 
 -include $(DEPENDS)
 

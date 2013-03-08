@@ -16,6 +16,7 @@
 /* */
 #include <error.h>
 
+#if 0
 #define Hash_Block_Size 10
 
 /* */
@@ -263,8 +264,7 @@ extern void hash_Print(FILE* output, Hash table) {
 
     return;
 }
-
-
+#endif
 
 /*****************
  ** end of file **
