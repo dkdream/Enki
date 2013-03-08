@@ -79,13 +79,13 @@ depends : $(DEPENDS)
 $(RUNS) : enki.vm
 
 clean ::
-	@rm -rf .depends .assembly
 	rm -f $(OBJS) $(MAINS:%.c=%.o) $(UNIT_TESTS:%.gcc=%.x)
 	rm -f enki.x test.x enki.vm enki_ver.h
 	rm -f $(RUNS)
 
 scrub :: 
 	@make clean
+	@rm -rf .depends .assembly
 
 enki.vm : enki_main.o libEnki.a 
 	$(GCC) $(CFLAGS) -o $@ $^ $(LIBFLAGS)
