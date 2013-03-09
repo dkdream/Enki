@@ -209,6 +209,13 @@ extern inline bool isType(const Node value, const Node type) {
     return kind->type.reference == type.reference;
 }
 
+extern inline bool isAtomic(const Node value) __attribute__((always_inline));
+extern inline bool isAtomic(const Node value) {
+    Kind kind = asKind(value);
+    if (!kind) return true;
+    if (kind->atom) return true;
+    return false;
+}
 
 extern inline unsigned long getCount(const Node value) __attribute__((always_inline));
 extern inline unsigned long getCount(const Node value) {

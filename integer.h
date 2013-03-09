@@ -12,9 +12,6 @@ struct integer {
     long value;
 };
 extern bool integer_Create(long value, Integer*);
-extern bool integer_Add(Integer, Integer, Integer*);
-extern bool integer_Mult(Integer, Integer, Integer*);
-extern bool integer_Subtract(Integer, Integer, Integer*);
 
 /***************************
  ** end of file

@@ -26,6 +26,7 @@ extern bool integer_Create(long value, Integer *target) {
     return result;
 }
 
+#if 0
 extern bool integer_Add(Integer left, Integer right, Integer *target) {
 
     if (!left)  {
@@ -78,6 +79,7 @@ extern bool integer_Subtract(Integer left, Integer right, Integer *target) {
 
     return  integer_Create(left->value - right->value, target);
 }
+#endif
 
 /*****************
  ** end of file **

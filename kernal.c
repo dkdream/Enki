@@ -29,10 +29,10 @@ struct gc_header    enki_true;
 Space _zero_space;
 
 Node       enki_globals = NIL; // nt_pair(nil, alist)
-Node            true_v  = NIL; // nt_unknown
-Node            f_quote = NIL; // nt_fixed
-Node           f_lambda = NIL; // nt_fixed
-Node              f_let = NIL; // nt_fixed
+Node            true_v  = NIL;
+Node            f_quote = NIL;
+Node           f_lambda = NIL;
+Node              f_let = NIL;
 Primitive p_eval_symbol = 0;
 Primitive   p_eval_pair = 0;
 Primitive  p_apply_expr = 0;
@@ -901,9 +901,6 @@ static Node defineEFixed(const char* neval,  Operator oeval,
 
 void startEnkiLibrary() {
     if (__initialized) return;
-
-    true_v = (Node)init_atom(&enki_true, 0);
-
     space_Init(&enki_zero_space);
 
     _zero_space = &enki_zero_space;
@@ -911,6 +908,10 @@ void startEnkiLibrary() {
     clink_Manage(&(enki_zero_space.start_clinks), &enki_globals);
 
     init_global_symboltable();
+
+    true_v = (Node)init_atom(&enki_true, 0);
+
+    setType(true_v, s_true);
 
     pair_Create(NIL,NIL, &enki_globals.pair);
 

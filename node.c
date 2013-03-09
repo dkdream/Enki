@@ -104,44 +104,34 @@ bool node_Iso(long depth, Node left, Node right)
         return left.integer->value == right.integer->value;
     }
 
-    if (isIdentical(type, s_pair)) {
-        if (!node_Iso(depth - 1,
-                      left.pair->car,
-                      right.pair->car)) {
-            return false;
-        }
-        return node_Iso(depth,
-                        left.pair->cdr,
-                        right.pair->cdr);
+    if (isAtomic(left)) {
+      return false;
+    }
+    if (isAtomic(right)) {
+      return false;
     }
 
-    if (isIdentical(type, s_tuple)) {
-        const unsigned lhs_max = asKind(left)->count;
-        const unsigned rhs_max = asKind(right)->count;
-        unsigned inx = 0;
-        if (lhs_max != rhs_max) return false;
-        for (; inx < lhs_max ; ++inx) {
-            if (!node_Iso(depth - 1,
-                          left.tuple->item[inx],
-                          right.tuple->item[inx])) {
-                return false;
-            }
-        }
-        return true;
+    const unsigned lhs_max = asKind(left)->count;
+    const unsigned rhs_max = asKind(right)->count;
+
+    if (lhs_max != rhs_max) return false;
+
+    unsigned inx = 0;
+    for (; inx < lhs_max ; ++inx) {
+      if (!node_Iso(depth - 1,
+                    left.tuple->item[inx],
+                    right.tuple->item[inx])) {
+        return false;
+      }
     }
 
-    return false;
+    return true;
 }
 
 extern void node_TypeOf(Node value, Target result)
 {
     if (isNil(value)) {
         ASSIGN(result, value);
-        return;
-    }
-
-    if (isIdentical(true_v, value)) {
-        ASSIGN(result, s_true);
         return;
     }
 

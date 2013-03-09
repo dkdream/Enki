@@ -167,6 +167,7 @@ static inline int isDigit10(int c) { return 0 <= c && c <= 127 && (CHAR_DIGIT10 
 static inline int isDigit16(int c) { return 0 <= c && c <= 127 && (CHAR_DIGIT16  & chartab[c]); }
 static inline int isLetter(int c)  { return 0 <= c && c <= 127 && (CHAR_LETTER   & chartab[c]); }
 static inline int isPrefix(int c)  { return 0 <= c && c <= 127 && (CHAR_PREFIX   & chartab[c]); }
+static inline int isBlank(int c)   { return 0 <= c && c <= 127 && (CHAR_BLANK    & chartab[c]); }
 
 static inline int digitValue(int c)
 {
@@ -568,11 +569,11 @@ extern bool readExpr(FILE *fp, Target result)
 
         case ',':
             {
-                if (matchChar(fp, '@')) {
-                    return readQuote(fp, s_unquote_splicing, result);
-                } else {
-                    return readQuote(fp, s_unquote, result);
-                }
+              if (matchChar(fp, '@')) {
+                return readQuote(fp, s_unquote_splicing, result);
+              } else {
+                return readQuote(fp, s_unquote, result);
+              }
             }
 
         case '}':
@@ -585,18 +586,20 @@ extern bool readExpr(FILE *fp, Target result)
 
         case '-':
             {
-                int dhr = getc(fp); ungetc(dhr, fp);
-                if (isDigit10(dhr)) return readInteger(fp, chr, result);
-                else return readSymbol(fp, chr, result);
+              int dhr = getc(fp); ungetc(dhr, fp);
+              if (isDigit10(dhr)) return readInteger(fp, chr, result);
+              else return readSymbol(fp, chr, result);
             }
 
         default:
             {
-                bool rtn = readSymbol(fp, chr, result);
-                if (isType(*(result.reference), s_pair)) {
-                    if (!list_UnDot(*(result.pair))) return false;
-                }
-                return rtn;
+              if (isBlank(chr))  continue;
+              if (!isPrint(chr)) continue;
+              bool rtn = readSymbol(fp, chr, result);
+              if (isType(*(result.reference), s_pair)) {
+                if (!list_UnDot(*(result.pair))) return false;
+              }
+              return rtn;
             }
         }
     }

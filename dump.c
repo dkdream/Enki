@@ -77,8 +77,14 @@ extern bool print(FILE* output, Node node) {
             fprintf(output, "t");
             return true;
         }
-        fprintf(output, "unknown(%p)",
-                node.reference);
+        if (isAtomic(node)) {
+          fprintf(output, "unknown(%p)",
+                  node.reference);
+        } else {
+          fprintf(output, "unknown(%p (size=%d))",
+                  node.reference,
+                  (unsigned) asKind(node)->count);
+        }
         return true;
     }
 
@@ -122,9 +128,20 @@ extern bool print(FILE* output, Node node) {
         return true;
     }
 
-    fprintf(output, "type[%p](%p)",
-            type.reference,
-            node.reference);
+    if (isType(type, s_symbol)) {
+      echo_string(output, (const char *)type.symbol->value);
+    } else {
+      fprintf(output, "type[%p]", type.reference);
+    }
+
+    if (isAtomic(node)) {
+      fprintf(output, "(%p)",
+              node.reference);
+    } else {
+      fprintf(output, "(%p (size=%d))",
+              node.reference,
+              (unsigned) asKind(node)->count);
+    }
     return true;
 }
 
@@ -143,8 +160,14 @@ extern bool dump(FILE* output, Node node) {
             fprintf(output, "t");
             return true;
         }
-        fprintf(output, "unknown(%p)",
-                node.reference);
+        if (isAtomic(node)) {
+          fprintf(output, "unknown(%p)",
+                  node.reference);
+        } else {
+          fprintf(output, "unknown(%p (size=%d))",
+                  node.reference,
+                  (unsigned) asKind(node)->count);
+        }
         return true;
     }
 
@@ -186,13 +209,24 @@ extern bool dump(FILE* output, Node node) {
     if (isIdentical(type, s_tuple)) {
         fprintf(output, "tuple(%p (size=%d))",
                 node.reference,
-                (unsigned) asKind(node.reference)->count);
+                (unsigned) asKind(node)->count);
         return true;
     }
 
-    fprintf(output, "type[%p](%p)",
-            type.reference,
-            node.reference);
+    if (isType(type, s_symbol)) {
+      echo_string(output, (const char *)type.symbol->value);
+    } else {
+      fprintf(output, "type[%p]", type.reference);
+    }
+    if (isAtomic(node)) {
+      fprintf(output, "(%p)",
+              node.reference);
+    } else {
+      fprintf(output, "(%p (size=%d))",
+              node.reference,
+              (unsigned) asKind(node)->count);
+    }
+
     return true;
 }
 
@@ -345,10 +379,22 @@ extern void prettyPrint(FILE* output, Node node) {
             return;
         }
 
-        offset += 20;
-        fprintf(output, "type[%p](%p)",
-                type.reference,
-                node.reference);
+        if (isType(type, s_symbol)) {
+          offset += type.symbol->size + 1;
+          echo_string(output, (const char *)type.symbol->value);
+        } else {
+          offset += 10;
+          fprintf(output, "type[%p]", type.reference);
+        }
+        if (isAtomic(node)) {
+          offset += 10;
+          fprintf(output, "(%p)", node.reference);
+        } else {
+          offset += 20;
+          fprintf(output, "(%p (size=%d))",
+                  node.reference,
+                  (unsigned) asKind(node)->count);
+        }
         return;
     }
 

@@ -36,16 +36,21 @@ extern Symbol s_true;
 extern Symbol s_unquote;
 extern Symbol s_unquote_splicing;
 
+// raw type names
 extern Symbol s_integer;
 extern Symbol s_primitive;
 extern Symbol s_symbol;
 extern Symbol s_text;
 extern Symbol s_tuple;
+
+// 
 extern Symbol s_pair;
 extern Symbol s_expression;
 extern Symbol s_form;
 extern Symbol s_fixed;
 extern Symbol s_delay;
+extern Symbol s_type;
+extern Symbol s_sort;
 
 extern bool symbol_Create(TextBuffer value, Symbol*);
 extern bool symbol_Convert(const char* value, Symbol*);
