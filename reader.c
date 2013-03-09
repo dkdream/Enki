@@ -657,6 +657,8 @@ extern void readFile(FILE *stream)
         }
     }
 
+    if (stream == stdin) return;
+
     int c = getc(stream);
 
     if (EOF != c)
