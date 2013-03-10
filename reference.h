@@ -97,6 +97,7 @@ extern inline bool isIdentical(const Node left, const Node right) {
 }
 
 /* */
+extern Node enki_globals;
 extern void startEnkiLibrary();
 extern void stopEnkiLibrary();
 

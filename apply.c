@@ -52,12 +52,15 @@ extern void popTrace() {
 // expand all forms
 extern void expand(const Node expr, const Node env, Target result)
 {
-    Node list = expr;
-    Node head = NIL;
-    Node tail = NIL;
+    GC_Begin(8);
 
-    darken_Node(expr);
-    darken_Node(env);
+    Node list; Node head; Node tail;
+
+    GC_Protect(list);
+    GC_Protect(head);
+    GC_Protect(tail);
+
+    list = expr;
 
     VM_ON_DEBUG(1, {
             fprintf(stderr, "expand: ");
@@ -108,18 +111,22 @@ extern void expand(const Node expr, const Node env, Target result)
             prettyPrint(stderr, *result.reference);
             fprintf(stderr, "\n");
         });
-    return;
+
+    GC_End();
 }
 
 // translate symbol in head position to known primitive/fixed functions
 extern void encode(const Node expr, const Node env, Target result)
 {
-    Node list = expr;
-    Node head = NIL;
-    Node tail = NIL;
+    GC_Begin(8);
 
-    darken_Node(expr);
-    darken_Node(env);
+    Node list; Node head; Node tail;
+
+    GC_Protect(list);
+    GC_Protect(head);
+    GC_Protect(tail);
+
+    list = expr;
 
     VM_ON_DEBUG(1, {
             fprintf(stderr,"encode: ");
@@ -173,23 +180,25 @@ extern void encode(const Node expr, const Node env, Target result)
             fprintf(stderr, "\n");
         });
 
-    return;
+    GC_End();
 }
 
 extern void eval(const Node expr, const Node env, Target result)
 {
-    pushTrace(expr);
+    GC_Begin(3);
 
-    darken_Node(expr);
-    darken_Node(env);
+    Primitive evaluator; Node args;
+
+    GC_Protect(evaluator);
+    GC_Protect(args);
+
+    pushTrace(expr);
 
     VM_ON_DEBUG(1, {
             fprintf(stderr, "eval: ");
             prettyPrint(stderr, expr);
             fprintf(stderr, "\n");
         });
-
-    Primitive evaluator = 0;
 
     if (isType(expr, s_pair)) {
         evaluator = p_eval_pair;
@@ -204,8 +213,6 @@ extern void eval(const Node expr, const Node env, Target result)
         goto done;
     }
 
-    Node args = NIL;
-
     pair_Create(expr, NIL, &(args.pair));
 
     apply(evaluator, args, env, result);
@@ -219,14 +226,12 @@ extern void eval(const Node expr, const Node env, Target result)
         });
 
     popTrace();
+
+    GC_End();
 }
 
 extern void apply(Node fun, Node args, const Node env, Target result)
 {
-    darken_Node(fun);
-    darken_Node(args);
-    darken_Node(env);
-
     VM_ON_DEBUG(1, {
             fprintf(stderr, "apply: ");
             prettyPrint(stderr, fun);

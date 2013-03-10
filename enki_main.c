@@ -9,6 +9,7 @@
 #include "reader.h"
 #include "dump.h"
 #include "apply.h"
+#include "treadmill.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -84,6 +85,7 @@ int main(int argc, char **argv)
                     fprintf(stderr, "unable to open %s for reading\n", arg);
                     exit(1);
                 } else {
+                    fprintf(stderr, "reading %s\n", arg);
                     readFile(input);
                     fclose(input);
                     input = 0;

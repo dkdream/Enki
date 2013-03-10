@@ -125,13 +125,13 @@ struct gc_treadmill {
     unsigned long count;
     Color  visiable;
     Header free;   // start of the free    list
-    Header bottom; // start of the hidden  list
-    Header top;    // end   of the hidden  list
+    //    Header bottom; // start of the hidden  list
+    //    Header top;    // end   of the hidden  list
     Header scan;   // end   of the resting list
     /**/
-    struct gc_header start_up;
-    struct gc_header start_down;
-    struct gc_header start_root;
+    struct gc_header top;
+    struct gc_header bottom;
+    struct gc_header root;
     struct {
         Clink  start_clinks;
         Target array[ROOT_COUNT];
@@ -140,27 +140,44 @@ struct gc_treadmill {
 
 extern Space _zero_space;
 
-extern bool space_Init(const Space); // this will erase the contents of the space
-extern bool space_Flip(const Space);
-extern bool space_Scan(const Space, unsigned int);
+extern void space_Init(const Space); // this will erase the contents of the space
+extern void space_Flip(const Space);
+extern void space_Scan(const Space, unsigned int);
 
-extern void clink_Init(Clink *link, unsigned max)  __attribute__((nonnull));
-extern bool clink_Manage(Clink *link, Target slot) __attribute__((nonnull));
-extern void clink_End(Clink *link)                 __attribute__((nonnull));
+#define Debug_treadmill() \
+     fprintf(stderr, "Debug_treadmill %s:%d begin\n", __FILE__,  __LINE__); \
+     space_Scan(_zero_space, 1000); \
+     space_Flip(_zero_space); \
+     space_Scan(_zero_space, 1000); \
+     space_Flip(_zero_space); \
+     space_Scan(_zero_space, 1000); \
+     space_Flip(_zero_space); \
+     space_Scan(_zero_space, 1000); \
+     space_Flip(_zero_space); \
+     fprintf(stderr, "end\n")
+
+extern void clink_Init(Clink *link, unsigned max)    __attribute__((nonnull));
+extern void clink_Manage(Clink *link, Target slot)   __attribute__((nonnull));
+extern void clink_UnManage(Clink *link, Target slot) __attribute__((nonnull));
+extern void clink_Final(Clink *link)                 __attribute__((nonnull));
 
 #define GC_Begin(MAX) \
-   struct { Clink link__; Target array[MAX];} __LOCAL_GC; \
-   clink_Init((Clink*)(& __LOCAL_GC), MAX)
+    struct { Clink link__; Target array[MAX];} __LOCAL_GC;    \
+    clink_Init((Clink*)(& __LOCAL_GC), MAX)
 
 #define GC_Protect(NAME) \
    clink_Manage((Clink*)(& __LOCAL_GC), &(NAME))
 
+#define GC_UnProtect(NAME) \
+   clink_UnManage((Clink*)(& __LOCAL_GC), &(NAME))
+
 #define GC_End() \
-   clink_End((Clink*)(& __LOCAL_GC))
+    clink_Final((Clink*)(& __LOCAL_GC))
 
 //extern bool node_ExternalInit(const EA_Type, Header);
 
 extern bool darken_Node(const Node node);
+extern void check_Node(const Node node);
 extern bool node_Allocate(const Space space, bool atom, Size size_in_char, Target);
 
 extern bool insert_After(const Header mark, const Header node);

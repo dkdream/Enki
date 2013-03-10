@@ -87,18 +87,6 @@ static Target *clink_Slots(Clink *link) {
     return (Target *)(link + 1);
 }
 
-extern inline bool initialize_StartNode(const Space space, const Header) __attribute__((always_inline));
-extern inline bool initialize_StartNode(const Space space, const Header header) {
-    if (!header) return false;
-
-    init_atom(header,0);
-
-    header->space  = space;
-    header->before = header->after = 0;
-
-    return true;
-}
-
 extern inline Color space_Hidden(const Space space) __attribute__((always_inline));
 extern inline Color space_Hidden(const Space space) {
     if (!space) return nc_unknown;
@@ -116,13 +104,184 @@ extern inline Color space_Hidden(const Space space) {
     return nc_unknown;
 }
 
+#define space_Check(space) space_Check__(space, __FILE__, __LINE__)
+
+extern inline void space_Check__(const Space space,
+                                 const char *filename,
+                                 unsigned int linenum) __attribute__((always_inline));
+extern inline void space_Check__(const Space space,
+                                 const char *filename,
+                                 unsigned int linenum)
+{
+    if (!space) return;
+
+    const char* error = 0;
+
+    const Header top    = &(space->top);
+    const Header bottom = &(space->bottom);
+    const Header root   = &(space->root);
+    const Header scan   = space->scan;
+    const Header free   = space->free;
+
+    bool check_top    = false;
+    bool check_bottom = false;
+    bool check_root   = false;
+    bool check_scan   = false;
+    bool check_free   = false;
+
+    Header temp = top;
+
+    // top -> root -> scan -> free -> bottom -> top
+    for (; temp ;) {
+        if (temp == scan) {
+            // note: scan may be root
+            check_scan = true;
+        }
+        temp = temp->after;
+        if (temp == top) {
+            check_top = true;
+            break;
+        }
+        if (temp == root) {
+            check_root = true;
+        }
+        if (temp == free) {
+            // note: free may be bottom
+            if (!check_root) {
+                error = "top -> free: missing root";
+                goto error;
+            }
+            if (!check_scan) {
+                error = "top -> free: missing scan";
+                goto error;
+            }
+            check_free = true;
+        }
+        if (temp == bottom) {
+            if (!check_root) {
+                error = "top -> bottom: missing root";
+                goto error;
+            }
+            if (!check_scan) {
+                error = "top -> bottom: missing scan";
+                goto error;
+            }
+            if (!check_free) {
+                error = "top -> bottom: missing free";
+                goto error;
+            }
+            check_bottom = true;
+        }
+    }
+
+    if (!check_top) {
+        error = "forward list is not circular";
+        goto error;
+    }
+    if (!check_bottom) {
+        error = "bottom not in forward list";
+        goto error;
+    }
+    if (!check_root) {
+        error = "root not in forward list";
+        goto error;
+    }
+    if (!check_scan) {
+        error = "scan not in forward list";
+        goto error;
+    }
+    if (!check_free) {
+        error = "free not in forward list";
+        goto error;
+    }
+
+    check_top    = false;
+    check_bottom = false;
+    check_root   = false;
+    check_scan   = false;
+    check_free   = false;
+
+    temp = top;
+
+    // top <- root <- scan <- free <- bottom <- top
+    for (; temp ;) {
+        temp = temp->before;
+        if (temp == scan) {
+            // note: scan may be root
+            check_scan = true;
+        }
+        if (temp == top) {
+            check_top = true;
+            break;
+        }
+        if (temp == root) {
+            check_root = true;
+        }
+        if (temp == free) {
+            // note: free may be bottom
+            if (check_root) {
+                error = "free <- root <- top";
+                goto error;
+            }
+            if (check_scan) {
+                error = "free <- scan <- top";
+                goto error;
+            }
+            check_free = true;
+        }
+        if (temp == bottom) {
+            if (check_root) {
+                error = "bottom <- root <- top";
+                goto error;
+            }
+            if (check_scan) {
+                error = "bottom <- scan <- top";
+                goto error;
+            }
+            check_bottom = true;
+        }
+    }
+
+
+    if (!check_top) {
+        error = "backward list is not circular";
+        goto error;
+    }
+    if (!check_bottom) {
+        error = "bottom not in backward list";
+        goto error;
+    }
+    if (!check_root) {
+        error = "root not in backward list";
+        goto error;
+    }
+    if (!check_scan) {
+        error = "scan not in backward list";
+        goto error;
+    }
+    if (!check_free) {
+        error = "free not in backward list";
+        goto error;
+    }
+
+    return;
+
+ error:
+    fprintf(stderr,
+            "%s:%d  %s\n",
+            filename,
+            linenum,
+            error);
+    BOOM();
+}
+
 extern bool insert_After(const Header mark, const Header node) {
     if (!mark)        VM_ERROR("no mark");
     if (!node)        VM_ERROR("no node");
     if (node->before) VM_ERROR("node %p is not unlinked (before %p)", node, node->before);
     if (node->after)  VM_ERROR("node %p is not unlinked (after %p)", node, node->after);
 
-    const Header after  = mark->after;
+    const Header after = mark->after;
 
     node->after  = after;
     node->before = mark;
@@ -197,8 +356,7 @@ static void release_Header(const Header header) {
              space->scan,
              space->top);
 
-    header->kind.live = 0;
-
+    header->kind.live   = 0;
     header->kind.inside = 0;
     header->kind.count  = 0;
     header->space       = 0;
@@ -212,9 +370,17 @@ extern bool darken_Node(const Node node) {
 
     if (!header->kind.inside) return true;
 
-    const Space  space = header->space;
+    const Space space = header->space;
 
     if (!space) return true;
+
+    if (!header->kind.live) {
+        fprintf(stderr, "found in space %p a dead ", space);
+        dump(stderr, node);
+        fprintf(stderr, "\n");
+    }
+
+    header->kind.live = 1;
 
     if (header->kind.color == space->visiable) return true;
 
@@ -229,31 +395,15 @@ extern bool darken_Node(const Node node) {
              space->scan,
              space->top);
 
+    space_Check(space);
+
     const Header scan   = space->scan;
-    const Header top    = space->top;
-    const Header bottom = space->bottom;
+    const Header free   = space->free;
+    const Header top    = &(space->top);
+    const Header bottom = &(space->bottom);
 
-    const Header up   = &(space->start_up);
-    const Header down = &(space->start_down);
-    const Header root = &(space->start_root);
-
-    if (header == up) {
-        VM_ERROR("darkening UP");
-        return false;
-    }
-
-    if (header == down) {
-        VM_ERROR("darkening DOWN");
-        return false;
-    }
-
-    if (header == down) {
-        VM_ERROR("darkening DOWN");
-        return false;
-    }
-
-    if (header == root) {
-        VM_ERROR("darkening ROOT");
+    if (header == scan) {
+        VM_ERROR("darkening scan");
         return false;
     }
 
@@ -267,40 +417,86 @@ extern bool darken_Node(const Node node) {
         return false;
     }
 
-    if (header == scan) {
-        VM_ERROR("darkening scan");
+    if (header == free) {
+        VM_ERROR("darkening free");
         return false;
     }
 
+    header->kind.live  = 1;
     header->kind.color = space->visiable;
-    space->count += 1;
 
     if (!extract_From(header)) {
-        return false;
+        BOOM();
     }
     if (!insert_After(top, header)) {
-        return false;
+        BOOM();
     }
+
+    space_Check(space);
 
     return true;
 }
 
-extern inline bool scan_Node(const Header header) __attribute__((always_inline));
-extern inline bool scan_Node(const Header header) {
-    if (!header)              return false;
-    if (!header->kind.inside) return true;
+extern void check_Node(const Node node) {
+     if (!node.reference) return;
+
+     const Header header = asHeader(node);
+     const Space  space  = header->space;
+
+     if (space) {
+         if (!header->kind.inside) {
+             BOOM();
+         }
+     }
+
+     if (!header->kind.live) {
+         BOOM();
+     }
+
+     if (header->kind.atom) return;
+
+     unsigned long max = header->kind.count;
+
+     Reference *slot = (Reference*) asReference(header);
+
+     int inx;
+     for (inx = 0; inx < max; ++inx) {
+         const Header temp = asHeader(slot[inx]);
+         if (!temp) continue;
+         if (!temp->kind.live) {
+             fprintf(stderr, "dead node ");
+             prettyPrint(stderr, slot[inx]);
+             fprintf(stderr,"\n");
+             BOOM();
+         }
+         check_Node(slot[inx]);
+     }
+}
+
+extern inline void scan_Node(const Header header) __attribute__((always_inline));
+extern inline void scan_Node(const Header header) {
+    if (!header)              return;
+    if (!header->kind.inside) return;
 
     const Space space = header->space;
 
-    if (!space) return true;
+    if (!space) return;
+
+#if 0
+    fprintf(stderr, "scanning %p node %p ", header, asReference(header));
+    prettyPrint(stderr, asReference(header));
+    fprintf(stderr, "\n");
+#endif
 
     if (header->kind.color != space->visiable) {
         VM_ERROR("scan error: scanning a clear or white node %p", header);
-        return false;
+        return;
     }
 
-    if (header->kind.atom) return true;
-    if (1 > header->kind.count) return true;
+    space->count += 1;
+
+    if (header->kind.atom) return;
+    if (1 > header->kind.count) return;
 
     VM_DEBUG(5, "scanning header %p (%d)[%d] in space %p",
              header,
@@ -318,12 +514,11 @@ extern inline bool scan_Node(const Header header) {
     }
 
     VM_DEBUG(5, "scan (%p) end", slot);
-    return true;
 }
 
 static inline bool space_CanFlip(const Space space) {
     const Header scan = space->scan;
-    const Header top  = space->top;
+    const Header top  = &(space->top);
     return (scan == top);
 }
 
@@ -339,14 +534,11 @@ extern bool node_Allocate(const Space space,
     if (inside) {
         unsigned count = space->count / 30;
         // scan first
-        if (!space_Scan(space, count)) {
-            return false;
-        }
+        space_Scan(space, count);
+
         // can we flip
         if (space_CanFlip(space)) {
-            if (!space_Flip(space)) {
-                return false;
-            }
+            space_Flip(space);
         }
     }
 
@@ -369,6 +561,8 @@ extern bool node_Allocate(const Space space,
     header->kind.color = space->visiable;
     header->space      = space;
 
+    space->count += 1;
+
     // insert into the black chain
     if (!insert_Before(space->free, header)) {
         VM_ERROR("unable to add to node %p to black list of %p",
@@ -377,47 +571,51 @@ extern bool node_Allocate(const Space space,
         return false;
     }
 
-    space->count += 1;
-
     target.reference[0] = asReference(header);
 
     // only return (true) after its in the black chain
     return true;
 }
 
-extern bool space_Init(const Space space) {
-    if (!space) return false;
+extern void space_Init(const Space space) {
+    if (!space) return;
 
     VM_DEBUG(5, "init space %p", space);
 
     memset(space, 0, sizeof(struct gc_treadmill));
 
-    const Header up   = &space->start_up;
-    const Header down = &space->start_down;
-    const Header root = &space->start_root;
+    const Header top    = &space->top;
+    const Header bottom = &space->bottom;
+    const Header root   = &space->root;
 
     space->visiable = nc_blue;
 
-    if (!initialize_StartNode(space, root)) return false;
-    if (!initialize_StartNode(space, up))   return false;
-    if (!initialize_StartNode(space, down)) return false;
+    init_atom(top,0);
+    init_atom(bottom,0);
+    init_atom(root,0);
+
+    top->space    = space;
+    bottom->space = space;
+    root->space   = space;
 
     // create a two node circular doubly link list
-    up->after   = up->before   = down;
-    down->after = down->before = up;
+    top->after     = root;
+    root->after    = bottom;
+    bottom->after  = top;
 
-    // insert root before down (after up)
-    if (!insert_Before(down, root)) return false;
+    top->before    = bottom;
+    bottom->before = root;
+    root->before   = top;
 
     // set root to visible
-    root->kind.color = space->visiable;
-    up->kind.color   = space_Hidden(space);
-    down->kind.color = space_Hidden(space);
+    top->kind.color    = space_Hidden(space);
+    bottom->kind.color = space_Hidden(space);
+    root->kind.color   = space->visiable;
 
-    space->top    = up;
-    space->scan   = root;
-    space->bottom = down;
-    space->free   = down;
+    space->scan = root;
+    space->free = bottom;
+
+    space_Check(space);
 
     // Inital state
     // white chain empty   (free == bottom)
@@ -425,61 +623,60 @@ extern bool space_Init(const Space space) {
     // black chain empty   (scan == free.before)
     // gray chain one node (scan == root)
 
-    space->start_clinks.before = &space->start_clinks;
-    space->start_clinks.after  = &space->start_clinks;
-    space->start_clinks.max    = ROOT_COUNT;
-    space->start_clinks.index  = 0;
-
-    return true;
+    clink_Init(&space->start_clinks, ROOT_COUNT);
 }
 
-extern bool space_Scan(const Space space, unsigned int upto) {
-    if (!space) return false;
+extern void space_Scan(const Space space, unsigned int upto) {
+    if (!space) return;
 
-    if (1 > upto) return true;
+    if (1 > upto) return;
+
+    space_Check(space);
+
+    const Header top = &(space->top);
 
     for ( ; 0 < upto ; --upto) {
         VM_DEBUG(5, "scan space %p %u", space, upto);
 
         const Header scan = space->scan;
 
-        if (scan == space->top) {
-            return true;
-        }
+        if (scan == top) break;
+
+        space_Check(space);
+
+        scan_Node(scan);
+
+        space_Check(space);
 
         space->scan = scan->before;
 
-        if (!scan_Node(scan)) {
-            VM_ERROR("unable to scan node %p", scan);
-            return false;
-        }
+        space_Check(space);
     }
 
     VM_DEBUG(5, "scan space %p end", space);
-
-    return true;
 }
 
-extern bool space_Flip(const Space space) {
-    if (!space) return false;
+extern void space_Flip(const Space space) {
+    if (!space) return;
 
-    const Header top  = space->top;
-    const Header scan = space->scan;
+    space_Check(space);
 
-    if (scan != top) return true;
+    const Header top    = &(space->top);
+    const Header bottom = &(space->bottom);
+    const Header root   = &(space->root);
+    const Header scan   = space->scan;
+
+    if (scan != top) return;
 
     VM_DEBUG(5, "flip space %p(%ld) begin", space, space->count);
 
     space->count = 0;
 
-    const Header bottom = space->bottom;
-    const Header root   = &(space->start_root);
-
     Header free = space->free;
 
     if (root->space != space) {
         VM_ERROR("%s", "the start root is NOT in its allocated space !!!");
-        return true;
+        return;
     }
 
     // set top and bottom to old visible (new hidden)
@@ -489,7 +686,6 @@ extern bool space_Flip(const Space space) {
     // set root to new visiable
     root->kind.color = space->visiable = space_Hidden(space);
 
-#if 0
     for (;;) {
         const Header hold = free;
 
@@ -499,68 +695,50 @@ extern bool space_Flip(const Space space) {
 
         release_Header(hold);
     }
-#else
-    {
-        Header hold = free;
+    space->free = free;
 
-        for (;;) {
-            if (hold == bottom) break;
-            hold->kind.live = 0;
-            hold = hold->after;
-        }
-    }
-#endif
+    space_Check(space);
 
     VM_DEBUG(5, "moving root (1)");
 
     // extract the root from the old black chain
     if (!extract_From(root)) {
         VM_ERROR("unable to extract the start root from old black");
-        return false;
+        return;
     }
 
     if (!insert_Before(free, root)) {
         VM_ERROR("unable to insert the root into new gray");
-        return false;
+        return;
     }
 
     space->scan = root; // set the start of the new gray chain
-
-    // check if the old white chain is empty
-    if (free == bottom) {
-        // check if the old clear chain is not empty
-        if (bottom->after != top) {
-            free = bottom->after;
-        }
-    }
-
-    space->free = free;
 
     VM_DEBUG(5, "moving bottom (2)");
 
     // concatinate the old white and old clear chains into new white chain
     if (!extract_From(bottom)) {
         VM_ERROR("unable concatinate old white and old clear");
-        return false;
+        return;
     }
 
     // empty old clear list
     if (!insert_Before(top, bottom)) {
         VM_ERROR("unable to create empty clear list");
-        return false;
+        return;
     }
 
     VM_DEBUG(5, "moving top (3)");
 
     if (!extract_From(top)) {
         VM_ERROR("unable ot extract the top");
-        return false;
+        return;
     }
 
     // make the old black chain gray
     if (!insert_Before(root, top)) {
         VM_ERROR("unable to change old black to new gray");
-        return false;
+        return;
     }
 
     VM_DEBUG(5, "scan clinks (4)");
@@ -585,30 +763,29 @@ extern bool space_Flip(const Space space) {
                 continue;
             }
 
-            const Reference value  = slots[size].reference[0];
+            const Reference value = slots[size].reference[0];
 
-#ifdef debug_THIS
-            const Header    header = asHeader(value);
-            const Space     space  = header->space;
+            if (!value) continue;
 
-            VM_DEBUG(1, "dakening root node %p (%d,%s)[%d] (header %p) (space %p scan %p top %p)",
-                     value,
-                     header->kind.tribe,
-                     (header->kind.live ? "l" : "d"),
-                     header->kind.count,
-                     header,
-                     space,
-                     space->scan,
-                     space->top);
-#endif
+            const Header   header = asHeader(value);
+            const Space     space = header->space;
+
+            if (!header->kind.inside) {
+                continue;
+            }
+            if (!space) {
+                continue;
+            }
+
             darken_Node(value);
         }
         start = start->after;
     } while ( start != end );
     /* CLINK_UNLOCK */
 
+    space_Check(space);
+
     VM_DEBUG(5, "flip space %p end", space);
-    return true;
 
     (void)release_Header;
 }
@@ -628,8 +805,14 @@ extern void clink_Init(Clink *link, unsigned max) {
     if (!space) return;
 
     /* CLINK_LOCK */
+    Clink *mark = &space->start_clinks;
 
-    Clink *mark   = &space->start_clinks;
+    if (mark == link) {
+        link->before = mark;
+        link->after  = mark;
+        return;
+    }
+
     Clink *before = mark->before;
 
     link->before = before;
@@ -641,51 +824,89 @@ extern void clink_Init(Clink *link, unsigned max) {
     /* CLINK_UNLOCK */
 }
 
-extern bool clink_Manage(Clink *link, Target slot) {
-    if (!link)           return false;
-    if (!slot.reference) return false;
-    if (!link->before)   return false;
-    if (link->max <= link->index) return false;
+extern void clink_Manage(Clink *link, Target slot) {
+    if (!link)           goto error;
+    if (!slot.reference) goto error;
+    if (!link->before)   goto error;
+    if (link->max <= link->index) goto error;
 
     Target *array = clink_Slots(link);
+
+    ASSIGN(slot, NIL);
 
     array[link->index] = slot;
 
     ++(link->index);
 
-    return true;
+    return;
+
+ error:
+    fatal("clink Manage error");
+}
+
+extern void clink_UnManage(Clink *link, Target slot) {
+    if (!link)           goto error;
+    if (!slot.reference) goto error;
+    if (!link->before)   goto error;
+    if (1 > link->index) goto error;
+
+    int      max = link->index;
+    unsigned inx = 0;
+    bool     found = false;
+
+    Target *array = clink_Slots(link);
+
+    for (; inx < max ; ++inx) {
+        Target hold = array[inx];
+        if (hold.reference == slot.reference) {
+            found = true;
+            break;
+        }
+    }
+
+    if (!found) goto error;
+
+    --max;
+
+    for (; inx < max ; ++inx) {
+        array[inx] = array[inx+1];
+    }
+
+    --(link->index);
+
+    return;
+
+ error:
+    fatal("clink UnManage error");
 }
 
 extern void clink_Final(Clink *link) {
-    if (!link)         return;
-    if (!link->before) return;
-    if (!link->after)  return;
+    if (!link)         goto error;
+    if (!link->before) goto error;
+    if (!link->after)  goto error;
 
     link->index = 0;
-
-    bool error = false;
 
     /* CLINK_LOCK */
 
     Clink *before = link->before;
     Clink *after  = link->after;
 
-    if (before->after != link) error = true;
-    if (after->before != link) error = true;
+    if (before->after != link) goto error;
+    if (after->before != link) goto error;
 
-    if (!error) {
-        before->after = after;
-        after->before = before;
+    before->after = after;
+    after->before = before;
 
-        link->before = 0;
-        link->after  = 0;
-    }
+    link->before = 0;
+    link->after  = 0;
 
     /* CLINK_UNLOCK */
 
-    if (error) {
-        VM_ERROR("clink is not linked corectly");
-    }
+    return;
+
+ error:
+    fatal("clink is not linked corectly");
 }
 
 /*****************

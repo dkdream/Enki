@@ -40,11 +40,21 @@ Primitive  p_apply_form = 0;
 
 #define SUBR(NAME) void opr_##NAME(Node args, Node env, Target result)
 
+static unsigned globals_count = 0;
+
 extern void defineValue(Node symbol, const Node value) {
+    GC_Begin(8);
     Node globals;
+
+    GC_Protect(globals);
+
     pair_GetCdr(enki_globals.pair, &globals);
     alist_Add(globals.pair, symbol, value, &globals.pair);
     pair_SetCdr(enki_globals.pair, globals);
+
+    ++globals_count;
+
+    GC_End();
 }
 
 static unsigned checkArgs(Node args, const char* name, unsigned min, ...)
@@ -534,7 +544,6 @@ static SUBR(com) {
     Node val = NIL;
     checkArgs(args, "~", 1, s_integer);
     forceArgs(args, &val, 0);
-
     integer_Create(~(val.integer->value), result.integer);
 }
 
@@ -829,29 +838,46 @@ static SUBR(encode_let) {
 }
 
 static void defineConstant(const char* name, const Node value) {
-    Symbol label = 0;
+    GC_Begin(8);
+
+    Symbol label;
+
+    GC_Protect(label);
 
     symbol_Convert(name, &label);
 
     defineValue(label, value);
+
+    GC_End();
 }
 
 static Primitive definePrimitive(const char* name, Operator func) {
-    Symbol    label = 0;
-    Primitive prim  = 0;
+    GC_Begin(8);
+
+    Symbol label; Primitive prim;
+
+    GC_Protect(label);
+    GC_Protect(prim);
 
     symbol_Convert(name, &label);
     primitive_Create(label, func, &prim);
 
     defineValue(label, prim);
 
+    GC_End();
+
     return prim;
 }
 
-static Node defineFixed(const char* name, Operator eval) {
-    Tuple     fixed = 0;
-    Symbol    label = 0;
-    Primitive prim  = 0;
+static Node defineFixed(const char* name, Operator eval)
+{
+    GC_Begin(8);
+
+    Tuple fixed; Symbol label; Primitive prim;
+
+    GC_Protect(fixed);
+    GC_Protect(label);
+    GC_Protect(prim);
 
     symbol_Convert(name, &label);
     primitive_Create(label, eval, &prim);
@@ -863,23 +889,29 @@ static Node defineFixed(const char* name, Operator eval) {
 
     defineValue(label, fixed);
 
+    GC_End();
+
     return (Node) fixed;
 }
 
 static Node defineEFixed(const char* neval,  Operator oeval,
                          const char* nencode, Operator oencode)
 {
-    Tuple     fixed = 0;
-    Symbol    label = 0;
-    Primitive prim  = 0;
+    GC_Begin(8);
+
+    Tuple fixed; Symbol label; Primitive prim;
+
+    GC_Protect(fixed);
+    GC_Protect(label);
+    GC_Protect(prim);
 
     tuple_Create(2, &fixed);
     setType(fixed, s_fixed);
 
     if (nencode) {
-      symbol_Convert(nencode, &label);
-      primitive_Create(label, oencode, &prim);
-      tuple_SetItem(fixed, fxd_encode, prim);
+        symbol_Convert(nencode, &label);
+        primitive_Create(label, oencode, &prim);
+        tuple_SetItem(fixed, fxd_encode, prim);
     }
 
     symbol_Convert(neval, &label);
@@ -888,10 +920,12 @@ static Node defineEFixed(const char* neval,  Operator oeval,
 
     defineValue(label, fixed);
 
+    GC_End();
+
     return (Node) fixed;
 }
 
-#define MK_CONST(x,y) defineConstant(#x, y);
+#define MK_CONST(x,y) defineConstant(#x, y)
 #define MK_PRM(x)     definePrimitive(#x, opr_ ## x)
 #define MK_FXD(x)     defineFixed(#x, opr_ ## x)
 #define MK_FXD(x)     defineFixed(#x, opr_ ## x)
@@ -901,9 +935,10 @@ static Node defineEFixed(const char* neval,  Operator oeval,
 
 void startEnkiLibrary() {
     if (__initialized) return;
-    space_Init(&enki_zero_space);
 
     _zero_space = &enki_zero_space;
+
+    space_Init(_zero_space);
 
     clink_Manage(&(enki_zero_space.start_clinks), &enki_globals);
 
@@ -970,6 +1005,8 @@ void startEnkiLibrary() {
 
     MK_CONST(t,true_v);
     MK_CONST(nil,NIL);
+
+    fprintf(stderr, "started\n");
 }
 
 void stopEnkiLibrary() {

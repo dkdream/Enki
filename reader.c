@@ -19,9 +19,6 @@
 #include <error.h>
 #include <signal.h>
 
-extern Node enki_globals;
-
-
 #define CHAR_PRINT    (1<<0)
 #define CHAR_BLANK    (1<<1)
 #define CHAR_ALPHA    (1<<2)
@@ -612,6 +609,14 @@ static void enki_sigint(int signo)
 
 extern void readFile(FILE *stream)
 {
+    GC_Begin(4);
+
+    Node globals = NIL;
+    Node obj     = NIL;
+
+    GC_Protect(globals);
+    GC_Protect(obj);
+
     signal(SIGINT, enki_sigint);
 
     for (;;) {
@@ -619,8 +624,6 @@ extern void readFile(FILE *stream)
             printf("-] ");
             fflush(stdout);
         }
-
-        Node obj = NIL;
 
         if (!readExpr(stream, &obj)) break;
 
@@ -631,14 +634,10 @@ extern void readFile(FILE *stream)
                 fflush(stderr);
             });
 
-        Node globals = NIL;
-
         pair_GetCdr(enki_globals.pair, &globals);
 
         expand(obj, globals, &obj);
-
         encode(obj, globals, &obj);
-
         eval(obj, globals, &obj);
 
         VM_ON_DEBUG(1, {
@@ -663,4 +662,6 @@ extern void readFile(FILE *stream)
 
     if (EOF != c)
         fatal("expected 0x%02x received 0x%02x '%c'\n", EOF, c, c);
+
+    GC_End();
 }

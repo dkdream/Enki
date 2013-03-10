@@ -76,9 +76,14 @@ extern void fatal(const char *reason, ...)
 
     dump_enki_stack();
     dump_c_stack();
+
+    fprintf(stderr, "\n");
     exit(1);
 }
 
+extern void boom() {
+    fatal("BOOM");
+}
 
 /*****************
  ** end of file **
