@@ -80,8 +80,9 @@ $(RUNS) : enki.vm
 
 clean ::
 	rm -f $(OBJS) $(MAINS:%.c=%.o) $(UNIT_TESTS:%.gcc=%.x)
-	rm -f enki.x test.x enki.vm enki_ver.h
+	rm -f enki.x test.x enki.vm libEnki.a
 	rm -f $(RUNS)
+	rm -f *~
 
 scrub :: 
 	@make clean
