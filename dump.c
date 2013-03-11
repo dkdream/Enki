@@ -78,12 +78,12 @@ extern bool print(FILE* output, Node node) {
             return true;
         }
         if (isAtomic(node)) {
-          fprintf(output, "unknown(%p)",
-                  node.reference);
+            fprintf(output, "unknown(%p)",
+                    node.reference);
         } else {
-          fprintf(output, "unknown(%p (size=%d))",
-                  node.reference,
-                  (unsigned) asKind(node)->count);
+            fprintf(output, "unknown(%p (size=%d))",
+                    node.reference,
+                    (unsigned) asKind(node)->count);
         }
         return true;
     }
@@ -129,18 +129,18 @@ extern bool print(FILE* output, Node node) {
     }
 
     if (isType(type, s_symbol)) {
-      echo_string(output, (const char *)type.symbol->value);
+        echo_string(output, (const char *)type.symbol->value);
     } else {
-      fprintf(output, "type[%p]", type.reference);
+        fprintf(output, "<type %p>", type.reference);
     }
 
     if (isAtomic(node)) {
-      fprintf(output, "(%p)",
-              node.reference);
+        fprintf(output, "(%p)",
+                node.reference);
     } else {
-      fprintf(output, "(%p (size=%d))",
-              node.reference,
-              (unsigned) asKind(node)->count);
+        fprintf(output, "(%p (size=%d))",
+                node.reference,
+                (unsigned) asKind(node)->count);
     }
     return true;
 }
@@ -161,12 +161,12 @@ extern bool dump(FILE* output, Node node) {
             return true;
         }
         if (isAtomic(node)) {
-          fprintf(output, "unknown(%p)",
-                  node.reference);
+            fprintf(output, "unknown(%p)",
+                    node.reference);
         } else {
-          fprintf(output, "unknown(%p (size=%d))",
-                  node.reference,
-                  (unsigned) asKind(node)->count);
+            fprintf(output, "unknown(%p (size=%d))",
+                    node.reference,
+                    (unsigned) asKind(node)->count);
         }
         return true;
     }
@@ -214,17 +214,17 @@ extern bool dump(FILE* output, Node node) {
     }
 
     if (isType(type, s_symbol)) {
-      echo_string(output, (const char *)type.symbol->value);
+        echo_string(output, (const char *)type.symbol->value);
     } else {
-      fprintf(output, "type[%p]", type.reference);
+        fprintf(output, "<type %p>", type.reference);
     }
     if (isAtomic(node)) {
-      fprintf(output, "(%p)",
-              node.reference);
+        fprintf(output, "(%p)",
+                node.reference);
     } else {
-      fprintf(output, "(%p (size=%d))",
-              node.reference,
-              (unsigned) asKind(node)->count);
+        fprintf(output, "(%p (size=%d))",
+                node.reference,
+                (unsigned) asKind(node)->count);
     }
 
     return true;
@@ -358,42 +358,21 @@ extern void prettyPrint(FILE* output, Node node) {
             return;
         }
 
-        if (isIdentical(type, s_expression)) {
-            offset += 20;
-            fprintf(output, "expression(%p)",
-                    node.reference);
-            return;
-        }
-
-        if (isIdentical(type, s_form)) {
-            offset += 20;
-            fprintf(output, "form(%p)",
-                    node.reference);
-            return;
-        }
-
-        if (isIdentical(type, s_fixed)) {
-            offset += 20;
-            fprintf(output, "fixed(%p)",
-                    node.reference);
-            return;
-        }
-
         if (isType(type, s_symbol)) {
-          offset += type.symbol->size + 1;
-          echo_string(output, (const char *)type.symbol->value);
+            offset += type.symbol->size + 1;
+            echo_string(output, (const char *)type.symbol->value);
         } else {
-          offset += 10;
-          fprintf(output, "type[%p]", type.reference);
+            offset += 10;
+            fprintf(output, "<type %p>", type.reference);
         }
         if (isAtomic(node)) {
-          offset += 10;
-          fprintf(output, "(%p)", node.reference);
+            offset += 10;
+            fprintf(output, "(%p)", node.reference);
         } else {
-          offset += 20;
-          fprintf(output, "(%p (size=%d))",
-                  node.reference,
-                  (unsigned) asKind(node)->count);
+            offset += 20;
+            fprintf(output, "(%p (size=%d))",
+                    node.reference,
+                    (unsigned) asKind(node)->count);
         }
         return;
     }

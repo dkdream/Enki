@@ -208,6 +208,11 @@ extern void eval(const Node expr, const Node env, Target result)
         evaluator = p_eval_symbol;
     }
 
+    if (isType(expr, s_forced)) {
+        tuple_GetItem(expr.tuple, 0, result);
+        goto done;
+    }
+
     if (!evaluator) {
         ASSIGN(result, expr);
         goto done;
@@ -240,17 +245,17 @@ extern void apply(Node fun, Node args, const Node env, Target result)
             fprintf(stderr,"\n");
         });
 
-    // Primitive -> Operator
+    // primitive -> Operator
     if (isType(fun, s_primitive)) {
       Operator function = fun.primitive->function;
       function(args, env, result);
       goto done;
     }
 
-    // Expression -> p_apply_expr
-    if (isType(fun, s_expression)) {
+    // lambda -> p_apply_lambda
+    if (isType(fun, s_lambda)) {
       if (!pair_Create(fun, args, &(args.pair))) goto error;
-      Operator function = p_apply_expr->function;
+      Operator function = p_apply_lambda->function;
       function(args, env, result);
       goto done;
     }

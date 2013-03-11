@@ -43,14 +43,15 @@ extern Symbol s_symbol;
 extern Symbol s_text;
 extern Symbol s_tuple;
 
-// 
+//
 extern Symbol s_pair;
-extern Symbol s_expression;
+extern Symbol s_lambda;
 extern Symbol s_form;
 extern Symbol s_fixed;
 extern Symbol s_delay;
 extern Symbol s_type;
 extern Symbol s_sort;
+extern Symbol s_forced;
 
 extern bool symbol_Create(TextBuffer value, Symbol*);
 extern bool symbol_Convert(const char* value, Symbol*);

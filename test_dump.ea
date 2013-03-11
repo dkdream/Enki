@@ -13,8 +13,6 @@ dump
 (assert 'primitive (type-of println))
 (assert 'fixed    (type-of let))
 
-(level 1)
-
 (define fooness 'fooness)
 (define barness (lambda (ok)
                   (dumpln ok)

@@ -7,7 +7,6 @@
 
 (define %define    define)
 (define %dump      dump)
-(define %form      form)
 (define %print     print)
 (define %type-of   type-of)
 (define oop-at     %element)

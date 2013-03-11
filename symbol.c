@@ -40,6 +40,7 @@ Symbol s_fixed = 0;
 Symbol s_delay = 0;
 Symbol s_type = 0;
 Symbol s_sort = 0;
+Symbol s_forced = 0;
 
 struct _internal_SymbolRow {
     unsigned lock;
@@ -99,12 +100,13 @@ extern void init_global_symboltable() {
     MK_SYM(text);
     MK_SYM(tuple);
     MK_SYM(pair);
-    MK_SYM(expression);
+    MK_SYM(lambda);
     MK_SYM(form);
     MK_SYM(fixed);
     MK_SYM(delay);
     MK_SYM(type);
     MK_SYM(sort);
+    MK_SYM(forced);
 }
 
 extern void final_global_symboltable() {

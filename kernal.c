@@ -28,22 +28,19 @@ struct gc_header    enki_true;
 
 Space _zero_space;
 
-Node       enki_globals = NIL; // nt_pair(nil, alist)
-Node            true_v  = NIL;
-Node            f_quote = NIL;
-Node           f_lambda = NIL;
-Node              f_let = NIL;
-Primitive p_eval_symbol = 0;
-Primitive   p_eval_pair = 0;
-Primitive  p_apply_expr = 0;
-Primitive  p_apply_form = 0;
+Node        enki_globals = NIL; // nt_pair(nil, alist)
+Node             true_v  = NIL;
+Primitive  p_eval_symbol = 0;
+Primitive    p_eval_pair = 0;
+Primitive p_apply_lambda = 0;
+Primitive  p_apply_delay = 0;
+Primitive p_apply_forced = 0;
+Primitive   p_apply_form = 0;
 
 #define SUBR(NAME) void opr_##NAME(Node args, Node env, Target result)
 
-static unsigned globals_count = 0;
-
 extern void defineValue(Node symbol, const Node value) {
-    GC_Begin(8);
+    GC_Begin(2);
     Node globals;
 
     GC_Protect(globals);
@@ -51,8 +48,6 @@ extern void defineValue(Node symbol, const Node value) {
     pair_GetCdr(enki_globals.pair, &globals);
     alist_Add(globals.pair, symbol, value, &globals.pair);
     pair_SetCdr(enki_globals.pair, globals);
-
-    ++globals_count;
 
     GC_End();
 }
@@ -73,6 +68,11 @@ static unsigned checkArgs(Node args, const char* name, unsigned min, ...)
 
 static void forceArgs(Node args, ...)
 {
+    GC_Begin(2);
+    Node tmp;
+
+    GC_Protect(tmp);
+
     va_list ap;
     va_start(ap, args);
 
@@ -88,10 +88,16 @@ static void forceArgs(Node args, ...)
 
         darken_Node(holding);
 
-        if (isType(holding, s_delay)) {
-            *location = holding;
+        if (!isType(holding, s_delay)) {
+            ASSIGN(location, holding);
         } else {
-            *location = holding;
+            Node dexpr, denv;
+            tuple_GetItem(holding.tuple, 1, &dexpr);
+            tuple_GetItem(holding.tuple, 2, &denv);
+            eval(dexpr, denv, &tmp);
+            tuple_SetItem(holding.tuple, 0, tmp);
+            setType(holding.tuple, s_forced);
+            ASSIGN(location, tmp);
         }
 
         pair_GetCdr(args.pair, &args);
@@ -107,6 +113,7 @@ static void forceArgs(Node args, ...)
 
  done:
     va_end(ap);
+    GC_End();
 }
 
 static void fetchArgs(Node args, ...)
@@ -139,9 +146,11 @@ static void fetchArgs(Node args, ...)
 
 static void eval_binding(Node binding, Node env, Target entry)
 {
-    Node symbol = NIL;
-    Node expr   = NIL;
-    Node value  = NIL;
+    GC_Begin(2);
+    Node symbol, expr, value;
+
+    GC_Protect(expr);
+    GC_Protect(value);
 
     list_GetItem(binding.pair, 0, &symbol);
     list_GetItem(binding.pair, 1, &expr);
@@ -149,12 +158,18 @@ static void eval_binding(Node binding, Node env, Target entry)
     eval(expr, env, &value);
 
     pair_Create(symbol, value, entry.pair);
+
+    GC_End();
 }
 
 static void eval_begin(Node body, Node env, Target last)
 {
-    Node expr  = NIL;
-    Node value = NIL;
+    GC_Begin(2);
+
+    Node expr, value;
+
+    GC_Protect(expr);
+    GC_Protect(value);
 
     while (isType(body, s_pair)) {
         pair_GetCar(body.pair, &expr);
@@ -163,14 +178,16 @@ static void eval_begin(Node body, Node env, Target last)
     }
 
     ASSIGN(last, value);
+    GC_End();
 }
 
 static SUBR(if)
 { //Fixed
-    Node tst    = NIL;
-    Node val    = NIL;
-    Node t_expr = NIL;
-    Node e_body = NIL;
+    GC_Begin(2);
+
+    Node tst, val, t_expr, e_body;
+
+    GC_Protect(val);
 
     list_GetItem(args.pair, 0, &tst);
     list_GetItem(args.pair, 1, &t_expr);
@@ -183,13 +200,19 @@ static SUBR(if)
     } else {
         eval(t_expr, env, result);
     }
+    GC_End();
 }
 
 static SUBR(and)
 { //Fixed
-    Node body = args;
-    Node expr = NIL;
-    Node ans  = true_v;
+    GC_Begin(2);
+    Node body, expr, ans;
+
+    GC_Protect(ans);
+
+    body = args;
+    expr = NIL;
+    ans  = true_v;
 
     for (; isType(body, s_pair) ;) {
         pair_GetCar(body.pair, &expr);
@@ -199,13 +222,19 @@ static SUBR(and)
     }
 
     ASSIGN(result, ans);
+    GC_End();
 }
 
 static SUBR(or)
 { //Fixed
-    Node body = args;
-    Node expr = NIL;
-    Node ans  = NIL;
+    GC_Begin(2);
+    Node body, expr, ans;
+
+    GC_Protect(ans);
+
+    body = args;
+    expr = NIL;
+    ans  = NIL;
 
     for (; isType(body, s_pair) ;) {
         pair_GetCar(body.pair, &expr);
@@ -215,6 +244,25 @@ static SUBR(or)
     }
 
     ASSIGN(result, ans);
+    GC_End();
+}
+
+static SUBR(while)
+{ //Fixed
+    Node tst  = NIL;
+    Node body = NIL;
+    Node val  = NIL;
+
+    pair_GetCar(args.pair, &tst);
+    pair_GetCdr(args.pair, &body);
+
+    for (;;) {
+        eval(tst, env, &val);
+
+        if (isNil(val)) break;
+
+        eval_begin(body, env, result);
+    }
 }
 
 static SUBR(set)
@@ -268,6 +316,11 @@ static SUBR(define)
     ASSIGN(result, value);
 }
 
+static SUBR(quote)
+{ //Fixed
+    pair_GetCar(args.pair, result);
+}
+
 static SUBR(let)
 { //Fixed
     Node env2     = NIL;
@@ -279,28 +332,29 @@ static SUBR(let)
 
     list_Map(eval_binding, bindings.pair, env, &(env2.pair));
 
-
     list_SetEnd(env2.pair, env);
 
     eval_begin(body, env2, result);
 }
 
-static SUBR(while)
-{ //Fixed
-    Node tst  = NIL;
-    Node body = NIL;
-    Node val  = NIL;
+static SUBR(lambda)
+{
+    pair_Create(args, env, result.pair);
+    setType(*result.reference, s_lambda);
+}
 
-    pair_GetCar(args.pair, &tst);
-    pair_GetCdr(args.pair, &body);
+static SUBR(delay)
+{
+    Tuple tuple, expr;
 
-    for (;;) {
-        eval(tst, env, &val);
+    pair_GetCar(args.pair, &expr);
 
-        if (isNil(val)) break;
-
-        eval_begin(body, env, result);
-    }
+    tuple_Create(3, &tuple);
+    tuple_SetItem(tuple, 0, NIL);
+    tuple_SetItem(tuple, 1, expr);
+    tuple_SetItem(tuple, 2, env);
+    setType(tuple, s_delay);
+    ASSIGN(result, tuple);
 }
 
 static SUBR(gensym)
@@ -341,41 +395,49 @@ static SUBR(find)
     }
 }
 
-static SUBR(quote)
-{
-    pair_GetCar(args.pair, result);
-}
-
-static SUBR(lambda)
-{
-    pair_Create(args, env, result.pair);
-    fprintf(stderr, "lambda:");
-    prettyPrint(stderr, args);
-    fprintf(stderr, "\n");
-    setType(*result.reference, s_expression);
-}
-
 static SUBR(eval_symbol)
 {
-    Node symbol = NIL;
+    GC_Begin(2);
+    Node symbol, tmp;
+    Pair entry;
+
+    GC_Protect(tmp);
 
     pair_GetCar(args.pair, &symbol);
 
     // lookup symbol in the current enviroment
-    if (!alist_Get(env.pair, symbol, result)) {
-        if (!isType(symbol, s_symbol)) {
-            fatal("undefined variable: <non-symbol>");
-        } else {
-            fatal("undefined variable: %s", symbol_Text(symbol.symbol));
-        }
+    if (!alist_Entry(env.pair, symbol, &entry)) goto error;
+
+    pair_GetCdr(entry, &tmp);
+
+    if (isType(tmp, s_forced)) {
+        tuple_GetItem(tmp.tuple, 0, &tmp);
+        pair_SetCdr(entry, tmp);
+    }
+
+    ASSIGN(result, tmp);
+
+    GC_End();
+    return;
+
+ error:
+    GC_End();
+    if (!isType(symbol, s_symbol)) {
+        fatal("undefined variable: <non-symbol>");
+    } else {
+        fatal("undefined variable: %s", symbol_Text(symbol.symbol));
     }
 }
 
 static SUBR(eval_pair)
 {
-    Node obj   = NIL;
-    Node head  = NIL;
-    Node tail  = NIL;
+    GC_Begin(5);
+    Node obj, head, tail, tmp;
+
+    GC_Protect(obj);
+    GC_Protect(head);
+    GC_Protect(tail);
+    GC_Protect(tmp);
 
     // (subr_eval_pair obj)
     pair_GetCar(args.pair, &obj);
@@ -386,6 +448,16 @@ static SUBR(eval_pair)
 
     // first eval the head
     eval(head, env, &head);
+
+    if (isType(head, s_delay)) {
+        Node dexpr, denv;
+        tuple_GetItem(head.tuple, 1, &dexpr);
+        tuple_GetItem(head.tuple, 2, &denv);
+        eval(dexpr, denv, &tmp);
+        tuple_SetItem(head.tuple, 0, tmp);
+        setType(head.tuple, s_forced);
+        head = tmp;
+    }
 
     if (isType(head, s_fixed)) {
         // apply Fixed to un-evaluated arguments
@@ -403,40 +475,29 @@ static SUBR(eval_pair)
 
  done:
     popTrace();
+
+    GC_End();
 }
 
-static SUBR(eval)
+static SUBR(apply_lambda)
 {
-    Node expr;
-    Node cenv;
+    GC_Begin(3);
+    Node cenv, tmp;
 
-    // (eval expr env)
-    // (eval expr)
-    list_GetItem(args.pair, 0, &expr);
-    list_GetItem(args.pair, 1, &cenv);
+    GC_Protect(cenv);
+    GC_Protect(tmp);
 
-    if (isNil(cenv)) cenv = env;
-
-    expand(expr, cenv, &expr);
-    encode(expr, cenv, &expr);
-    eval(expr, cenv, result);
-}
-
-static SUBR(apply_expr)
-{
-    Node fun       = NIL;
-    Node arguments = NIL;
-    Node defn      = NIL;
-    Node cenv      = NIL;
-    Node formals   = NIL;
-    Node body      = NIL;
-    Node tmp       = NIL;
+    Node fun, arguments;
 
     pair_GetCar(args.pair, &fun); //(fun . arguments)
     pair_GetCdr(args.pair, &arguments);
 
+    Node defn;
+
     pair_GetCar(fun.pair, &defn); //((formals) . body)
     pair_GetCdr(fun.pair, &cenv); // retreve the closure enviroment
+
+    Node formals, body;
 
     pair_GetCar(defn.pair, &formals);
     pair_GetCdr(defn.pair, &body);
@@ -456,6 +517,7 @@ static SUBR(apply_expr)
             fprintf(stderr, " args: ");
             prettyPrint(stderr, arguments);
             fprintf(stderr, "\n");
+            GC_End();
             fatal(0);
         }
 
@@ -484,25 +546,49 @@ static SUBR(apply_expr)
         fprintf(stderr, " args: ");
         prettyPrint(stderr, arguments);
         fprintf(stderr, "\n");
+        GC_End();
         fatal(0);
     }
 
     // process the body of the lambda
     // and return the last value
     eval_begin(body, cenv, result);
+
+    GC_End();
 }
 
 static SUBR(apply_form)
 {
-    Node form;
-    Node cargs;
-    Node func;
+    Node form, cargs, func;
 
     pair_GetCar(args.pair, &form);
     pair_GetCdr(args.pair, &cargs);
     pair_GetCar(form.pair, &func);
 
     apply(func, cargs, env, result);
+}
+
+static SUBR(eval)
+{
+    GC_Begin(3);
+
+    Node expr, cenv;
+
+    GC_Protect(expr);
+    GC_Protect(cenv);
+
+    // (eval expr env)
+    // (eval expr)
+    list_GetItem(args.pair, 0, &expr);
+    list_GetItem(args.pair, 1, &cenv);
+
+    if (isNil(cenv)) cenv = env;
+
+    expand(expr, cenv, &expr);
+    encode(expr, cenv, &expr);
+    eval(expr, cenv, result);
+
+    GC_End();
 }
 
 static SUBR(apply)
@@ -523,6 +609,7 @@ static SUBR(apply)
 static SUBR(form)
 {
   Tuple tuple; Node func = NIL;
+
   pair_GetCar(args.pair, &func);
 
   tuple_Create(1, &tuple);
@@ -534,10 +621,18 @@ static SUBR(form)
 
 static SUBR(type_of)
 {
-    Node val = NIL;
-    checkArgs(args, "type-of", 1, NIL);
-    pair_GetCar(args.pair, &val);
-    node_TypeOf(val, result);
+    Node value, type;
+    int count = checkArgs(args, "type-of", 1, NIL);
+
+    ASSIGN(result,NIL);
+
+    if (1 < count) {
+        forceArgs(args, &value, &type, 0);
+        setType(value, type);
+    } else {
+        pair_GetCar(args.pair, &value);
+        node_TypeOf(value, result);
+    }
 }
 
 static SUBR(com) {
@@ -756,7 +851,7 @@ static SUBR(level)
 }
 
 static SUBR(element) {
-    Node tuple; Node index; Node value;
+    Node tuple, index, value;
     int count = checkArgs(args, "element", 2, NIL, s_integer);
 
     ASSIGN(result,NIL);
@@ -774,9 +869,37 @@ static SUBR(cons) {
     Node car; Node cdr;
 
     checkArgs(args, "cons", 2, NIL, NIL);
-    forceArgs(args, &car, &cdr, 0);
+    fetchArgs(args, &car, &cdr, 0);
 
     pair_Create(car, cdr, result.pair);
+}
+
+static SUBR(list) {
+    ASSIGN(result, args);
+}
+
+static SUBR(tuple) {
+    unsigned size = 0;
+    bool     dotted = false;
+
+    list_State(args.pair, &size, &dotted);
+
+    if (dotted) fatal("dotted list in: tuple");
+
+    if (1 > size) {
+        ASSIGN(result, NIL);
+        return;
+    }
+
+    GC_Begin(2);
+    Node tuple;
+    GC_Protect(tuple);
+
+    tuple_Create(size, &tuple.tuple);
+    tuple_Fill(tuple.tuple, args.pair);
+    ASSIGN(result, tuple);
+
+    GC_End();
 }
 
 static SUBR(allocate) {
@@ -835,6 +958,10 @@ static SUBR(encode_let) {
     list_SetEnd(lenv.pair, env);
 
     list_Map(encode, args.pair, lenv, result);
+}
+
+static SUBR(encode_delay) {
+    list_Map(encode, args.pair, env, result);
 }
 
 static void defineConstant(const char* name, const Node value) {
@@ -950,28 +1077,32 @@ void startEnkiLibrary() {
 
     pair_Create(NIL,NIL, &enki_globals.pair);
 
-    f_quote  = MK_EFXD(quote,encode_quote);
-    f_lambda = MK_EFXD(lambda,encode_lambda);
-    f_let    = MK_EFXD(let,encode_let);
-
-    MK_FXD(and);
-    MK_FXD(define);
     MK_FXD(if);
+    MK_FXD(and);
     MK_FXD(or);
-    MK_FXD(set);
     MK_FXD(while);
+
+    MK_FXD(set);
+    MK_FXD(define);
+
+    MK_EFXD(quote,encode_quote);
+    MK_EFXD(let,encode_let);
+    MK_EFXD(lambda,encode_lambda);
+    MK_EFXD(delay,encode_delay);
 
     MK_PRM(gensym);
     MK_PRM(find);
 
-    p_eval_symbol = MK_OPR(%eval-symbol,eval_symbol);
-    p_eval_pair   = MK_OPR(%eval-pair,eval_pair);
-    p_apply_expr  = MK_OPR(%apply-expr,apply_expr);
-    p_apply_form  = MK_OPR(%apply-form,apply_form);
+    p_eval_symbol  = MK_OPR(%eval-symbol,eval_symbol);
+    p_eval_pair    = MK_OPR(%eval-pair,eval_pair);
 
-    MK_OPR(%form,form);
-    MK_OPR(%eval,eval);
-    MK_OPR(%apply,apply);
+    p_apply_lambda = MK_OPR(%apply-lambda,apply_lambda);
+    p_apply_form   = MK_OPR(%apply-form,apply_form);
+
+    MK_PRM(eval);
+    MK_PRM(apply);
+    MK_PRM(form);
+
     MK_OPR(type-of, type_of);
 
     MK_OPR(~,com);
@@ -996,12 +1127,15 @@ void startEnkiLibrary() {
     MK_PRM(println);
     MK_PRM(debug);
     MK_PRM(level);
-    MK_OPR(%element,element);
-    MK_OPR(%allocate,allocate);
-    MK_OPR(%cons,cons);
-    MK_OPR(%encode-quote,encode_quote);
-    MK_OPR(%encode-lambda,encode_lambda);
-    MK_OPR(%encode-let,encode_let);
+    MK_PRM(element);
+    MK_PRM(cons);
+    MK_PRM(list);
+    MK_PRM(tuple);
+    MK_PRM(allocate);
+
+    MK_OPR(encode-quote,encode_quote);
+    MK_OPR(encode-lambda,encode_lambda);
+    MK_OPR(encode-let,encode_let);
 
     MK_CONST(t,true_v);
     MK_CONST(nil,NIL);

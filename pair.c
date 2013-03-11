@@ -254,7 +254,7 @@ extern bool alist_Entry(Pair pair, const Node label, Pair* value) {
 
         darken_Node(entry);
 
-        *value = entry;
+        ASSIGN(value, entry);
         return true;
     }
 

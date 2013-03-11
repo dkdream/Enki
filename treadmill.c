@@ -384,16 +384,12 @@ extern bool darken_Node(const Node node) {
 
     if (header->kind.color == space->visiable) return true;
 
-    VM_DEBUG(1, "darkening node %p (%d,%s,%s)[%d] (header %p) (space %p scan %p top %p)",
+    VM_DEBUG(1, "darkening node %p (size=%d) (header %p) (space %p scan %p)",
              node.reference,
-             header->kind.tribe,
-             (header->live ? "l" : "d"),
-             (header->prefix ? "p" : "r"),
              header->kind.count,
              header,
              space,
-             space->scan,
-             space->top);
+             space->scan);
 
     space_Check(space);
 
@@ -481,12 +477,6 @@ extern inline void scan_Node(const Header header) {
     const Space space = header->space;
 
     if (!space) return;
-
-#if 0
-    fprintf(stderr, "scanning %p node %p ", header, asReference(header));
-    prettyPrint(stderr, asReference(header));
-    fprintf(stderr, "\n");
-#endif
 
     if (header->kind.color != space->visiable) {
         VM_ERROR("scan error: scanning a clear or white node %p", header);
@@ -828,7 +818,7 @@ extern void clink_Manage(Clink *link, Target slot) {
     if (!link)           goto error;
     if (!slot.reference) goto error;
     if (!link->before)   goto error;
-    if (link->max <= link->index) goto error;
+    if (link->max <= link->index) goto error_space;
 
     Target *array = clink_Slots(link);
 
@@ -842,6 +832,9 @@ extern void clink_Manage(Clink *link, Target slot) {
 
  error:
     fatal("clink Manage error");
+
+ error_space:
+    fatal("clink Manage error: to little space");
 }
 
 extern void clink_UnManage(Clink *link, Target slot) {
