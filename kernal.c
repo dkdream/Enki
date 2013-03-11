@@ -953,15 +953,25 @@ static SUBR(encode_let) {
 
     pair_GetCar(args.pair, &locals);
 
+    if (!isType(locals, s_pair)) {
+        list_Map(encode, args.pair, env, result);
+        return;
+    }
+
     list_Map(environ_Let, locals.pair, env, &lenv);
-
     list_SetEnd(lenv.pair, env);
-
     list_Map(encode, args.pair, lenv, result);
 }
 
 static SUBR(encode_delay) {
     list_Map(encode, args.pair, env, result);
+}
+
+static SUBR(force) {
+    Node value = NIL;
+    checkArgs(args, "force", 1, NIL);
+    forceArgs(args, &value, 0);
+    ASSIGN(result, value);
 }
 
 static void defineConstant(const char* name, const Node value) {
@@ -1136,6 +1146,8 @@ void startEnkiLibrary() {
     MK_OPR(encode-quote,encode_quote);
     MK_OPR(encode-lambda,encode_lambda);
     MK_OPR(encode-let,encode_let);
+
+    MK_PRM(force);
 
     MK_CONST(t,true_v);
     MK_CONST(nil,NIL);

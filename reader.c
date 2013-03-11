@@ -283,8 +283,10 @@ static bool readList(FILE *fp, int delim, Target result)
     Pair  tail = head;
     Node  hold = NIL;
 
-
-    if (!readExpr(fp, &(hold.reference))) goto eof;
+    if (!readExpr(fp, &(hold.reference))) {
+        ASSIGN(result, NIL);
+        goto eof;
+    }
 
     if (!pair_Create(hold, NIL, result.pair)) goto failure;
 
