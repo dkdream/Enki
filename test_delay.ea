@@ -1,0 +1,25 @@
+
+(define foo (delay (let () (println "forced") 3)))
+(println (type-of foo))
+(println (+ foo 4))
+(println (type-of foo))
+
+(define test (let ((foo 3) (bar 4))
+               (delay (+ foo bar))))
+
+(println "test before: " (type-of test))
+
+(define passing (lambda (arg)
+                  (println "in lambda: " (type-of arg))
+                  1))
+
+(passing test)
+
+(println "test after: " (type-of test))
+
+(println "test: " test)
+
+(println "test force: " (force test))
+(println "test after force: " (type-of test))
+
+
