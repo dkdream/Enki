@@ -86,6 +86,7 @@ int main(int argc, char **argv)
                     exit(1);
                 } else {
                     fprintf(stderr, "reading %s\n", arg);
+                    fflush(stderr);
                     readFile(input);
                     fclose(input);
                     input = 0;

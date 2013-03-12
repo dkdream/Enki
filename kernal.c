@@ -294,6 +294,7 @@ static SUBR(set)
         fprintf(stderr, "\nerror: non-symbol identifier in set: ");
         dump(stderr, symbol);
         fprintf(stderr, "\n");
+        fflush(stderr);
         fatal(0);
     }
 
@@ -303,6 +304,7 @@ static SUBR(set)
         fprintf(stderr, "\nerror: cannot set undefined variable: ");
         dump(stderr, symbol);
         fprintf(stderr, "\n");
+        fflush(stderr);
         fatal(0);
     }
 
@@ -325,6 +327,7 @@ static SUBR(define)
         fprintf(stderr, "\nerror: non-symbol identifier in define: ");
         dump(stderr, symbol);
         fprintf(stderr, "\n");
+        fflush(stderr);
         fatal(0);
     }
 
@@ -536,6 +539,7 @@ static SUBR(apply_lambda)
             fprintf(stderr, " args: ");
             prettyPrint(stderr, arguments);
             fprintf(stderr, "\n");
+            fflush(stderr);
             GC_End();
             fatal(0);
         }
@@ -565,6 +569,7 @@ static SUBR(apply_lambda)
         fprintf(stderr, " args: ");
         prettyPrint(stderr, arguments);
         fprintf(stderr, "\n");
+        fflush(stderr);
         GC_End();
         fatal(0);
     }
@@ -758,6 +763,7 @@ static SUBR(assert)
         fprintf(stderr, " to: ");
         print(stderr, right);
         fprintf(stderr, "\n");
+        fflush(stderr);
         fatal(0);
     }
 }
@@ -805,6 +811,7 @@ static SUBR(dumpln)
     pair_GetCar(args.pair, &value);
     prettyPrint(stdout, value);
     printf("\n");
+    fflush(stdout);
     ASSIGN(result,NIL);
 }
 
@@ -828,6 +835,7 @@ static SUBR(println)
         print(stdout, value);
     }
     printf("\n");
+    fflush(stdout);
     ASSIGN(result,NIL);
 }
 
@@ -849,6 +857,7 @@ static SUBR(debug)
             print(stderr, value);
         }
         fprintf(stderr, "\n");
+        fflush(stderr);
     }
     ASSIGN(result,NIL);
 }
@@ -1252,6 +1261,7 @@ void startEnkiLibrary() {
     MK_OPR(concat-symbol,concat_symbol);
 
     fprintf(stderr, "started\n");
+    fflush(stderr);
 }
 
 void stopEnkiLibrary() {

@@ -30,9 +30,7 @@
                                  (list 'concat-list (cadr obj) (qq-list (cdr l)))
                                  (cadr obj))
                              (list 'cons (qq-object obj) (qq-list (cdr l)))))
-                       (if (= l nil)
-                           nil
-                       (list 'quote l)))))
+                       (list 'quote l))))
     (set qq-element (lambda (l)
                       (let ((head (car l)))
                         (if (= head 'unquote)
@@ -42,10 +40,58 @@
                      (if (pair? object)
                          (qq-element object)
                          (list 'quote object))))
-    (lambda (object)
-      (let ((result)) 
-        (set result (qq-object object))
-        (dumpln result)))
-    ))
+    (lambda (expr)
+      (qq-object expr))))
 
-(expand-quote '`(,%define ,name (lambda ,args ,@body)))
+
+(define quasiquote (form expand-quote))
+
+(dumpln  (let ((%define 'define)
+               (name 'fooness)
+               (args '(one two three))
+               (body '(anda one anda two)))
+           `(,%define ,name (lambda ,args ,@body))))
+
+(define %define-with (lambda (%define)
+                       (lambda (pattern . body)
+                         (if (pair? pattern)
+                             (let ((name (car pattern))
+                                   (args (cdr pattern)))
+                               `(,%define ,name (lambda ,args ,@body)))
+                             `(,%define ,pattern ,@body)))))
+
+(define %define-kind (lambda (%define %kind)
+                       (lambda (pattern . body)
+                         (if (pair? pattern)
+                             (let ((name (car pattern))
+                                   (args (cdr pattern)))
+                               `(,%define ,name (,%kind (lambda ,args ,@body))))
+                             `(,%define ,pattern (,%kind ,@body))))))
+
+(define expand-define (%define-with define))
+(define expand-macro  (%define-kind define form))
+
+(dumpln (apply expand-define
+         '((list-length list)
+           (if (pair? list)
+               (+ 1 (list-length (cdr list)))
+               0))))
+
+(dumpln (apply expand-define '(x y z)))
+
+(define define (form expand-define))
+
+(dumpln (apply expand-macro
+               '((begin . body)
+                 `(let () ,@body))))
+
+(define macro (form expand-macro))
+
+(macro (begin . body)
+  `(let nil ,@body))
+
+(begin 
+  (print 1)
+  (print 2)
+  (println 3))
+       

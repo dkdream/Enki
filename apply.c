@@ -62,7 +62,7 @@ extern void expand(const Node expr, const Node env, Target result)
 
     list = expr;
 
-    VM_ON_DEBUG(1, {
+    VM_ON_DEBUG(3, {
             fprintf(stderr, "expand: ");
             prettyPrint(stderr, list);
             fprintf(stderr, "\n");
@@ -106,7 +106,7 @@ extern void expand(const Node expr, const Node env, Target result)
     pair_Create(head, tail, result.pair);
 
  done:
-    VM_ON_DEBUG(1, {
+    VM_ON_DEBUG(3, {
             fprintf(stderr, "expand => ");
             prettyPrint(stderr, *result.reference);
             fprintf(stderr, "\n");
@@ -128,7 +128,7 @@ extern void encode(const Node expr, const Node env, Target result)
 
     list = expr;
 
-    VM_ON_DEBUG(1, {
+    VM_ON_DEBUG(2, {
             fprintf(stderr,"encode: ");
             prettyPrint(stderr, list);
             fprintf(stderr, "\n");
@@ -174,7 +174,7 @@ extern void encode(const Node expr, const Node env, Target result)
     pair_Create(head, tail, result.pair);
 
  done:
-    VM_ON_DEBUG(1, {
+    VM_ON_DEBUG(2, {
             fprintf(stderr, "encode => ");
             prettyPrint(stderr, *result.reference);
             fprintf(stderr, "\n");
@@ -237,7 +237,7 @@ extern void eval(const Node expr, const Node env, Target result)
 
 extern void apply(Node fun, Node args, const Node env, Target result)
 {
-    VM_ON_DEBUG(1, {
+    VM_ON_DEBUG(4, {
             fprintf(stderr, "apply: ");
             prettyPrint(stderr, fun);
             fprintf(stderr, " to: ");
@@ -275,7 +275,7 @@ extern void apply(Node fun, Node args, const Node env, Target result)
 
  done:
 
-    VM_ON_DEBUG(1, {
+    VM_ON_DEBUG(4, {
             fprintf(stderr, "apply => ");
             prettyPrint(stderr, *result.reference);
             fprintf(stderr, "\n");
