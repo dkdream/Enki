@@ -391,8 +391,6 @@ extern bool darken_Node(const Node node) {
              space,
              space->scan);
 
-    space_Check(space);
-
     const Header scan   = space->scan;
     const Header free   = space->free;
     const Header top    = &(space->top);
@@ -427,8 +425,6 @@ extern bool darken_Node(const Node node) {
     if (!insert_After(top, header)) {
         BOOM();
     }
-
-    space_Check(space);
 
     return true;
 }
@@ -522,7 +518,7 @@ extern bool node_Allocate(const Space space,
     bool inside = (!space ? false : true);
 
     if (inside) {
-        unsigned count = space->count / 30;
+        unsigned count = 2;
         // scan first
         space_Scan(space, count);
 

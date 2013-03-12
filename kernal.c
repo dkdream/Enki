@@ -9,6 +9,7 @@
 #include "all_types.inc"
 #include "treadmill.h"
 #include "debug.h"
+#include "text_buffer.h"                  /* ((string 214)) */
 
 /* */
 #include <string.h>
@@ -60,10 +61,38 @@ static unsigned checkArgs(Node args, const char* name, unsigned min, ...)
     list_State(args.pair, &count, &dotted);
 
     if (count < min) {
-        fatal("wrong number of arguments (%i) in: %s\n", count, name);
+        fatal("too few arguments (%i) to: %s\n", count, name);
     }
 
     return count;
+}
+
+static void forceArg(Node arg, Target result) {
+    GC_Begin(2);
+    Node tmp;
+
+    GC_Protect(tmp);
+
+    if (isType(arg, s_delay)) {
+        Node dexpr, denv;
+        tuple_GetItem(arg.tuple, 1, &dexpr);
+        tuple_GetItem(arg.tuple, 2, &denv);
+        eval(dexpr, denv, &tmp);
+        tuple_SetItem(arg.tuple, 0, tmp);
+        setType(arg.tuple, s_forced);
+        ASSIGN(result, tmp);
+        goto done;
+    }
+
+    if (isType(arg, s_forced)) {
+        tuple_GetItem(arg.tuple, 0, result);
+        goto done;
+    }
+
+    ASSIGN(result, arg);
+
+  done:
+    GC_End();
 }
 
 static void forceArgs(Node args, ...)
@@ -86,19 +115,7 @@ static void forceArgs(Node args, ...)
 
         pair_GetCar(args.pair, &holding);
 
-        darken_Node(holding);
-
-        if (!isType(holding, s_delay)) {
-            ASSIGN(location, holding);
-        } else {
-            Node dexpr, denv;
-            tuple_GetItem(holding.tuple, 1, &dexpr);
-            tuple_GetItem(holding.tuple, 2, &denv);
-            eval(dexpr, denv, &tmp);
-            tuple_SetItem(holding.tuple, 0, tmp);
-            setType(holding.tuple, s_forced);
-            ASSIGN(location, tmp);
-        }
+        forceArg(holding, location);
 
         pair_GetCdr(args.pair, &args);
 
@@ -290,7 +307,9 @@ static SUBR(set)
     }
 
     eval(expr, env, &value);
+
     pair_SetCdr(entry, value);
+
     ASSIGN(result,value);
 }
 
@@ -974,6 +993,83 @@ static SUBR(force) {
     ASSIGN(result, value);
 }
 
+static SUBR(concat_text) {
+    static TextBuffer buffer = BUFFER_INITIALISER;
+    static char data[20];
+    buffer_reset(&buffer);
+
+    checkArgs(args, "concat-text", 2, s_text, s_text);
+
+    while (isType(args, s_pair)) {
+        Node text;
+
+        pair_GetCar(args.pair, &text);
+        pair_GetCdr(args.pair, &args);
+
+        if (isType(text, s_text)) {
+            buffer_add(&buffer, text_Text(text.text));
+            continue;
+        }
+
+        if (isType(text, s_symbol)) {
+            buffer_add(&buffer, symbol_Text(text.symbol));
+            continue;
+        }
+
+        if (isType(text, s_integer)) {
+            long value = text.integer->value;
+            sprintf(data, "%ld", value);
+            buffer_add(&buffer, data);
+            continue;
+        }
+
+        fatal("wrong type of argument to: %s", "concat-text");
+    }
+
+    text_Create(buffer, result.text);
+}
+
+static SUBR(concat_symbol) {
+    static TextBuffer buffer = BUFFER_INITIALISER;
+    static char data[20];
+    buffer_reset(&buffer);
+
+    checkArgs(args, "concat-symbol", 2, NIL, NIL);
+
+    while (isType(args, s_pair)) {
+        Node text;
+
+        pair_GetCar(args.pair, &text);
+        pair_GetCdr(args.pair, &args);
+
+        if (isType(text, s_text)) {
+            buffer_add(&buffer, text_Text(text.text));
+            continue;
+        }
+
+        if (isType(text, s_symbol)) {
+            buffer_add(&buffer, symbol_Text(text.symbol));
+            continue;
+        }
+
+        if (isType(text, s_integer)) {
+            long value = text.integer->value;
+            sprintf(data, "%ld", value);
+            buffer_add(&buffer, data);
+            continue;
+        }
+
+        fatal("wrong type of argument to: %s", "concat-symbol");
+    }
+
+    symbol_Create(buffer, result.symbol);
+}
+
+/***************************************************************
+ ***************************************************************
+ ***************************************************************
+ ***************************************************************/
+
 static void defineConstant(const char* name, const Node value) {
     GC_Begin(8);
 
@@ -1087,6 +1183,9 @@ void startEnkiLibrary() {
 
     pair_Create(NIL,NIL, &enki_globals.pair);
 
+    MK_CONST(t,true_v);
+    MK_CONST(nil,NIL);
+
     MK_FXD(if);
     MK_FXD(and);
     MK_FXD(or);
@@ -1146,11 +1245,11 @@ void startEnkiLibrary() {
     MK_OPR(encode-quote,encode_quote);
     MK_OPR(encode-lambda,encode_lambda);
     MK_OPR(encode-let,encode_let);
+    MK_OPR(encode-delay,encode_delay);
 
     MK_PRM(force);
-
-    MK_CONST(t,true_v);
-    MK_CONST(nil,NIL);
+    MK_OPR(concat-text,concat_text);
+    MK_OPR(concat-symbol,concat_symbol);
 
     fprintf(stderr, "started\n");
 }

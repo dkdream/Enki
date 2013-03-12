@@ -1,0 +1,51 @@
+
+(define pair? (lambda (x) (= (type-of x) 'pair)))
+
+(define car (lambda (x)
+              (if (pair? x)
+                  (element x 0)
+                  nil)))
+
+(define cdr (lambda (x)
+              (if (pair? x)
+                  (element x 1)
+                  nil)))
+
+(define cadr (lambda (x) (car (cdr x))))
+(define cddr (lambda (x) (cdr (cdr x))))
+
+(define concat-list
+  (lambda (x y)
+    (if (pair? x)
+        (cons (car x) (concat-list (cdr x) y))
+      y)))
+
+(define expand-quote
+  (let ((qq-list) (qq-element) (qq-object))
+    (set qq-list (lambda (l)
+                   (if (pair? l)
+                       (let ((obj (car l)))
+                         (if (and (pair? obj) (= (car obj) 'unquote-splicing))
+                             (if (cdr l)
+                                 (list 'concat-list (cadr obj) (qq-list (cdr l)))
+                                 (cadr obj))
+                             (list 'cons (qq-object obj) (qq-list (cdr l)))))
+                       (if (= l nil)
+                           nil
+                       (list 'quote l)))))
+    (set qq-element (lambda (l)
+                      (let ((head (car l)))
+                        (if (= head 'unquote)
+                            (cadr l)
+                            (qq-list l)))))
+    (set qq-object (lambda (object)
+                     (if (pair? object)
+                         (qq-element object)
+                         (list 'quote object))))
+    (lambda (object)
+      (let ((result)) 
+        (set result (qq-object object))
+        (dumpln result)))
+    ))
+
+(expand-quote '`(,%define ,name (lambda ,args ,@body)))

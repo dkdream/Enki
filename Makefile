@@ -33,6 +33,7 @@ TAILFLAGS += -fcrossjumping
 TAILFLAGS += -fif-conversion
 TAILFLAGS += -fif-conversion2
 TAILFLAGS += -fdelete-null-pointer-checks
+TAILFLAGS += -Wformat-security
 
 RUNFLAGS := 
 

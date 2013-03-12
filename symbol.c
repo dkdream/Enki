@@ -82,6 +82,7 @@ extern void init_global_symboltable() {
     empty_symbol->kind.type = (Node)s_symbol;
 
     symbol_Convert(".", &s_dot);
+    symbol_Convert("unquote-splicing", &s_unquote_splicing);
 
     MK_SYM(global);
     MK_SYM(current);
@@ -93,7 +94,6 @@ extern void init_global_symboltable() {
     MK_SYM(t);
     MK_SYM(true);
     MK_SYM(unquote);
-    MK_SYM(unquote_splicing);
 
     MK_SYM(integer);
     MK_SYM(primitive);

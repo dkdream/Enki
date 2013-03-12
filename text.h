@@ -18,7 +18,6 @@ struct text {
 };
 
 extern bool text_Create(TextBuffer value, Text*);
-extern bool text_Append(Text, Text, Text*);
 
 /* macros */
 extern inline const char* text_Text(Text) __attribute__((always_inline nonnull(1)));

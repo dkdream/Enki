@@ -1,17 +1,10 @@
 ;;; -*- mode: enki; -*-
-(level 1)
 
-(define list (lambda args args))
-
-(dumpln '(lambda (fooness . bar) body))
-
-(define %define    define)
 (define %dump      dump)
 (define %print     print)
 (define %type-of   type-of)
-(define oop-at     %element)
-(define set-oop-at %element)
-(define cons       %cons)
+(define oop-at     element)
+(define set-oop-at element)
 
 (define %error
   (lambda args
@@ -33,11 +26,11 @@
 
 (define car  (lambda (x)
                (if (pair? x)
-                   (oop-at x 0))))
+                   (element x 0))))
 
 (define cdr  (lambda (x)
                (if (pair? x)
-                   (oop-at x 1))))
+                   (element x 1))))
 
 (define caar (lambda (x) (car (car x))))
 (define cadr (lambda (x) (car (cdr x))))
@@ -77,7 +70,6 @@
 
 (define quasiquote (form expand-quote))
 
-
 (define %define-with (lambda (%define)
                        (lambda (pattern . body)
                          (if (pair? pattern)
@@ -104,8 +96,8 @@
                                    `(,%define ,name (,%kind (lambda ,args ,@other)))
                                    `(,%define ,name (,%kind ,@body))))))))
 
-(%define define (form (%define-with %define)))
-(%define macro  (form (%define-kind %define %form)))
+(define define (form (%define-with define)))
+(define macro  (form (%define-kind define form)))
 
 (macro (begin . body)
   `(let () ,@body))

@@ -88,46 +88,6 @@ extern bool text_Create(TextBuffer value, Text *target) {
     return result;
 }
 
-extern bool text_Append(Text head, Text tail, Text *target) {
-    if (!head) {
-        if (tail) {
-            *target = tail;
-            return true;
-        }
-        TextBuffer value = BUFFER_INITIALISER;
-        return text_Create(value, target);
-    }
-
-    if (!tail) {
-        *target = head;
-        return true;
-    }
-
-    unsigned int       size = head->size + tail->size;
-    const HashCode hashcode = head->hashcode ^ hash_ajust(head->size, tail->hashcode);
-    const int         cells = size / sizeof(const unsigned long);
-
-    if (!node_Allocate(_zero_space,
-                       true,
-                       asSize(sizeof(struct text), sizeof(unsigned long) * cells),
-                       target))
-        return false;
-
-    Text result = *target;
-
-    setType(result, s_text);
-
-    result->size     = size;
-    result->hashcode = hashcode;
-
-    char* at = (char*)result->value;
-
-    memcpy(at, head->value, head->size);
-    memcpy(at + head->size, tail->value, tail->size);
-
-    return result;
-}
-
 /*****************
  ** end of file **
  *****************/

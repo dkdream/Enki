@@ -326,7 +326,7 @@ static bool readList(FILE *fp, int delim, Target result)
 
  failure:
     if (!error) {
-        fatal(error);
+      fatal("%s", error);
     }
 
     return false;
@@ -370,7 +370,7 @@ static bool readTuple(FILE *fp, int delim, Target result)
 
     failure:
     if (!error) {
-        fatal(error);
+        fatal("%s", error);
     }
 
     return false;
@@ -405,7 +405,7 @@ static bool readControl(FILE *fp, Symbol control, int delim, Target result)
 
  failure:
     if (!error) {
-        fatal(error);
+        fatal("%s", error);
     }
 
     return false;
