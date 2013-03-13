@@ -9,7 +9,7 @@
 #include "all_types.inc"
 #include "treadmill.h"
 #include "debug.h"
-#include "text_buffer.h"                  /* ((string 214)) */
+#include "text_buffer.h"
 
 /* */
 #include <string.h>
@@ -428,7 +428,9 @@ static SUBR(eval_symbol)
     pair_GetCar(args.pair, &symbol);
 
     // lookup symbol in the current enviroment
-    if (!alist_Entry(env.pair, symbol, &entry)) goto error;
+    if (!alist_Entry(env.pair, symbol, &entry)) {
+        if (!alist_Entry(enki_globals.pair,  symbol, &entry)) goto error;
+    }
 
     pair_GetCdr(entry, &tmp);
 
@@ -800,16 +802,41 @@ static SUBR(environment)
 static SUBR(dump)
 {
     Node value = NIL;
-    pair_GetCar(args.pair, &value);
-    prettyPrint(stdout, value);
+
+    if (isType(args, s_pair)) {
+        pair_GetCar(args.pair, &value);
+        pair_GetCdr(args.pair, &args);
+        prettyPrint(stdout, value);
+    }
+
+    while (isType(args, s_pair)) {
+        printf(" ");
+        pair_GetCar(args.pair, &value);
+        pair_GetCdr(args.pair, &args);
+        prettyPrint(stdout, value);
+    }
+
+    fflush(stdout);
     ASSIGN(result,NIL);
 }
 
 static SUBR(dumpln)
 {
     Node value = NIL;
-    pair_GetCar(args.pair, &value);
-    prettyPrint(stdout, value);
+
+    if (isType(args, s_pair)) {
+        pair_GetCar(args.pair, &value);
+        pair_GetCdr(args.pair, &args);
+        prettyPrint(stdout, value);
+    }
+
+    while (isType(args, s_pair)) {
+        printf(" ");
+        pair_GetCar(args.pair, &value);
+        pair_GetCdr(args.pair, &args);
+        prettyPrint(stdout, value);
+    }
+
     printf("\n");
     fflush(stdout);
     ASSIGN(result,NIL);
@@ -818,22 +845,27 @@ static SUBR(dumpln)
 static SUBR(print)
 {
     Node value = NIL;
+
     while (isType(args, s_pair)) {
         pair_GetCar(args.pair, &value);
         pair_GetCdr(args.pair, &args);
         print(stdout, value);
     }
+
+    fflush(stdout);
     ASSIGN(result,NIL);
 }
 
 static SUBR(println)
 {
     Node value = NIL;
+
     while (isType(args, s_pair)) {
         pair_GetCar(args.pair, &value);
         pair_GetCdr(args.pair, &args);
         print(stdout, value);
     }
+
     printf("\n");
     fflush(stdout);
     ASSIGN(result,NIL);
@@ -869,9 +901,10 @@ static SUBR(level)
     integer_Create(ea_global_debug, &value.integer);
 
     if (isType(args, s_pair)) {
-        pair_GetCar(args.pair, &value);
-        if (isType(value, s_integer)) {
-            ea_global_debug = value.integer->value;
+        Node nvalue;
+        pair_GetCar(args.pair, &nvalue);
+        if (isType(nvalue, s_integer)) {
+            ea_global_debug = nvalue.integer->value;
         }
     }
 

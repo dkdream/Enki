@@ -89,7 +89,17 @@ extern void expand(const Node expr, const Node env, Target result)
         Node value = NIL;
 
         // check if the enviroment
-        alist_Get(env.pair, head, &value);
+        if (!alist_Get(env.pair, head, &value)) {
+            alist_Get(enki_globals.pair, head, &value);
+        }
+
+        VM_ON_DEBUG(3, {
+                fprintf(stderr, "expand ");
+                prettyPrint(stderr, head);
+                fprintf(stderr, " as ");
+                prettyPrint(stderr, value);
+                fprintf(stderr, "\n");
+            });
 
         // check if the reference is a form
         if (!isType(value, s_form)) goto list_begin;
@@ -147,7 +157,9 @@ extern void encode(const Node expr, const Node env, Target result)
     if (isType(head, s_symbol)) {
         Node value = NIL;
         // check if the enviroment
-        alist_Get(env.pair, head, &value);
+        if (!alist_Get(env.pair, head, &value)) {
+            alist_Get(enki_globals.pair, head, &value);
+        }
 
         if (isType(value, s_primitive)) {
             head = value;

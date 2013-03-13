@@ -150,8 +150,7 @@ enki_ver.h : FORCE
 
 %.run : %.ea
 	@echo $(ENKI.test) $(RUNFLAGS) $<
-	@$(ENKI.test) $(RUNFLAGS) $< >$@ 2>&1 || ( cat $@ ; rm -f $@; false )
-	@cat $@
+	@$(ENKI.test) $(RUNFLAGS) $< 2>&1 | tee $@
 	@echo '==============================================================='
 
 %.o : %.gcc

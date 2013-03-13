@@ -138,7 +138,7 @@
       `(let (,(car bindings)) ,(%let* (cdr bindings) body))
     `(let ,bindings ,@body)))
 
-(macro (let*  bindings . body)
+(macro (let* bindings . body)
   (%let* bindings body))
 
 ;;; letrec

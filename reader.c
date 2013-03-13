@@ -18,6 +18,8 @@
 #include <stdbool.h>
 #include <error.h>
 #include <signal.h>
+#include <unistd.h>
+#include <time.h>
 
 #define CHAR_PRINT    (1<<0)
 #define CHAR_BLANK    (1<<1)
@@ -613,10 +615,8 @@ extern void readFile(FILE *stream)
 {
     GC_Begin(4);
 
-    Node globals = NIL;
-    Node obj     = NIL;
+    Node obj = NIL;
 
-    GC_Protect(globals);
     GC_Protect(obj);
 
     signal(SIGINT, enki_sigint);
@@ -636,11 +636,25 @@ extern void readFile(FILE *stream)
                 fflush(stderr);
             });
 
-        pair_GetCdr(enki_globals.pair, &globals);
+//        clock_t cstart = clock();
 
-        expand(obj, globals, &obj);
-        encode(obj, globals, &obj);
-        eval(obj, globals, &obj);
+        expand(obj, NIL, &obj);
+
+//        clock_t cexpand = clock();
+
+        encode(obj, NIL, &obj);
+
+//        clock_t cencode = clock();
+
+        eval(obj, NIL, &obj);
+
+//        clock_t ceval = clock();
+
+#if 0
+        fprintf(stderr, "expand %.3f cpu sec; ", ((double)cexpand - (double)cstart)* 1.0e-6);
+        fprintf(stderr, "encode %.3f cpu sec; ", ((double)cencode - (double)cexpand)* 1.0e-6);
+        fprintf(stderr, "eval   %.3f cpu sec\n", ((double)ceval   - (double)cencode)* 1.0e-6);
+#endif
 
         VM_ON_DEBUG(1, {
                 fprintf(stderr, "result ");

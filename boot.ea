@@ -1,4 +1,3 @@
-
 (define pair? (lambda (x) (= (type-of x) 'pair)))
 
 (define car (lambda (x)
@@ -11,21 +10,27 @@
                   (element x 1)
                   nil)))
 
-(define list-length-raw (lambda (list)
-                          (if (pair? list)
-                              (+ 1 (list-length-raw (cdr list)))
-                              0)))
-
-(dumpln "list-length-raw" (list-length-raw '(1 2 3 4)))
-
 (define cadr (lambda (x) (car (cdr x))))
 (define cddr (lambda (x) (cdr (cdr x))))
 
-(define concat-list
-  (lambda (x y)
-    (if (pair? x)
-        (cons (car x) (concat-list (cdr x) y))
-      y)))
+(define concat-list (lambda (x y)
+                      (if (pair? x)
+                          (cons (car x) (concat-list (cdr x) y))
+                          y)))
+
+(define list-length (lambda (list)
+                      (if (pair? list)
+                          (+ 1 (list-length (cdr list)))
+                          0)))
+
+(define (%list->array list index)
+  (if (pair? list)
+      (let ((result (%list->array (cdr list) (+ 1 index))))
+        (element result index (car list))
+        result)
+      (allocate index)))
+
+(define list->array (lambda (list) (%list->array list 0)))
 
 (define expand-quote
   (let ((qq-list) (qq-element) (qq-object))
@@ -50,14 +55,7 @@
     (lambda (expr)
       (qq-object expr))))
 
-
 (define quasiquote (form expand-quote))
-
-(dumpln (let ((%define 'define)
-              (name 'fooness)
-              (args '(one two three))
-              (body '(and one anda two)))
-          `(,%define ,name (lambda ,args ,@body))))
 
 (define %define-with (lambda (%define)
                        (lambda (pattern . body)
@@ -81,42 +79,30 @@
 (define define (form expand-define))
 (define macro  (form expand-macro))
 
-(dumpln (apply expand-define
-         '((list-length list)
-           (if (pair? list)
-               (+ 1 (list-length (cdr list)))
-               0))))
-
-(define (list-length-cooked list)
-  (if (pair? list)
-      (+ 1 (list-length-cooked (cdr list)))
-      0))
-
-(dumpln "cooked list-length" (list-length-cooked '(1 2 3 4)))
-
-(dumpln (apply expand-define '(x y z)))
-
-
-(dumpln (apply expand-macro
-               '((begin . body)
-                 `(let () ,@body))))
-
-
-
 (macro (begin . body)
-  `(let nil ,@body))
+  `(let () ,@body))
 
-(begin 
-  (print 1)
-  (print 2)
-  (println 3))
+(define (map function list)
+  (if (pair? list)
+      (let ((head (function (car list))))
+        (cons head (map function (cdr list))))))
 
+(define (map-with function list a)
+  (if (pair? list)
+      (let ((head (function (car list) a)))
+        (cons head (map-with function (cdr list) a)))))
 
-(define expand-let* (lambda (bindings body)
-                      (if (pair? (cdr bindings))
-                          `(let (,(car bindings)) ,(expand-let* (cdr bindings) body))
-                          `(let ,bindings ,@body))))
+(define (map2-with function alist blist a)
+  (if (pair? alist)
+      (let ((head (function (car alist) (car blist) a)))
+        (cons head (map2-with function (cdr alist) (cdr blist) a)))))
 
-(dumpln (apply expand-let* '(((x 1)(y 2)(z 3)) (do-it))))
-       
-(dumpln "End")
+;;; let*
+(define (expand-let* bindings body)
+  (if (pair? (cdr bindings))
+      `(let (,(car bindings)) ,(expand-let* (cdr bindings) body))
+      `(let ,bindings ,@body)))
+
+(macro (let* bindings . body)
+  (expand-let* bindings body))
+
