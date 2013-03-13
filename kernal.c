@@ -17,6 +17,8 @@
 #include <error.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <unistd.h>
+#include <time.h>
 
 static bool __initialized = false;
 
@@ -1107,6 +1109,52 @@ static SUBR(concat_symbol) {
     symbol_Create(buffer, result.symbol);
 }
 
+static clock_t cstart;
+static clock_t csegment;
+static SUBR(start_time) {
+    clock_t current = clock();
+    cstart   = current;
+    csegment = current;
+}
+
+static SUBR(mark_time) {
+    clock_t current = clock();
+
+    Node value = NIL;
+    bool prefix = false;
+
+    while (isType(args, s_pair)) {
+        pair_GetCar(args.pair, &value);
+        pair_GetCdr(args.pair, &args);
+        if (isType(value, s_symbol)) {
+            print(stderr, value);
+            prefix = true;
+            continue;
+        }
+        if (isType(value, s_text)) {
+            print(stderr, value);
+            prefix = true;
+            continue;
+        }
+        if (isType(value, s_integer)) {
+            print(stderr, value);
+            prefix = true;
+            continue;
+        }
+    }
+
+    if (prefix) {
+        fprintf(stderr, " ");
+    }
+
+    fprintf(stderr, "(%.3f %.3f) cpu sec\n",
+            ((double)current - (double)csegment) * 1.0e-6,
+            ((double)current - (double)cstart) * 1.0e-6);
+    fflush(stderr);
+
+    csegment = clock();
+}
+
 /***************************************************************
  ***************************************************************
  ***************************************************************
@@ -1211,6 +1259,10 @@ static Node defineEFixed(const char* neval,  Operator oeval,
 void startEnkiLibrary() {
     if (__initialized) return;
 
+    clock_t cbegin = clock();
+
+     cstart = cbegin;
+
     _zero_space = &enki_zero_space;
 
     space_Init(_zero_space);
@@ -1293,8 +1345,17 @@ void startEnkiLibrary() {
     MK_OPR(concat-text,concat_text);
     MK_OPR(concat-symbol,concat_symbol);
 
-    fprintf(stderr, "started\n");
+    MK_OPR(start-time,start_time);
+    MK_OPR(mark-time,mark_time);
+
+    clock_t cend = clock();
+
+    fprintf(stderr,
+            "started (%.3f cpu sec)\n",
+            ((double)cend - (double)cbegin) * 1.0e-6);
     fflush(stderr);
+
+    csegment = clock();
 }
 
 void stopEnkiLibrary() {

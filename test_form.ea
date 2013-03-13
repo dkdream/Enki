@@ -11,13 +11,6 @@
                   (element x 1)
                   nil)))
 
-(define list-length-raw (lambda (list)
-                          (if (pair? list)
-                              (+ 1 (list-length-raw (cdr list)))
-                              0)))
-
-(dumpln "list-length-raw" (list-length-raw '(1 2 3 4)))
-
 (define cadr (lambda (x) (car (cdr x))))
 (define cddr (lambda (x) (cdr (cdr x))))
 
@@ -26,6 +19,8 @@
     (if (pair? x)
         (cons (car x) (concat-list (cdr x) y))
       y)))
+
+(mark-time 23)
 
 (define expand-quote
   (let ((qq-list) (qq-element) (qq-object))
@@ -51,6 +46,8 @@
       (qq-object expr))))
 
 
+(mark-time 49)
+
 (define quasiquote (form expand-quote))
 
 (dumpln (let ((%define 'define)
@@ -58,6 +55,9 @@
               (args '(one two three))
               (body '(and one anda two)))
           `(,%define ,name (lambda ,args ,@body))))
+
+
+(mark-time 60)
 
 (define %define-with (lambda (%define)
                        (lambda (pattern . body)
@@ -67,6 +67,9 @@
                                `(,%define ,name (lambda ,args ,@body)))
                              `(,%define ,pattern ,@body)))))
 
+
+(mark-time 71)
+
 (define %define-kind (lambda (%define %kind)
                        (lambda (pattern . body)
                          (if (pair? pattern)
@@ -75,8 +78,16 @@
                                `(,%define ,name (,%kind (lambda ,args ,@body))))
                              `(,%define ,pattern (,%kind ,@body))))))
 
+
+(mark-time 82)
+
 (define expand-define (%define-with define))
+
+(mark-time)
+
 (define expand-macro  (%define-kind define form))
+
+(mark-time 90)
 
 (define define (form expand-define))
 (define macro  (form expand-macro))
@@ -96,7 +107,6 @@
 
 (dumpln (apply expand-define '(x y z)))
 
-
 (dumpln (apply expand-macro
                '((begin . body)
                  `(let () ,@body))))
@@ -104,7 +114,7 @@
 
 
 (macro (begin . body)
-  `(let nil ,@body))
+  `(let () ,@body))
 
 (begin 
   (print 1)
