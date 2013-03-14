@@ -484,11 +484,12 @@ extern inline void scan_Node(const Header header) {
     if (header->kind.atom) return;
     if (1 > header->kind.count) return;
 
-    VM_DEBUG(5, "scanning header %p (%d)[%d] in space %p",
+    VM_DEBUG(5, "scanning header %p[%d] in space %p",
              header,
-             header->kind.tribe,
              header->kind.count,
              space);
+
+    darken_Node(header->kind.type);
 
     Reference *slot = (Reference*) asReference(header);
 
@@ -530,9 +531,8 @@ extern bool node_Allocate(const Space space,
 
     const Header header = fresh_tuple(inside, size_in_char);
 
-    VM_DEBUG(1, "allocating node %p (%d,%s)[%d] (header %p) (space %p scan %p top %p)",
+    VM_DEBUG(1, "allocating node %p (%s)[%d] (header %p) (space %p scan %p top %p)",
              asReference(header),
-             header->kind.tribe,
              (header->kind.live ? "l" : "d"),
              header->kind.count,
              header,
