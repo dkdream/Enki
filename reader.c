@@ -21,15 +21,16 @@
 #include <unistd.h>
 #include <time.h>
 
-#define CHAR_PRINT    (1<<0)
-#define CHAR_BLANK    (1<<1)
-#define CHAR_ALPHA    (1<<2)
-#define CHAR_DIGIT10  (1<<3)
-#define CHAR_DIGIT16  (1<<4)
-#define CHAR_LETTER   (1<<5)
-#define CHAR_PREFIX   (1<<6)
 
-static char chartab[]= {
+#define CHAR_BLANK    (1<<0)
+#define CHAR_ALPHA    (1<<1)
+#define CHAR_DIGIT10  (1<<2)
+#define CHAR_DIGIT16  (1<<3)
+#define CHAR_LETTER   (1<<4)
+#define CHAR_PREFIX   (1<<5)
+#define CHAR_SYMTAX   (1<<6)
+
+static unsigned short chartab[]= {
     /*  00 nul */   0,
     /*  01 soh */   0,
     /*  02 stx */   0,
@@ -40,10 +41,10 @@ static char chartab[]= {
     /*  07 bel */   0,
     /*  08 bs  */   0,
     /*  09 ht  */   0,
-    /*  0a nl  */   CHAR_PRINT | CHAR_BLANK,
+    /*  0a nl  */   CHAR_BLANK,
     /*  0b vt  */   0,
-    /*  0c np  */   CHAR_PRINT | CHAR_BLANK,
-    /*  0d cr  */   CHAR_PRINT | CHAR_BLANK,
+    /*  0c np  */   CHAR_BLANK,
+    /*  0d cr  */   CHAR_BLANK,
     /*  0e so  */   0,
     /*  0f si  */   0,
     /*  10 dle */   0,
@@ -62,105 +63,119 @@ static char chartab[]= {
     /*  1d gs  */   0,
     /*  1e rs  */   0,
     /*  1f us  */   0,
-    /*  20 sp  */   CHAR_PRINT | CHAR_BLANK,
-    /*  21  !  */   CHAR_PRINT | CHAR_LETTER,
-    /*  22  "  */   CHAR_PRINT | CHAR_PRINT,
-    /*  23  #  */   CHAR_PRINT | CHAR_LETTER,
-    /*  24  $  */   CHAR_PRINT | CHAR_LETTER,
-    /*  25  %  */   CHAR_PRINT | CHAR_LETTER,
-    /*  26  &  */   CHAR_PRINT | CHAR_LETTER,
-    /*  27  '  */   CHAR_PRINT,
-    /*  28  (  */   CHAR_PRINT,
-    /*  29  )  */   CHAR_PRINT,
-    /*  2a  *  */   CHAR_PRINT | CHAR_LETTER,
-    /*  2b  +  */   CHAR_PRINT | CHAR_LETTER,
-    /*  2c  ,  */   CHAR_PRINT | CHAR_LETTER,
-    /*  2d  -  */   CHAR_PRINT | CHAR_LETTER,
-    /*  2e  .  */   CHAR_PRINT | CHAR_PREFIX,
-    /*  2f  /  */   CHAR_PRINT | CHAR_LETTER,
-    /*  30  0  */   CHAR_PRINT | CHAR_DIGIT10 | CHAR_DIGIT16,
-    /*  31  1  */   CHAR_PRINT | CHAR_DIGIT10 | CHAR_DIGIT16,
-    /*  32  2  */   CHAR_PRINT | CHAR_DIGIT10 | CHAR_DIGIT16,
-    /*  33  3  */   CHAR_PRINT | CHAR_DIGIT10 | CHAR_DIGIT16,
-    /*  34  4  */   CHAR_PRINT | CHAR_DIGIT10 | CHAR_DIGIT16,
-    /*  35  5  */   CHAR_PRINT | CHAR_DIGIT10 | CHAR_DIGIT16,
-    /*  36  6  */   CHAR_PRINT | CHAR_DIGIT10 | CHAR_DIGIT16,
-    /*  37  7  */   CHAR_PRINT | CHAR_DIGIT10 | CHAR_DIGIT16,
-    /*  38  8  */   CHAR_PRINT | CHAR_DIGIT10 | CHAR_DIGIT16,
-    /*  39  9  */   CHAR_PRINT | CHAR_DIGIT10 | CHAR_DIGIT16,
-    /*  3a  :  */   CHAR_PRINT | CHAR_LETTER,
-    /*  3b  ;  */   CHAR_PRINT,
-    /*  3c  <  */   CHAR_PRINT | CHAR_LETTER,
-    /*  3d  =  */   CHAR_PRINT | CHAR_LETTER,
-    /*  3e  >  */   CHAR_PRINT | CHAR_LETTER,
-    /*  3f  ?  */   CHAR_PRINT | CHAR_LETTER,
-    /*  40  @  */   CHAR_PRINT | CHAR_LETTER,
-    /*  41  A  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA | CHAR_DIGIT16,
-    /*  42  B  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA | CHAR_DIGIT16,
-    /*  43  C  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA | CHAR_DIGIT16,
-    /*  44  D  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA | CHAR_DIGIT16,
-    /*  45  E  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA | CHAR_DIGIT16,
-    /*  46  F  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA | CHAR_DIGIT16,
-    /*  47  G  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  48  H  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  49  I  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  4a  J  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  4b  K  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  4c  L  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  4d  M  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  4e  N  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  4f  O  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  50  P  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  51  Q  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  52  R  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  53  S  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  54  T  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  55  U  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  56  V  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  57  W  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  58  X  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  59  Y  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  5a  Z  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  5b  [  */   CHAR_PRINT,
-    /*  5c  \  */   CHAR_PRINT | CHAR_LETTER,
-    /*  5d  ]  */   CHAR_PRINT,
-    /*  5e  ^  */   CHAR_PRINT | CHAR_LETTER,
-    /*  5f  _  */   CHAR_PRINT | CHAR_LETTER,
-    /*  60  `  */   CHAR_PRINT,
-    /*  61  a  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA | CHAR_DIGIT16,
-    /*  62  b  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA | CHAR_DIGIT16,
-    /*  63  c  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA | CHAR_DIGIT16,
-    /*  64  d  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA | CHAR_DIGIT16,
-    /*  65  e  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA | CHAR_DIGIT16,
-    /*  66  f  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA | CHAR_DIGIT16,
-    /*  67  g  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  68  h  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  69  i  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  6a  j  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  6b  k  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  6c  l  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  6d  m  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  6e  n  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  6f  o  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  70  p  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  71  q  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  72  r  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  73  s  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  74  t  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  75  u  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  76  v  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  77  w  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  78  x  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  79  y  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  7a  z  */   CHAR_PRINT | CHAR_LETTER | CHAR_ALPHA,
-    /*  7b  {  */   CHAR_PRINT,
-    /*  7c  | */    CHAR_PRINT | CHAR_LETTER,
-    /*  7d  }  */   CHAR_PRINT,
-    /*  7e  ~  */   CHAR_PRINT | CHAR_LETTER,
+    /*  20 sp  */   CHAR_BLANK,
+    /*  21  !  */   CHAR_LETTER,
+    /*  22  "  */   0,
+    /*  23  #  */   0,
+    /*  24  $  */   CHAR_LETTER,
+    /*  25  %  */   CHAR_LETTER,
+    /*  26  &  */   CHAR_LETTER,
+    /*  27  '  */   0,
+    /*  28  (  */   0,
+    /*  29  )  */   0,
+    /*  2a  *  */   CHAR_LETTER,
+    /*  2b  +  */   CHAR_LETTER,
+    /*  2c  ,  */   0,
+    /*  2d  -  */   CHAR_LETTER,
+    /*  2e  .  */   CHAR_PREFIX,
+    /*  2f  /  */   CHAR_LETTER,
+    /*  30  0  */   CHAR_DIGIT10 | CHAR_DIGIT16,
+    /*  31  1  */   CHAR_DIGIT10 | CHAR_DIGIT16,
+    /*  32  2  */   CHAR_DIGIT10 | CHAR_DIGIT16,
+    /*  33  3  */   CHAR_DIGIT10 | CHAR_DIGIT16,
+    /*  34  4  */   CHAR_DIGIT10 | CHAR_DIGIT16,
+    /*  35  5  */   CHAR_DIGIT10 | CHAR_DIGIT16,
+    /*  36  6  */   CHAR_DIGIT10 | CHAR_DIGIT16,
+    /*  37  7  */   CHAR_DIGIT10 | CHAR_DIGIT16,
+    /*  38  8  */   CHAR_DIGIT10 | CHAR_DIGIT16,
+    /*  39  9  */   CHAR_DIGIT10 | CHAR_DIGIT16,
+    /*  3a  :  */   0,
+    /*  3b  ;  */   0,
+    /*  3c  <  */   CHAR_LETTER,
+    /*  3d  =  */   CHAR_LETTER,
+    /*  3e  >  */   CHAR_LETTER,
+    /*  3f  ?  */   CHAR_LETTER,
+    /*  40  @  */   CHAR_LETTER,
+    /*  41  A  */   CHAR_LETTER | CHAR_ALPHA | CHAR_DIGIT16,
+    /*  42  B  */   CHAR_LETTER | CHAR_ALPHA | CHAR_DIGIT16,
+    /*  43  C  */   CHAR_LETTER | CHAR_ALPHA | CHAR_DIGIT16,
+    /*  44  D  */   CHAR_LETTER | CHAR_ALPHA | CHAR_DIGIT16,
+    /*  45  E  */   CHAR_LETTER | CHAR_ALPHA | CHAR_DIGIT16,
+    /*  46  F  */   CHAR_LETTER | CHAR_ALPHA | CHAR_DIGIT16,
+    /*  47  G  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  48  H  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  49  I  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  4a  J  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  4b  K  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  4c  L  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  4d  M  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  4e  N  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  4f  O  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  50  P  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  51  Q  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  52  R  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  53  S  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  54  T  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  55  U  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  56  V  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  57  W  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  58  X  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  59  Y  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  5a  Z  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  5b  [  */   0,
+    /*  5c  \  */   0,
+    /*  5d  ]  */   0,
+    /*  5e  ^  */   CHAR_LETTER,
+    /*  5f  _  */   CHAR_LETTER,
+    /*  60  `  */   0,
+    /*  61  a  */   CHAR_LETTER | CHAR_ALPHA | CHAR_DIGIT16,
+    /*  62  b  */   CHAR_LETTER | CHAR_ALPHA | CHAR_DIGIT16,
+    /*  63  c  */   CHAR_LETTER | CHAR_ALPHA | CHAR_DIGIT16,
+    /*  64  d  */   CHAR_LETTER | CHAR_ALPHA | CHAR_DIGIT16,
+    /*  65  e  */   CHAR_LETTER | CHAR_ALPHA | CHAR_DIGIT16,
+    /*  66  f  */   CHAR_LETTER | CHAR_ALPHA | CHAR_DIGIT16,
+    /*  67  g  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  68  h  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  69  i  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  6a  j  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  6b  k  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  6c  l  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  6d  m  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  6e  n  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  6f  o  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  70  p  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  71  q  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  72  r  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  73  s  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  74  t  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  75  u  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  76  v  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  77  w  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  78  x  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  79  y  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  7a  z  */   CHAR_LETTER | CHAR_ALPHA,
+    /*  7b  {  */   0,
+    /*  7c  | */    CHAR_LETTER,
+    /*  7d  }  */   0,
+    /*  7e  ~  */   CHAR_LETTER,
     /*  7f del */   0,
 };
 
-static inline int isPrint(int c)   { return 0 <= c && c <= 127 && (CHAR_PRINT    & chartab[c]); }
+/* syntax: " # ' ( ) , : ; [ \ ] ` { } */
+/* " -> string
+** # -> comment
+** ' -> quote
+** ( -> list ')'
+** , -> s_comma
+** : -> s_colon
+** ; -> s_semi
+** [ -> tuple ']'
+** \ -> unquote
+** ` -> quasiqute
+** { -> delay '}'
+**/
+
+static inline int isPrint(int c)   { return 0x20 <= c && c <= 0x7e; }
 static inline int isAlpha(int c)   { return 0 <= c && c <= 127 && (CHAR_ALPHA    & chartab[c]); }
 static inline int isDigit10(int c) { return 0 <= c && c <= 127 && (CHAR_DIGIT10  & chartab[c]); }
 static inline int isDigit16(int c) { return 0 <= c && c <= 127 && (CHAR_DIGIT16  & chartab[c]); }
@@ -278,12 +293,35 @@ static bool readQuote(FILE *fp, Node symbol, Target result);
 static bool readSymbol(FILE *fp, int first, Target result);
 static bool readComment(FILE *fp);
 
+static bool list2tuple(Pair list, Tuple* tuple) {
+    unsigned size;
+    bool     dotted;
+
+    if (!list_State(list, &size, &dotted)) goto failure;
+    if (!tuple_Create(size, tuple)) goto failure;
+    if (!tuple_Fill(*tuple, list))  goto failure;
+
+    fprintf(stderr,"list2tuple: ");
+    prettyPrint(stderr, list);
+    fprintf(stderr," -> ");
+    prettyPrint(stderr, tuple);
+    fprintf(stderr,"\n");
+    fflush(stderr);
+
+    return true;
+
+ failure:
+    fatal("%s", "unable to convert list to tuple");
+    return false;
+}
+
 static bool readList(FILE *fp, int delim, Target result)
 {
     const char *error = 0;
-    Pair  head = 0;
-    Pair  tail = head;
-    Node  hold = NIL;
+    Pair  head    = 0;
+    Pair  tail    = 0;
+    Pair  segment = 0;
+    Node  hold    = NIL;
 
     if (!readExpr(fp, &(hold.reference))) {
         ASSIGN(result, NIL);
@@ -298,24 +336,47 @@ static bool readList(FILE *fp, int delim, Target result)
     for (;;) {
         if (!readExpr(fp, &(hold.reference))) goto eof;
 
-        if (!isIdentical(hold.symbol, s_dot)) {
-            if (!pair_Create(hold, NIL, &(hold.pair))) goto failure;
-            if (!pair_SetCdr(tail, hold)) goto failure;
-            tail = hold.pair;
-            continue;
-        }
+        if (isIdentical(hold.symbol, s_dot)) {
+            if (!readExpr(fp, &(hold.reference))) {
+                error = "missing item after .";
+                goto failure;
+            }
 
-        if (!readExpr(fp, &(hold.reference))) {
-            error = "missing item after .";
+            if (!pair_SetCdr(tail, hold)) goto failure;
+
+            if (!readExpr(fp, &(hold.reference))) goto eof;
+
+            error = "extra item after .";
             goto failure;
         }
 
+        if (isIdentical(hold.symbol, s_comma)) {
+            Pair  list;
+            Tuple tuple;
+            if (!segment) {
+                list = head;
+            } else {
+                if (!pair_GetCdr(segment, &list)) goto failure;
+            }
+
+            if (!list2tuple(list, &tuple)) goto failure;
+
+            if (!segment) {
+                if (!pair_SetCar(head, tuple)) goto failure;
+                if (!pair_SetCdr(head, NIL)) goto failure;
+                segment = head;
+            } else {
+                if (!pair_Create(tuple, NIL, &list)) goto failure;
+                if (!pair_SetCdr(segment, list)) goto failure;
+                segment = list;
+            }
+            tail = segment;
+            continue;
+        }
+
+        if (!pair_Create(hold, NIL, &(hold.pair))) goto failure;
         if (!pair_SetCdr(tail, hold)) goto failure;
-
-        if (!readExpr(fp, &(hold.reference))) goto eof;
-
-        error = "extra item after .";
-        goto failure;
+        tail = hold.pair;
     }
 
  eof:
@@ -366,7 +427,6 @@ static bool readTuple(FILE *fp, int delim, Target result)
     if (!list_State(head, &size, &dotted)) goto failure;
     if (!tuple_Create(size, result.tuple)) goto failure;
     if (!tuple_Fill(*result.tuple, head))  goto failure;
-
 
     return true;
 
@@ -549,26 +609,49 @@ extern bool readExpr(FILE *fp, Target result)
         case '\n': continue;
         case '\r': continue;
         case ' ' : continue;
-        case '"':  return readString(fp, '"', result);
-        case '?':  return readCode(fp, result);
-        case '\'': return readQuote(fp, s_quote, result);
-        case '`':  return readQuote(fp, s_quasiquote, result);
-        case '(':  return readList(fp, ')', result);
-        case '[':  return readTuple(fp, ']', result);
-        case '{':  return readControl(fp, s_delay, '}', result);
-
-        case ';':
+        case '#':
             {
                 readComment(fp);
                 continue;
             }
 
-        case '0' ... '9':
-            {
-                return readInteger(fp, chr, result);
-            }
+        case '"':
+            return readString(fp, '"', result);
+
+        case '?':
+            return readCode(fp, result);
+
+        case '\'':
+            return readQuote(fp, s_quote, result);
+
+        case '`':
+            return readQuote(fp, s_quasiquote, result);
+
+        case '(':
+            return readList(fp, ')', result);
+
+        case '[':
+            return readTuple(fp, ']', result);
+
+        case '{':
+            return readControl(fp, s_delay, '}', result);
 
         case ',':
+            ASSIGN(result, s_comma);
+            return true;
+
+        case ':':
+            ASSIGN(result, s_colon);
+            return true;
+
+        case ';':
+            ASSIGN(result, s_semi);
+            return true;
+
+        case '0' ... '9':
+            return readInteger(fp, chr, result);
+
+        case '\\':
             {
               if (matchChar(fp, '@')) {
                 return readQuote(fp, s_unquote_splicing, result);

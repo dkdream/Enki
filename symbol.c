@@ -28,6 +28,10 @@ Symbol s_true = 0;
 Symbol s_unquote = 0;
 Symbol s_unquote_splicing = 0;
 
+Symbol s_comma = 0;
+Symbol s_colon = 0;
+Symbol s_semi  = 0;
+
 Symbol s_integer = 0;
 Symbol s_primitive = 0;
 Symbol s_symbol = 0;
@@ -82,6 +86,10 @@ extern void init_global_symboltable() {
     empty_symbol->kind.type = (Node)s_symbol;
 
     symbol_Convert(".", &s_dot);
+    symbol_Convert(",", &s_comma);
+    symbol_Convert(":", &s_colon);
+    symbol_Convert(";", &s_semi);
+
     symbol_Convert("unquote-splicing", &s_unquote_splicing);
 
     MK_SYM(global);

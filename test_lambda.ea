@@ -1,4 +1,3 @@
-;;-*- mode: enki;-*-
 
 (lambda (let lambda) (let 3))
 

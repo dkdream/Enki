@@ -54,7 +54,7 @@
               (name 'fooness)
               (args '(one two three))
               (body '(and one anda two)))
-          `(,%define ,name (lambda ,args ,@body))))
+          `(\%define \name (lambda \args \@body))))
 
 
 (mark-time 60)
@@ -64,8 +64,8 @@
                          (if (pair? pattern)
                              (let ((name (car pattern))
                                    (args (cdr pattern)))
-                               `(,%define ,name (lambda ,args ,@body)))
-                             `(,%define ,pattern ,@body)))))
+                               `(\%define \name (lambda \args \@body)))
+                             `(\%define \pattern \@body)))))
 
 
 (mark-time 71)
@@ -75,8 +75,8 @@
                          (if (pair? pattern)
                              (let ((name (car pattern))
                                    (args (cdr pattern)))
-                               `(,%define ,name (,%kind (lambda ,args ,@body))))
-                             `(,%define ,pattern (,%kind ,@body))))))
+                               `(\%define \name (\%kind (lambda \args \@body))))
+                             `(\%define \pattern (\%kind \@body))))))
 
 
 (mark-time 82)
@@ -109,12 +109,12 @@
 
 (dumpln (apply expand-macro
                '((begin . body)
-                 `(let () ,@body))))
+                 `(let () \@body))))
 
 
 
 (macro (begin . body)
-  `(let () ,@body))
+  `(let () \@body))
 
 (begin 
   (print 1)
@@ -124,8 +124,8 @@
 
 (define expand-let* (lambda (bindings body)
                       (if (pair? (cdr bindings))
-                          `(let (,(car bindings)) ,(expand-let* (cdr bindings) body))
-                          `(let ,bindings ,@body))))
+                          `(let (\(car bindings)) \(expand-let* (cdr bindings) body))
+                          `(let \bindings \@body))))
 
 (dumpln (apply expand-let* '(((x 1)(y 2)(z 3)) (do-it))))
        
