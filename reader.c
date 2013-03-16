@@ -293,20 +293,27 @@ static bool readQuote(FILE *fp, Node symbol, Target result);
 static bool readSymbol(FILE *fp, int first, Target result);
 static bool readComment(FILE *fp);
 
-static bool list2tuple(Pair list, Tuple* tuple) {
+static bool list2type(Pair list, Symbol type) {
+    Tuple tuple;
     unsigned size;
     bool     dotted;
 
     if (!list_State(list, &size, &dotted)) goto failure;
-    if (!tuple_Create(size, tuple)) goto failure;
-    if (!tuple_Fill(*tuple, list))  goto failure;
+    if (1 > size) return true;
 
-    fprintf(stderr,"list2tuple: ");
-    prettyPrint(stderr, list);
-    fprintf(stderr," -> ");
-    prettyPrint(stderr, tuple);
-    fprintf(stderr,"\n");
-    fflush(stderr);
+    if (!tuple_Create(size, &tuple)) goto failure;
+    if (!tuple_Fill(tuple, list))    goto failure;
+    if (!setType(tuple, type))       goto failure;
+
+    if (!dotted) {
+        if (!pair_SetCar(list, tuple)) goto failure;
+        if (!pair_SetCdr(list, NIL))   goto failure;
+    } else {
+        Node end;
+        if (!list_GetEnd(list, &end)) goto failure;
+        if (!pair_SetCar(list, tuple)) goto failure;
+        if (!pair_SetCdr(list, end))   goto failure;
+    }
 
     return true;
 
@@ -321,6 +328,7 @@ static bool readList(FILE *fp, int delim, Target result)
     Pair  head    = 0;
     Pair  tail    = 0;
     Pair  segment = 0;
+    Pair  list    = 0;
     Node  hold    = NIL;
 
     if (!readExpr(fp, &(hold.reference))) {
@@ -351,23 +359,17 @@ static bool readList(FILE *fp, int delim, Target result)
         }
 
         if (isIdentical(hold.symbol, s_comma)) {
-            Pair  list;
-            Tuple tuple;
             if (!segment) {
                 list = head;
             } else {
                 if (!pair_GetCdr(segment, &list)) goto failure;
             }
 
-            if (!list2tuple(list, &tuple)) goto failure;
+            if (!list2type(list, s_comma)) goto failure;
 
             if (!segment) {
-                if (!pair_SetCar(head, tuple)) goto failure;
-                if (!pair_SetCdr(head, NIL)) goto failure;
                 segment = head;
             } else {
-                if (!pair_Create(tuple, NIL, &list)) goto failure;
-                if (!pair_SetCdr(segment, list)) goto failure;
                 segment = list;
             }
             tail = segment;
@@ -384,6 +386,12 @@ static bool readList(FILE *fp, int delim, Target result)
         error = "EOF while reading list";
         goto failure;
     }
+
+    if (!segment) return true;
+
+    if (!pair_GetCdr(segment, &list)) goto failure;
+    if (isNil(list)) return true;
+    if (!list2type(list, s_comma)) goto failure;
 
     return true;
 
