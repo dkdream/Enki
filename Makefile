@@ -1,4 +1,4 @@
-PREFIX  = /tools/Mercury
+PREFIX  = /tools/Enki
 BINDIR  = $(PREFIX)/bin
 INCDIR  = $(PREFIX)/include
 LIBDIR  = $(PREFIX)/lib
