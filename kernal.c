@@ -266,6 +266,7 @@ static SUBR(or)
     GC_End();
 }
 
+#if 0
 static SUBR(while)
 { //Fixed
     Node tst  = NIL;
@@ -283,6 +284,7 @@ static SUBR(while)
         eval_begin(body, env, result);
     }
 }
+#endif
 
 static SUBR(set)
 { //Fixed
@@ -596,6 +598,48 @@ static SUBR(apply_form)
     apply(func, cargs, env, result);
 }
 
+static SUBR(expand)
+{
+    GC_Begin(3);
+
+    Node expr, cenv;
+
+    GC_Protect(expr);
+    GC_Protect(cenv);
+
+    // (expand expr env)
+    // (expand expr)
+    list_GetItem(args.pair, 0, &expr);
+    list_GetItem(args.pair, 1, &cenv);
+
+    if (isNil(cenv)) cenv = env;
+
+    expand(expr, cenv, result);
+
+    GC_End();
+}
+
+static SUBR(encode)
+{
+    GC_Begin(3);
+
+    Node expr, cenv;
+
+    GC_Protect(expr);
+    GC_Protect(cenv);
+
+    // (encode expr env)
+    // (encode expr)
+    list_GetItem(args.pair, 0, &expr);
+    list_GetItem(args.pair, 1, &cenv);
+
+    if (isNil(cenv)) cenv = env;
+
+    encode(expr, cenv, result);
+
+    GC_End();
+}
+
 static SUBR(eval)
 {
     GC_Begin(3);
@@ -612,6 +656,27 @@ static SUBR(eval)
 
     if (isNil(cenv)) cenv = env;
 
+    eval(expr, cenv, result);
+
+    GC_End();
+}
+
+static SUBR(reduce)
+{
+    GC_Begin(3);
+
+    Node expr, cenv;
+
+    GC_Protect(expr);
+    GC_Protect(cenv);
+
+    // (reduce expr env)
+    // (reduce expr)
+    list_GetItem(args.pair, 0, &expr);
+    list_GetItem(args.pair, 1, &cenv);
+
+    if (isNil(cenv)) cenv = env;
+
     expand(expr, cenv, &expr);
     encode(expr, cenv, &expr);
     eval(expr, cenv, result);
@@ -621,13 +686,13 @@ static SUBR(eval)
 
 static SUBR(apply)
 {
-  Node func  = NIL;
+    Node func  = NIL;
     Node cargs = NIL;
     Node cenv  = NIL;
 
     list_GetItem(args.pair, 0, &func);
     list_GetItem(args.pair, 1, &cargs);
-    list_GetItem(args.pair, 2, &cargs);
+    list_GetItem(args.pair, 2, &cenv);
 
     if (isNil(cenv)) cenv = env;
 
@@ -1283,7 +1348,7 @@ void startEnkiLibrary() {
     MK_FXD(if);
     MK_FXD(and);
     MK_FXD(or);
-    MK_FXD(while);
+//    MK_FXD(while);
 
     MK_FXD(set);
     MK_FXD(define);
@@ -1302,7 +1367,10 @@ void startEnkiLibrary() {
     p_apply_lambda = MK_OPR(%apply-lambda,apply_lambda);
     p_apply_form   = MK_OPR(%apply-form,apply_form);
 
+    MK_PRM(expand);
+    MK_PRM(encode);
     MK_PRM(eval);
+    MK_PRM(reduce);
     MK_PRM(apply);
     MK_PRM(form);
 
