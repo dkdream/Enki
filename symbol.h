@@ -36,9 +36,11 @@ extern Symbol s_true;
 extern Symbol s_unquote;
 extern Symbol s_unquote_splicing;
 
+// syntax type names
 extern Symbol s_comma;
 extern Symbol s_colon;
 extern Symbol s_semi;
+extern Symbol s_block;
 
 // raw type names
 extern Symbol s_integer;

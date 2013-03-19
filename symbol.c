@@ -31,6 +31,7 @@ Symbol s_unquote_splicing = 0;
 Symbol s_comma = 0;
 Symbol s_colon = 0;
 Symbol s_semi  = 0;
+Symbol s_block = 0;
 
 Symbol s_integer = 0;
 Symbol s_primitive = 0;
@@ -115,6 +116,7 @@ extern void init_global_symboltable() {
     MK_SYM(type);
     MK_SYM(sort);
     MK_SYM(forced);
+    MK_SYM(block);
 }
 
 extern void final_global_symboltable() {

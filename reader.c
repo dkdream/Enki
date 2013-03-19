@@ -310,7 +310,7 @@ static bool list2type(Pair list, Symbol type) {
         if (!pair_SetCdr(list, NIL))   goto failure;
     } else {
         Node end;
-        if (!list_GetEnd(list, &end)) goto failure;
+        if (!list_GetEnd(list, &end))  goto failure;
         if (!pair_SetCar(list, tuple)) goto failure;
         if (!pair_SetCdr(list, end))   goto failure;
     }
@@ -318,7 +318,7 @@ static bool list2type(Pair list, Symbol type) {
     return true;
 
  failure:
-    fatal("%s", "unable to convert list to tuple");
+    fatal("%s", "unable to convert list to typed tuple");
     return false;
 }
 
@@ -403,13 +403,13 @@ static bool readList(FILE *fp, int delim, Target result)
     return false;
 }
 
-static bool readTuple(FILE *fp, int delim, Target result)
+static bool readTuple(FILE *fp, Symbol type, int delim, Target result)
 {
     const char *error = 0;
     unsigned size;
     bool     dotted;
     Pair  head = 0;
-    Pair  tail = head;
+    Pair  tail = 0;
     Node  hold = NIL;
 
 
@@ -435,45 +435,11 @@ static bool readTuple(FILE *fp, int delim, Target result)
     if (!list_State(head, &size, &dotted)) goto failure;
     if (!tuple_Create(size, result.tuple)) goto failure;
     if (!tuple_Fill(*result.tuple, head))  goto failure;
+    if (!setType(*result.tuple, type))     goto failure;
 
     return true;
 
     failure:
-    if (!error) {
-        fatal("%s", error);
-    }
-
-    return false;
-}
-
-static bool readControl(FILE *fp, Symbol control, int delim, Target result)
-{
-    const char *error = 0;
-    Pair  head = 0;
-    Pair  tail = head;
-    Node  hold = NIL;
-
-    if (!pair_Create(control, NIL, result.pair)) goto failure;
-
-    head = *result.pair;
-    tail = head;
-
-    for (;;) {
-        if (!readExpr(fp, &(hold.reference))) goto eof;
-        if (!pair_Create(hold, NIL, &(hold.pair))) goto failure;
-        if (!pair_SetCdr(tail, hold)) goto failure;
-        tail = hold.pair;
-    }
-
- eof:
-    if (!matchChar(fp, delim)) {
-        error = "EOF while reading list";
-        goto failure;
-    }
-
-    return true;
-
- failure:
     if (!error) {
         fatal("%s", error);
     }
@@ -639,10 +605,10 @@ extern bool readExpr(FILE *fp, Target result)
             return readList(fp, ')', result);
 
         case '[':
-            return readTuple(fp, ']', result);
+            return readTuple(fp, s_tuple, ']', result);
 
         case '{':
-            return readControl(fp, s_delay, '}', result);
+            return readTuple(fp, s_block, '}', result);
 
         case ',':
             ASSIGN(result, s_comma);
