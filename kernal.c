@@ -19,6 +19,8 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <time.h>
+#include <stdlib.h>
+#include <sys/wait.h>
 
 static bool __initialized = false;
 
@@ -1220,6 +1222,26 @@ static SUBR(mark_time) {
     csegment = clock();
 }
 
+static SUBR(system) {
+    Node command = NIL;
+    checkArgs(args, "system", 1, s_text);
+    forceArgs(args, &command, 0);
+
+    int state = system(text_Text(command.text));
+
+    if (WIFEXITED(state)) {
+        int status = WEXITSTATUS(state);
+        integer_Create(status, result.integer);
+    } else {
+        if (!WIFSIGNALED(state)) {
+            ASSIGN(result, NIL);
+        } else {
+            int signo = (WTERMSIG(state) * -1);
+            integer_Create(signo, result.integer);
+        }
+    }
+}
+
 /***************************************************************
  ***************************************************************
  ***************************************************************
@@ -1415,6 +1437,8 @@ void startEnkiLibrary() {
 
     MK_OPR(start-time,start_time);
     MK_OPR(mark-time,mark_time);
+
+    MK_PRM(system);
 
     clock_t cend = clock();
 
