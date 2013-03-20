@@ -1,0 +1,44 @@
+
+
+<core> = <object>
+       | <variable>
+       | (quote <object>)
+       | (lambda <arguments> <core>)
+       | (if <core> <core> <core>)
+       | (set! <variable> <core>)
+       | (call/cc <core>)
+       | (<core> <core>*)
+
+<arguments> = ()
+            | <variable>
+            | (<variable>+)
+            | (<variable>+ . <variable>)
+
+-------- marocs ---------
+
+(begin exp1) -> exp1
+(begin exp1 exp2 ... ) -> ((lambda (x) (begin exp2 ... )) exp1)
+
+(let ([var val] ... ) exp ... ) -> ((lambda (var ... ) (begin exp ...)) val ... )
+
+(let label ([var val] ... ) exp ... ) -> ((Y (lambda (label var ... ) (begin exp ... ))) val ... )
+
+(rec var exp) -> (let ([var '()]) (set! var exp))
+
+(recur f ([var init] ... ) exp ... ) -> ((rec f (lambda (var ... ) (begin exp ... ))) init ... )
+
+(and exp1) -> exp1
+(and exp1 exp2 ... ) -> (if exp1 (and exp2 ... ) '())
+
+(or exp1) -> exp1
+(or exp1 exp2 ... ) -> (if exp1 't (or exp2 ... ))
+
+(when test exp ... ) -> (if test (begin exp ... ) '())
+
+(unless test exp ... ) -> (if test '() (begin exp ... ))
+
+(record (var ... ) val exp ... ) -> (apply (lambda (var ... ) (begin exp ... )) val)
+
+(cond [else exp ... ]) -> (begin exp ... )
+(cond [test exp ... ] clause ... ) -> (if test (begin exp ... ) (cond clause ... ))
+                 
