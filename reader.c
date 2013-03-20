@@ -218,6 +218,7 @@ static inline bool matchChar(FILE *fp, int match)
     return false;
 }
 
+// use by both readCode and readString
 static int readChar(int chr, FILE *fp)
 {
     if ('\\' != chr) return chr;
@@ -233,6 +234,8 @@ static int readChar(int chr, FILE *fp)
     case 't':   return '\t';
     case 'v':   return '\v';
     case '\'':  return '\'';
+    case '\"':  return '\"';
+    case '\\':  return '\\';
 
     case 'u': {
         int ahr = getc(fp),
@@ -322,6 +325,7 @@ static bool list2type(Pair list, Symbol type) {
     return false;
 }
 
+// (...)
 static bool readList(FILE *fp, int delim, Target result)
 {
     const char *error = 0;
@@ -403,6 +407,8 @@ static bool readList(FILE *fp, int delim, Target result)
     return false;
 }
 
+// [...] - tuple
+// {...} - block
 static bool readTuple(FILE *fp, Symbol type, int delim, Target result)
 {
     const char *error = 0;
@@ -447,6 +453,7 @@ static bool readTuple(FILE *fp, Symbol type, int delim, Target result)
     return false;
 }
 
+// ?xxx
 static bool readCode(FILE *fp, Target result)
 {
     int chr = getc(fp);
@@ -458,6 +465,7 @@ static bool readCode(FILE *fp, Target result)
     return integer_Create(chr, result.integer);
 }
 
+// "..."
 static bool readString(FILE *fp, int end, Target result)
 {
     static TextBuffer buf = BUFFER_INITIALISER;
@@ -481,6 +489,8 @@ static bool readString(FILE *fp, int end, Target result)
     return false;
 }
 
+// -?[0-9]+
+// 0x[0-9a-fA-F]+
 static bool readInteger(FILE *fp, int first, Target result)
 {
     int chr = first;

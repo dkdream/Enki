@@ -1,0 +1,112 @@
+(define all-tests '())
+
+## implemented by compiler.ea
+## (emit-program expr)
+##
+
+(define compile-program (lambda (x) (emit-program x)))
+
+(define emit-library (lambda () '()))
+
+(define add-tests-with-string-output
+  (let ((format (lambda (expr . string)
+                  (tuple expr 'string string))))
+    (lambda (test-name list)
+      (set! all-tests (cons (cons test-name (map format list))
+                            all-tests)))))
+
+(define build
+  (lambda ()
+    (unless (zero? (system (format "gcc -m32 -Wall -o stst \"@{s}\" \"@{s}\" stst.s"
+                                   (runtime-file)
+                                   (lib-file))))
+      (error 'make "could not build target"))))
+
+(define execute
+  (lambda ()
+    (unless (zero? (system "./stst > stst.out"))
+      (error 'make "produced program exited abnormally"))))
+
+(define build-program
+  (lambda (expr)
+    (run-compile expr)
+    (build)))
+
+(define get-string
+  (lambda ()
+    (let ((file (open-file "stst.out" "r")))
+      (file-as-string file))))
+
+(define test-with-string-output 
+  (lambda (test-id expr expected-output)
+    (run-compile expr)
+    (build)
+    (execute)
+    (unless (string=? expected-output (get-string))
+      (error 'test (format "output mismatch for test @{s}, expected \"@{s}\", got \"@{s}\""
+                           test-id expected-output (get-string))))))
+
+(define test-one
+  (lambda (test-id test)
+    (let ((expr (element test 0))
+          (type (element test 1))
+          (out  (element test 2)))
+      (print (format "test @{s}:@{s} ..." test-id expr))
+      (if (eq 'string type)
+          (test-with-string-output test-id expr out)
+          (error 'test (format "invalid test type @{s}" type)))
+      (print " ok\n"))))
+
+(define test-all
+  (lambda ()
+    (let ((loop-test (lambda (inx tests)
+                       (if (null? tests)
+                           (print (format "passed all @{s} tests\n" inx))
+                           (let ((group (car tests))
+                                 (rest  (cdr tests)))
+                             (let ((test-name  (car group))
+                                   (group-list (cdr group)))
+                               (print (format "Performing @{s} tests ...\n" test-name))
+                               (let ((loop-unit (lambda (inx tests)
+                                                  (if (null? tests)
+                                                      (loop-test inx rest)
+                                                      (test-one inx (car tests))
+                                                      (loop-unit (+ 1 inx) (cdr tests))))))
+                                 (loop-unit inx group-list))))))))
+      (loop-test 0 (reverse all-tests)))))
+
+(define input-filter (lambda (x) x))
+(define runtime-file "startup.c")
+(define lib-file     "lib.s")
+
+(let ((cmp-port))
+  (define compile-port
+    (lambda arg
+      (if (null? arg)
+          cmp-port
+          (set! cmp-port (car arg))))))
+
+(define run-compile
+  (lambda (expr)
+    (let ((temp "stst.s"))
+      (remove-file "stst.s")
+      (compile-port (open-file "stst.s" "w"))
+      (compile-program expr)
+      (close-port (compile-port))
+      (compiler-port 'closed))))
+
+(define emit
+  (lambda args
+    (let ((port (compile-port)))
+    (fprint port (apply format args))
+    (fprint port "\n"))))
+
+(define compile-lib
+  (lambda ()
+    (remove-file lib-file)
+    (compile-port (open-file lib-file "w"))
+    (emit-library)
+    (close-port (compile-port))
+    (compile-port 'close)))
+
+      

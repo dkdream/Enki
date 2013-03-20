@@ -1,0 +1,15 @@
+(require "run_compiler_tests.ea")
+(require "echo_tests/group_1.1.ea")
+
+(define compile-program 
+  (lambda (value)
+    (unless (integer? value)
+      (error 'compile-program "not an integer"))
+    (emit "  .text")
+    (emit "  .globl scheme_entry")
+    (emit "  .type scheme_entry, @function")
+    (emit "scheme_entry:")
+    (emit "  movl $@{s}, %eax" value)
+    (emit "  ret")))
+
+

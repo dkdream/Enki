@@ -11,7 +11,8 @@ copper
 .depends
 *.vm
 *.a
-mercury_ver.h
+*.silk
+
 
 
 
