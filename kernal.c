@@ -1372,8 +1372,18 @@ static SUBR(require) {
         return;
     }
 
+    struct stat stbuf;
+    int filedes = fileno(file);
+
+    if (fstat(filedes, &stbuf) == -1) {
+        fatal("failed retrieve fstat of \'%s\' for require", text_Text(path.text));
+        return;
+    }
+
     readFile(file);
     fclose(file);
+
+    integer_Create(stbuf.st_ino, result.integer);
 }
 
 struct os_file {
@@ -1575,9 +1585,17 @@ static SUBR(inode) {
 
     const char *name = text_Text(fname.text);
 
-    if (stat(name, &stbuf) == -1) {
-        fatal("inode: can't access %s\n", name);
+    int filedes = open(name, O_RDONLY|O_DIRECT);
+
+    if (-1 == filedes) {
+        ASSIGN(result, NIL);
     }
+
+    if (fstat(filedes, &stbuf) == -1) {
+        ASSIGN(result, NIL);
+    }
+
+    close(filedes);
 
     integer_Create(stbuf.st_ino, result.integer);
 }
