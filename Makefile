@@ -51,7 +51,7 @@ H_SOURCES := $(filter-out enki.h, $(notdir $(wildcard *.h)))
 
 ASMS    := $(C_SOURCES:%.c=.assembly/%.s)
 OBJS    := $(C_SOURCES:%.c=%.o)
-TSTS    := $(notdir $(wildcard test*.ea))
+TSTS    := $(notdir $(wildcard test_*.ea))
 RUNS    := $(TSTS:test_%.ea=test_%.run)
 DEPENDS := $(C_SOURCES:%.c=.depends/%.d) $(MAINS:%.c=.depends/%.d)
 
