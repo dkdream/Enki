@@ -5,6 +5,7 @@
  ** Routine List:
  **    <routine-list-end>
  **/
+#define _GNU_SOURCE
 #define debug_THIS
 #include "all_types.inc"
 #include "treadmill.h"
@@ -55,6 +56,22 @@ extern void defineValue(Node symbol, const Node value) {
     pair_SetCdr(enki_globals.pair, globals);
 
     GC_End();
+}
+
+extern bool opaque_Create(Symbol type, long size, Reference* target) {
+    if (!node_Allocate(_zero_space,
+                       true,
+                       size,
+                       target))
+        return 0;
+
+    Reference result = *target;
+
+    memset(result, 0, size);
+
+    setType(result, type);
+
+    return result;
 }
 
 static unsigned checkArgs(Node args, const char* name, unsigned min, ...)
@@ -1242,6 +1259,306 @@ static SUBR(system) {
     }
 }
 
+static SUBR(error) {
+    Node kind    = NIL;
+    Node message = NIL;
+
+    checkArgs(args, "error", 1, s_symbol, s_text);
+    forceArgs(args, &kind, &message, 0);
+
+    print(stderr, kind);
+    fatal("%s", text_Text(message.text));
+}
+
+static void formatAppendTo(TextBuffer *buffer, Node value) {
+    char data[20];
+
+    if (isNil(value)) return;
+
+    Node type = getType(value);
+
+    if (isNil(type)) return;
+
+    if (isIdentical(type, s_symbol)) {
+        buffer_add(buffer, symbol_Text(value.symbol));
+        return;
+    }
+
+    if (isIdentical(type, s_text)) {
+        buffer_add(buffer, text_Text(value.text));
+        return;
+    }
+
+    if (isIdentical(type, s_integer)) {
+        sprintf(data, "%ld", value.integer->value);
+        buffer_add(buffer, data);
+        return;
+    }
+}
+
+static SUBR(format) {
+    static TextBuffer buffer = BUFFER_INITIALISER;
+
+    buffer_reset(&buffer);
+
+    const char* format;
+
+    checkArgs(args, "format", 1, s_text);
+
+    if (!isType(args, s_pair)) {
+        fatal("missing first argument to format\n");
+    } else {
+        Node form = NIL;
+        pair_GetCar(args.pair, &form);
+        pair_GetCdr(args.pair, &args);
+        if (!isType(form, s_text)) {
+            fatal("first argument to formant is not text\n");
+        }
+        format = text_Text(form.text);
+    }
+
+    unsigned count = 0;
+
+    for (; *format ; ++format) {
+        char at = format[0];
+
+        if ('@' == at) {
+            if (('{' == format[1]) && ('}' == format[3])) {
+                char code = format[2];
+                format += 3;
+
+                ++count;
+
+                if (!isType(args, s_pair)) {
+                    fatal("missing argument %d to format\n", count);
+                } else {
+                    Node value = NIL;
+
+                    pair_GetCar(args.pair, &value);
+                    pair_GetCdr(args.pair, &args);
+
+                    if ('q' == code) {
+                        buffer_append(&buffer, '"');
+                    }
+                    formatAppendTo(&buffer, value);
+
+                    if ('q' == code) {
+                        buffer_append(&buffer, '"');
+                    }
+                }
+                continue;
+            }
+        }
+
+        buffer_append(&buffer, at);
+    }
+
+    text_Create(buffer, result.text);
+}
+
+static SUBR(require) {
+    Node path;
+
+    checkArgs(args, "require", 1, s_text);
+    forceArgs(args, &path, 0);
+
+    FILE* file = fopen(text_Text(path.text), "r");
+
+    if (!file) {
+        fatal("failed to open \'%s\' for require", text_Text(path.text));
+        return;
+    }
+
+    readFile(file);
+    fclose(file);
+}
+
+struct os_file {
+    FILE* file;
+};
+
+typedef struct os_file* OSFile;
+
+static SUBR(open_in) {
+    Node path;
+    checkArgs(args, "open-in", 1, s_text);
+    forceArgs(args, &path, 0);
+
+    FILE* file = fopen(text_Text(path.text), "r");
+
+    if (!file) {
+        fatal("failed to open \'%s\' for reading", text_Text(path.text));
+        return;
+    }
+
+    Reference infile = 0;
+
+    if (!opaque_Create(s_infile, sizeof(struct os_file), &infile)) {
+        fatal("failed to allocate opaque object");
+    }
+
+    ((OSFile)(infile))->file = file;
+
+    ASSIGN(result, infile);
+}
+
+static SUBR(open_out) {
+    Node path;
+    checkArgs(args, "open-out", 1, s_text);
+    forceArgs(args, &path, 0);
+
+    FILE* file = fopen(text_Text(path.text), "w");
+
+    if (!file) {
+        fatal("failed to open \'%s\' for writing", text_Text(path.text));
+        return;
+    }
+
+    Reference outfile = 0;
+
+    if (!opaque_Create(s_outfile, sizeof(struct os_file), &outfile)) {
+        fatal("failed to allocate opaque object");
+    }
+
+    ((OSFile)(outfile))->file = file;
+
+    ASSIGN(result, outfile);
+}
+
+static SUBR(close_in) {
+    Node file;
+    checkArgs(args, "close-in", 1, s_infile);
+    forceArgs(args, &file, 0);
+
+    if (!isType(file, s_infile)) {
+        fatal("close-in: not an infile");
+    }
+
+    FILE* in = ((OSFile)(file.reference))->file;
+
+    if (fclose(in)) {
+        fatal("close-in: error closing os-file");
+    }
+
+    ((OSFile)(file.reference))->file = 0;
+
+    setType(file, s_opaque);
+}
+
+static SUBR(close_out) {
+    Node file;
+    checkArgs(args, "close-out", 1, s_outfile);
+    forceArgs(args, &file, 0);
+
+    if (!isType(file, s_outfile)) {
+        fatal("close-out: not an outfile");
+    }
+
+    FILE* out = ((OSFile)(file.reference))->file;
+
+    if (fclose(out)) {
+        fatal("close-out: error closing os-file");
+    }
+
+    ((OSFile)(file.reference))->file = 0;
+
+    setType(file, s_opaque);
+}
+
+static SUBR(fprint) {
+    FILE* out = 0;
+
+    checkArgs(args, "fprint", 1, s_outfile);
+
+    if (!isType(args, s_pair)) {
+         fatal("missing first argument to fprint\n");
+    } else {
+        Node outfile = NIL;
+
+        pair_GetCar(args.pair, &outfile);
+        pair_GetCdr(args.pair, &args);
+
+        if (!isType(outfile, s_outfile)) {
+            fatal("first argument to formant is not an outfile\n");
+        }
+
+        out = ((OSFile)(outfile.reference))->file;
+    }
+
+    while (isType(args, s_pair)) {
+        Node text;
+        pair_GetCar(args.pair, &text);
+        pair_GetCdr(args.pair, &args);
+
+        if (!isType(text, s_text)) {
+            fatal("invalid argument to fprint\n");
+        }
+
+        fprintf(out, "%s", text_Text(text.text));
+    }
+}
+
+static SUBR(read_line) {
+    static TextBuffer buffer = BUFFER_INITIALISER;
+    buffer_reset(&buffer);
+
+    Node file;
+
+    checkArgs(args, "read-line", 1, s_infile);
+    forceArgs(args, &file, 0);
+
+    if (!isType(file, s_infile)) {
+        fatal("read-line: not an infile");
+    }
+
+    FILE* in = ((OSFile)(file.reference))->file;
+
+    size_t  len  = buffer.size;
+    ssize_t read = getline(&(buffer.buffer), &len, in);
+
+    buffer.size     = len;
+    buffer.position = read;
+
+    text_Create(buffer, result.text);
+}
+
+static SUBR(eof_in) {
+    Node file;
+
+    checkArgs(args, "eof_in", 1, s_infile);
+    forceArgs(args, &file, 0);
+
+    if (!isType(file, s_infile)) {
+        fatal("read-line: not an infile");
+    }
+
+    FILE* in = ((OSFile)(file.reference))->file;
+
+    if (feof(in)) {
+        ASSIGN(result, true_v);
+    } else {
+        ASSIGN(result, NIL);
+    }
+}
+
+static SUBR(read_sexpr) {
+    static TextBuffer buffer = BUFFER_INITIALISER;
+    buffer_reset(&buffer);
+
+    Node file;
+
+    checkArgs(args, "read-sexpr", 1, s_infile);
+    forceArgs(args, &file, 0);
+
+    if (!isType(file, s_infile)) {
+        fatal("read-line: not an infile");
+    }
+
+    FILE* in = ((OSFile)(file.reference))->file;
+
+    readExpr(in, result);
+}
+
 /***************************************************************
  ***************************************************************
  ***************************************************************
@@ -1439,6 +1756,20 @@ void startEnkiLibrary() {
     MK_OPR(mark-time,mark_time);
 
     MK_PRM(system);
+    MK_PRM(error);
+    MK_PRM(format);
+    MK_PRM(require);
+
+    MK_OPR(open-in,open_in);
+    MK_OPR(open-out,open_out);
+
+    MK_OPR(close-in,close_in);
+    MK_OPR(close-out,close_out);
+
+    MK_PRM(fprint);
+    MK_OPR(read-line,read_line);
+    MK_OPR(eof-in,eof_in);
+    MK_OPR(read-sexpr,read_sexpr);
 
     clock_t cend = clock();
 

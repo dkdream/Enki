@@ -46,6 +46,9 @@ Symbol s_delay = 0;
 Symbol s_type = 0;
 Symbol s_sort = 0;
 Symbol s_forced = 0;
+Symbol s_infile = 0;
+Symbol s_outfile = 0;
+Symbol s_opaque = 0;
 
 struct _internal_SymbolRow {
     unsigned lock;
@@ -117,6 +120,9 @@ extern void init_global_symboltable() {
     MK_SYM(sort);
     MK_SYM(forced);
     MK_SYM(block);
+    MK_SYM(infile);
+    MK_SYM(outfile);
+    MK_SYM(opaque);
 }
 
 extern void final_global_symboltable() {

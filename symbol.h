@@ -59,6 +59,11 @@ extern Symbol s_type;
 extern Symbol s_sort;
 extern Symbol s_forced;
 
+// c-library type names
+extern Symbol s_infile;
+extern Symbol s_outfile;
+extern Symbol s_opaque;
+
 extern bool symbol_Create(TextBuffer value, Symbol*);
 extern bool symbol_Convert(const char* value, Symbol*);
 extern void check_SymbolTable__(const char*, unsigned);

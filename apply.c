@@ -232,6 +232,7 @@ extern void eval(const Node expr, const Node env, Target result)
 
     pair_Create(expr, NIL, &(args.pair));
 
+    ASSIGN(result, NIL);
     apply(evaluator, args, env, result);
 
  done:
