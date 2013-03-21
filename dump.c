@@ -101,7 +101,7 @@ extern bool print(FILE* output, Node node) {
     }
 
     if (isIdentical(type, s_integer)) {
-        fprintf(output, "%ld",
+        fprintf(output, "%lld",
                 node.integer->value);
         return true;
     }
@@ -186,7 +186,7 @@ extern bool dump(FILE* output, Node node) {
     }
 
     if (isIdentical(type, s_integer)) {
-        fprintf(output, "integer(%ld)",
+        fprintf(output, "integer(%lld)",
                 node.integer->value);
         return true;
     }
@@ -315,7 +315,7 @@ extern void prettyPrint(FILE* output, Node node) {
 
         if (isIdentical(type, s_integer)) {
             offset += 10;
-            fprintf(output, "%ld", node.integer->value);
+            fprintf(output, "%lld", node.integer->value);
             return;
         }
 

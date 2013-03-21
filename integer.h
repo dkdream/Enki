@@ -9,9 +9,9 @@
 #include "reference.h"
 
 struct integer {
-    long value;
+    long long value;
 };
-extern bool integer_Create(long value, Integer*);
+extern bool integer_Create(long long value, Integer*);
 
 /***************************
  ** end of file

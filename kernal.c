@@ -13,15 +13,18 @@
 #include "text_buffer.h"
 
 /* */
-#include <string.h>
-#include <stdbool.h>
 #include <error.h>
+#include <fcntl.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
-#include <unistd.h>
-#include <time.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <sys/wait.h>
+#include <time.h>
+#include <unistd.h>
 
 static bool __initialized = false;
 
@@ -1290,7 +1293,7 @@ static void formatAppendTo(TextBuffer *buffer, Node value) {
     }
 
     if (isIdentical(type, s_integer)) {
-        sprintf(data, "%ld", value.integer->value);
+        sprintf(data, "%lld", value.integer->value);
         buffer_add(buffer, data);
         return;
     }
@@ -1559,6 +1562,26 @@ static SUBR(read_sexpr) {
     readExpr(in, result);
 }
 
+static SUBR(inode) {
+    struct stat stbuf;
+    Node fname;
+
+    checkArgs(args, "inode", 1, s_text);
+    forceArgs(args, &fname, 0);
+
+    if (!isType(fname, s_text)) {
+        fatal("inode: not text");
+    }
+
+    const char *name = text_Text(fname.text);
+
+    if (stat(name, &stbuf) == -1) {
+        fatal("inode: can't access %s\n", name);
+    }
+
+    integer_Create(stbuf.st_ino, result.integer);
+}
+
 /***************************************************************
  ***************************************************************
  ***************************************************************
@@ -1770,6 +1793,7 @@ void startEnkiLibrary() {
     MK_OPR(read-line,read_line);
     MK_OPR(eof-in,eof_in);
     MK_OPR(read-sexpr,read_sexpr);
+    MK_PRM(inode);
 
     clock_t cend = clock();
 
@@ -1783,4 +1807,4 @@ void startEnkiLibrary() {
 
 void stopEnkiLibrary() {
     if (!__initialized) return;
- }
+}

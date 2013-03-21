@@ -10,7 +10,7 @@
 #include "treadmill.h"
 #include "symbol.h"
 
-extern bool integer_Create(long value, Integer *target) {
+extern bool integer_Create(long long value, Integer *target) {
     if (!node_Allocate(_zero_space,
                        true,
                        sizeof(struct integer),
