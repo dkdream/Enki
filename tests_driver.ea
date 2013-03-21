@@ -17,7 +17,7 @@
 
 (define build
   (lambda ()
-    (unless (zero? (system (format "gcc -m32 -Wall -o stst \"@{s}\" \"@{s}\" stst.s"
+    (unless (zero? (system (format "gcc -m32 -Wall -o stst @{q} @{q} stst.s"
                                    (runtime-file)
                                    (lib-file))))
       (error 'make "could not build target"))))
@@ -34,7 +34,7 @@
 
 (define get-string
   (lambda ()
-    (let ((file (open-file "stst.out" "r")))
+    (let ((file (open-in "stst.out")))
       (file-as-string file))))
 
 (define test-with-string-output 
@@ -43,7 +43,7 @@
     (build)
     (execute)
     (unless (string=? expected-output (get-string))
-      (error 'test (format "output mismatch for test @{s}, expected \"@{s}\", got \"@{s}\""
+      (error 'test (format "output mismatch for test @{s}, expected @{q}, got @{q}"
                            test-id expected-output (get-string))))))
 
 (define test-one
