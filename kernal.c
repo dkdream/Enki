@@ -360,6 +360,8 @@ static SUBR(define)
 
     eval(expr, env, &value);
 
+    VM_DEBUG(1, "defining %s", symbol_Text(symbol.symbol));
+
     defineValue(symbol, value);
 
     ASSIGN(result, value);

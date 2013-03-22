@@ -1,3 +1,5 @@
+(level 1)
+
 (define pair? (lambda (x) (= (type-of x) 'pair)))
 
 (define car (lambda (x)
@@ -23,12 +25,13 @@
                           (+ 1 (list-length (cdr list)))
                           0)))
 
-(define (%list->array list index)
-  (if (pair? list)
-      (let ((result (%list->array (cdr list) (+ 1 index))))
-        (element result index (car list))
-        result)
-      (allocate index)))
+(define %list->array 
+  (lambda (list index)
+    (if (pair? list)
+        (let ((result (%list->array (cdr list) (+ 1 index))))
+          (element result index (car list))
+          result)
+        (allocate index))))
 
 (define list->array (lambda (list) (%list->array list 0)))
 
@@ -62,16 +65,16 @@
                          (if (pair? pattern)
                              (let ((name (car pattern))
                                    (args (cdr pattern)))
-                               `(,%define ,name (lambda ,args ,@body)))
-                             `(,%define ,pattern ,@body)))))
+                               `(\%define \name (lambda \args \@body)))
+                             `(\%define \pattern \@body)))))
 
 (define %define-kind (lambda (%define %kind)
                        (lambda (pattern . body)
                          (if (pair? pattern)
                              (let ((name (car pattern))
                                    (args (cdr pattern)))
-                               `(,%define ,name (,%kind (lambda ,args ,@body))))
-                             `(,%define ,pattern (,%kind ,@body))))))
+                               `(\%define \name (\%kind (lambda \args \@body))))
+                             `(\%define \pattern (\%kind \@body))))))
 
 (define expand-define (%define-with define))
 (define expand-macro  (%define-kind define form))
@@ -80,7 +83,7 @@
 (define macro  (form expand-macro))
 
 (macro (begin . body)
-  `(let () ,@body))
+  `(let () \@body))
 
 (define (map function list)
   (if (pair? list)
@@ -97,11 +100,11 @@
       (let ((head (function (car alist) (car blist) a)))
         (cons head (map2-with function (cdr alist) (cdr blist) a)))))
 
-;;; let*
+### let*
 (define (expand-let* bindings body)
   (if (pair? (cdr bindings))
-      `(let (,(car bindings)) ,(expand-let* (cdr bindings) body))
-      `(let ,bindings ,@body)))
+      `(let (\(car bindings)) \(expand-let* (cdr bindings) body))
+      `(let \bindings \@body)))
 
 (macro (let* bindings . body)
   (expand-let* bindings body))
