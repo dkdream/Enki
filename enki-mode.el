@@ -1,105 +1,20 @@
 ;; -*- Mode: Emacs-Lisp -*-
 
-(defvar enki-mode-hook nil)
-
-(defvar enki-mode-map
-  (let ((map (make-keymap)))
-    (define-key map "\C-j" 'newline-and-indent)
-    map)
-  "Keymap for Enki major mode")
-
-(add-to-list 'auto-mode-alist '("\\.ea\\'" . enki-mode))
-
-(defconst enki-keyword-pattern
-  (regexp-opt '("!="
-                "="
-                "allocate"
-                "and"
-                "apply"
-                "assert"
-                "cons"
-                "debug"
-                "define"
-                "delay"
-                "element"
-                "environment"
-                "error"
-                "eval"
-                "exit"
-                "force"
-                "if"
-                "iso"
-                "lambda"
-                "let"
-                "list"
-                "or"
-                "require"
-                "set"
-                "system"
-                "tuple"
-                "type-of"
-                ) t)
-  "Enki keyword pattern")
-
-(defconst enki-variable-pattern
-  "\\('\\w*'\\)"
-  "Enki variable pattern")
-
-(defconst enki-special-pattern
-  "\\('\\w*'\\)"
-  "Enki special pattern")
-
-(defconst enki-constant-pattern
-  "\\('\\w*'\\)"
-  "Enki constant pattern")
-
-
-(defconst enki-begin-pattern
-  "^[ \t]*\\(PARTICIPANT\\|MODEL\\|APPLICATION\\|WORKFLOW\\|ACTIVITY\\|DATA\\|TOOL_LIST\\|TRANSITION\\)"
-  "Enki begin pattern")
-
-(defconst enki-begin-pattern
-  "^[ \t]*END_"
-  "Enki end pattern")
-
-(defconst enki-font-lock-keywords-defaults
-  (list
-   (cons enki-keyword-pattern  'font-lock-builtin-face)
-   (cons enki-variable-pattern 'font-lock-variable-name-face)
-;;   (cons enki-special-pattern  'font-lock-keyword-face)
-;;   (cons enki-constant-pattern 'font-lock-constant-face)   
-   )
-  "Minimal highlighting expressions for Enki mode")
-
-;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;
-
 (defconst enki-font-lock-keywords-1
   `(;; Definitions.
-    (,(concat "(\\(def\\("
-              ;; Function declarations.
-              "\\(advice\\|alias\\|generic\\|macro\\*?\\|method\\|"
-              "setf\\|subst\\*?\\|un\\*?\\|"
-              "ine-\\(condition\\|"
-              "\\(?:derived\\|\\(?:global\\(?:ized\\)?-\\)?minor\\|generic\\)-mode\\|"
-              "method-combination\\|setf-expander\\|skeleton\\|widget\\|"
-              "function\\|\\(compiler\\|modify\\|symbol\\)-macro\\)\\)\\|"
-
-              ;; Variable declarations.
-              "\\(const\\(ant\\)?\\|custom\\|varalias\\|face\\|parameter\\|var\\)\\|"
-
-              ;; Structure declarations.
-              "\\(class\\|group\\|theme\\|package\\|struct\\|type\\)"
-              "\\)\\)\\>"
-              ;; Any whitespace and defined object.
-              "[ \t'\(]*"
-              "\\(setf[ \t]+\\sw+)\\|\\sw+\\)?")
+    (,(concat
+       "(" (regexp-opt
+            '("define" "macro" "set") t)
+       "\\>"
+       ;; Any whitespace and defined object.
+       "[ \t'\(]*"
+       "\\(setf[ \t]+\\sw+)\\|\\sw+\\)?")
      (1 font-lock-keyword-face)
      (9 (cond ((match-beginning 3) font-lock-function-name-face)
               ((match-beginning 6) font-lock-variable-name-face)
               (t font-lock-type-face))
         nil t))
+
     ;; Regexp negated char group.
     ("\\[\\(\\^\\)" 1 font-lock-negation-char-face prepend))
   
@@ -110,36 +25,25 @@
           `(;; Control structures. Enki forms.
             (,(concat
                "(" (regexp-opt
-                    '("and"
-                      "or"
-                      "if"
-                      "while"
-                      "let"
-                      "let*"
-                      "letrec"
-                      "begin"
-                      "lambda"
-                      "define"
-                      "delay"
-                      "force"
-                      "assert") t)
-               "\\>")
-             .  1)
+                    '("if" "let" "let*" "letrec" "begin" "lambda" "delay" "force") t)
+               "\\>") . 1)
             ;; Control structures.  Common Enki forms.
             (,(concat
                "(" (regexp-opt
-                    '("when"
-                      "unless") t)
-               "\\>")
-             . 1)
+                    '("when" "and" "or" "while" "unless") t)
+               "\\>") . 1)
+
             ;; Exit/Feature symbols as constants.
-            (,(concat "(\\(catch\\|throw\\|featurep\\|provide\\|require\\)\\>"
-                      "[ \t']*\\(\\sw+\\)?")
-             (1 font-lock-keyword-face)
-             (2 font-lock-constant-face nil t))
+            (,(concat
+               "(" (regexp-opt
+                    '("catch" "throw" "provide" "require") t)
+               "\\>[ \t']*\\(\\sw+\\)?") (1 font-lock-keyword-face) (2 font-lock-constant-face nil t))
 
             ;; Erroneous structures.
-            ("(\\(abort\\|assert\\|warn\\|check-type\\|cerror\\|error\\|signal\\)\\>" 1 font-lock-warning-face)
+            (,(concat
+               "(" (regexp-opt
+                    '("abort" "assert" "warn" "error" "signal") t)
+               "\\>") 1 font-lock-warning-face)
 
             ;; Words inside \\[] tend to be for `substitute-command-keys'.
             ("\\\\\\\\\\[\\(\\sw+\\)\\]" 1 font-lock-constant-face prepend)
@@ -203,9 +107,6 @@
       (modify-syntax-entry ?\t "    " table)
       (modify-syntax-entry ?\f "    " table)
       (modify-syntax-entry ?\n ">   " table)
-      ;; This is probably obsolete since nowadays such features use overlays.
-      ;; ;; Give CR the same syntax as newline, for selective-display.
-      ;; (modify-syntax-entry ?\^m ">   " table)
       (modify-syntax-entry ?\; "<   " table)
       (modify-syntax-entry ?` "'   " table)
       (modify-syntax-entry ?' "'   " table)
@@ -222,34 +123,10 @@
       (modify-syntax-entry ?\] ")[  " table))
     table))
 
-(put 'autoload 'doc-string-elt 3)
-(put 'defun    'doc-string-elt 3)
-(put 'defun*    'doc-string-elt 3)
-(put 'defvar   'doc-string-elt 3)
-(put 'defcustom 'doc-string-elt 3)
-(put 'deftheme 'doc-string-elt 2)
-(put 'deftype 'doc-string-elt 3)
-(put 'defconst 'doc-string-elt 3)
-(put 'defmacro 'doc-string-elt 3)
-(put 'defmacro* 'doc-string-elt 3)
-(put 'defsubst 'doc-string-elt 3)
-(put 'defstruct 'doc-string-elt 2)
-(put 'define-skeleton 'doc-string-elt 2)
-(put 'define-derived-mode 'doc-string-elt 4)
-(put 'define-compilation-mode 'doc-string-elt 3)
-(put 'easy-mmode-define-minor-mode 'doc-string-elt 2)
-(put 'define-minor-mode 'doc-string-elt 2)
-(put 'easy-mmode-define-global-mode 'doc-string-elt 2)
-(put 'define-global-minor-mode 'doc-string-elt 2)
-(put 'define-globalized-minor-mode 'doc-string-elt 2)
-(put 'define-generic-mode 'doc-string-elt 7)
-(put 'define-ibuffer-filter 'doc-string-elt 2)
-(put 'define-ibuffer-op 'doc-string-elt 3)
-(put 'define-ibuffer-sorter 'doc-string-elt 2)
-(put 'lambda 'doc-string-elt 2)
-(put 'defalias 'doc-string-elt 3)
-(put 'defvaralias 'doc-string-elt 3)
-(put 'define-category 'doc-string-elt 2)
+(put 'require 'doc-string-elt 3)
+(put 'define  'doc-string-elt 3)
+(put 'lambda  'doc-string-elt 2)
+(put 'macro   'doc-string-elt 3)
 
 (defvar enki-doc-string-elt-property 'doc-string-elt
   "The symbol property that holds the docstring position info.")
@@ -290,14 +167,11 @@
               font-lock-string-face))))
     font-lock-comment-face))
 
-(defun enki-mode-variables (&optional enki-syntax keywords-case-insensitive)
+(defun enki-mode-variables ()
   "Common initialization routine for enki modes.
-The ENKI-SYNTAX argument is used by code in inf-enki.el and is
-\(uselessly) passed from pp.el, chistory.el, gnus-kill.el and
-score-mode.el.  KEYWORDS-CASE-INSENSITIVE non-nil means that for
+KEYWORDS-CASE-INSENSITIVE non-nil means that for
 font-lock keywords will not be case sensitive."
-  (when enki-syntax
-    (set-syntax-table enki-mode-syntax-table))
+  (set-syntax-table enki-mode-syntax-table)
   (setq local-abbrev-table enki-mode-abbrev-table)
   (make-local-variable 'paragraph-ignore-fill-prefix)
   (setq paragraph-ignore-fill-prefix t)
@@ -339,13 +213,13 @@ font-lock keywords will not be case sensitive."
   (setq multibyte-syntax-as-symbol t)
   (set (make-local-variable 'syntax-begin-function) 'beginning-of-defun)
   (setq font-lock-defaults
-	`((enki-font-lock-keywords
-	   enki-font-lock-keywords-1
-           enki-font-lock-keywords-2)
-	  nil ,keywords-case-insensitive (("+-*/.<>=!?$%_&~^:@" . "w")) nil
+	`((enki-font-lock-keywords enki-font-lock-keywords-1 enki-font-lock-keywords-2)
+	  nil
+          nil
+          (("+-*/.<>=!?$%_&~^:@" . "w"))
+          nil
 	  (font-lock-mark-block-function . mark-defun)
-	  (font-lock-syntactic-face-function
-	   . enki-font-lock-syntactic-face-function))))
+	  (font-lock-syntactic-face-function . enki-font-lock-syntactic-face-function))))
 
 (defun enki-outline-level ()
   "Enki mode `outline-level' function."
@@ -369,7 +243,6 @@ font-lock keywords will not be case sensitive."
   (let ((map (make-sparse-keymap))
 	(menu-map (make-sparse-keymap "Enki")))
     (set-keymap-parent map enki-mode-shared-map)
-    (define-key map "\e\C-x" 'enki-eval-defun)
     (define-key map "\C-c\C-z" 'run-enki)
     (define-key map [menu-bar enki] (cons "Enki" menu-map))
     (define-key menu-map [run-enki]
@@ -402,13 +275,13 @@ if that value is non-nil."
   (use-local-map enki-mode-map)
   (setq major-mode 'enki-mode)
   (setq mode-name "Enki")
-  (enki-mode-variables nil t)
+  (enki-mode-variables)
   (make-local-variable 'comment-start-skip)
-  (setq comment-start-skip
-       "\\(\\(^\\|[^\\\\\n]\\)\\(\\\\\\\\\\)*\\)\\(;+\\|#|\\) *")
+  (setq comment-start-skip "\\(\\(^\\|[^\\\\\n]\\)\\(\\\\\\\\\\)*\\)\\(;+\\|#|\\) *")
   (setq imenu-case-fold-search t)
   (set-syntax-table enki-mode-syntax-table)
   (run-mode-hooks 'enki-mode-hook))
+
 (put 'enki-mode 'find-tag-default-function 'enki-find-tag-default)
 
 (defun enki-find-tag-default ()
@@ -418,8 +291,25 @@ if that value is non-nil."
           (substring default (match-end 0))
 	default))))
 
-(defvar enki-indent-offset nil
-  "If non-nil, indent second line of expressions that many more columns.")
+(defcustom enki-mode-hook nil
+  "Hook run when entering Enki mode."
+  :options '(imenu-add-menubar-index)
+  :type 'hook
+  :group 'enki)
+
+(defcustom enki-indent-offset nil
+  "If non-nil, indent second line of expressions that many more columns."
+  :group 'enki
+  :type '(choice (const nil) integer))
+
+(defcustom enki-indent-function 'enki-indent-function
+  "A function to be called by `calculate-enki-indent'.
+It indents the arguments of a Enki function call.  This function
+should accept two arguments: the indent-point, and the
+`parse-partial-sexp' state at that position.  One option for this
+function is `common-enki-indent-function'."
+  :type 'function
+  :group 'enki)
 
 (defun enki-indent-line (&optional whole-exp)
   "Indent current line as Enki code.
@@ -665,6 +555,7 @@ This function also returns nil meaning don't specify the indentation."
   "Number of columns to indent the second line of a `(def...)' form."
   :group 'enki
   :type 'integer)
+
 (put 'enki-body-indent 'safe-local-variable 'integerp)
 
 (defun enki-indent-specform (count state indent-point normal-indent)
@@ -870,5 +761,7 @@ ENDPOS is encountered."
 	   (enki-indent-line))
       (indent-sexp endmark)
       (set-marker endmark nil))))
+
+(add-to-list 'auto-mode-alist '("\\.ea\\'" . enki-mode))
 
 (provide 'enki-mode)
