@@ -1,28 +1,39 @@
 ;; -*- Mode: Emacs-Lisp -*-
+    
+;;    ;; regexp grouping constructs
+;;    ((lambda (bound)
+;;       (catch 'found
+;;         ;; The following loop is needed to continue searching after matches
+;;         ;; that do not occur in strings.  The associated regexp matches one
+;;         ;; of `\\\\' `\\(' `\\(?:' `\\|' `\\)'.  `\\\\' has been included to
+;;         ;; avoid highlighting, for example, `\\(' in `\\\\('.
+;;         (while (re-search-forward "\\(\\\\\\\\\\)\\(?:\\(\\\\\\\\\\)\\|\\((\\(?:\\?[0-9]*:\\)?\\|[|)]\\)\\)" bound t)
+;;           (unless (match-beginning 2)
+;;             (let ((face (get-text-property (1- (point)) 'face)))
+;;               (when (or (and (listp face)
+;;                              (memq 'font-lock-string-face face))
+;;                         (eq 'font-lock-string-face face))
+;;                 (throw 'found t)))))))
+;;     (1 'font-lock-regexp-grouping-backslash prepend)
+;;     (3 'font-lock-regexp-grouping-construct prepend))
 
-(defconst enki-font-lock-keywords
+(defconst enki-font-lock-keywords-1
   `(
-    ;; '(' <word.1> '(' <word.2> ... 
+    ;; '(' <word.1> '(' <word.2> <3...> ')'
     (,(concat
        "(" (regexp-opt
             '("define" "macro") t)
-       "\\>[ \t']*(\\(\\sw+\\)")
+       "\\>[ \t']*(\\(\\sw+\\)\\([^\)]*\\))")
      (1 font-lock-keyword-face)
-     (2 font-lock-function-name-face nil t))
-    
-    ;; '(' <word.1> '(' <word.2> ...  ')'
-    (,(concat
-       "(" (regexp-opt
-            '("lambda") t)
-       "\\>[ \t']*(\\(\\(\\sw+[ \t']*\\)+\\)?)")
-     (1 font-lock-keyword-face)
-     (2 font-lock-type-face nil t))
+     (2 font-lock-function-name-face nil t)
+     (3 font-lock-type-face nil t)
+     )
 
-    ;; '(' <word.1> '(' <word.2> ... . <word.2> ')'
+    ;; '(' <word.1> '(' <2...> ')'
     (,(concat
        "(" (regexp-opt
             '("lambda") t)
-       "\\>[ \t']*(\\(\\(\\sw+[ \t']*\\)+\\.[ \t']*\\sw+\\)?)")
+       "\\>[ \t']*(\\([^\)]*\\)?)")
      (1 font-lock-keyword-face)
      (2 font-lock-type-face nil t))
 
@@ -37,7 +48,7 @@
     ;; '(' <word.1> <word.2> ... 
     (,(concat
        "(" (regexp-opt
-            '("let" "let*" "letrec" "begin") t)
+            '("let" "let*" "letrec") t)
        "\\>[ \t']*\\(\\sw+\\)?")
      (1 font-lock-keyword-face)
      (2 font-lock-function-name-face nil t))
@@ -45,10 +56,11 @@
     ;; '(' <word>
     (,(concat
        "(" (regexp-opt
-            '("if" "when" "and" "or" "while" "unless" "begin"
+            '("if" "when" "and" "or" "unless" "begin"
               "let" "let*" "letrec"
               "define" "set" "macro"
-              "delay" "force") t)
+              "delay" "force" "require"
+              "type-of") t)
        "\\>") 1 font-lock-keyword-face)
         
     ;; '(' <word> ...
@@ -56,9 +68,6 @@
        "(" (regexp-opt
             '("abort" "assert" "warn" "error" "signal") t)
        "\\>") 1 font-lock-warning-face)
-    
-    ;; '(' <word> ...
-    ;;("(\\(\\sw\\sw+\\)" 1 font-lock-variable-name-face prepend)
     
     ;; '`' <word> tend to be symbol names.
     ("`\\(\\sw\\sw+\\)" 1 font-lock-constant-face prepend)
@@ -71,23 +80,6 @@
     
     ;; `&' <word> keywords as types.
     ("\\&\\(\\sw\\sw+\\)" 1 font-lock-type-face prepend)
-    
-    ;; regexp grouping constructs
-    ((lambda (bound)
-       (catch 'found
-         ;; The following loop is needed to continue searching after matches
-         ;; that do not occur in strings.  The associated regexp matches one
-         ;; of `\\\\' `\\(' `\\(?:' `\\|' `\\)'.  `\\\\' has been included to
-         ;; avoid highlighting, for example, `\\(' in `\\\\('.
-         (while (re-search-forward "\\(\\\\\\\\\\)\\(?:\\(\\\\\\\\\\)\\|\\((\\(?:\\?[0-9]*:\\)?\\|[|)]\\)\\)" bound t)
-           (unless (match-beginning 2)
-             (let ((face (get-text-property (1- (point)) 'face)))
-               (when (or (and (listp face)
-                              (memq 'font-lock-string-face face))
-                         (eq 'font-lock-string-face face))
-                 (throw 'found t)))))))
-     (1 'font-lock-regexp-grouping-backslash prepend)
-     (3 'font-lock-regexp-grouping-construct prepend))
     )
   "Gaudy level highlighting for Enki modes.")
 
@@ -247,12 +239,12 @@ font-lock keywords will not be case sensitive."
   (setq multibyte-syntax-as-symbol t)
   (set (make-local-variable 'syntax-begin-function) 'beginning-of-defun)
   (setq font-lock-defaults
-	`((enki-font-lock-keywords)
-	  nil
-          nil
-          (("+-*/.<>=!?$%_&~^:@" . "w"))
-          nil
-	  (font-lock-mark-block-function . mark-defun)
+	`((enki-font-lock-keywords enki-font-lock-keywords-1)      ;; keywords
+	  nil                            ;; keywords-only 
+          nil                            ;; case-fold
+          (("+-*/.<>=!?$%_&~^:@" . "w")) ;; syntax-alist 
+          nil                            ;; syntax-begin
+	  (font-lock-mark-block-function . mark-defun) ;; other-vars...
 	  (font-lock-syntactic-face-function . enki-font-lock-syntactic-face-function))))
 
 (defun enki-outline-level ()
@@ -585,7 +577,7 @@ This function also returns nil meaning don't specify the indentation."
 	      (method
 		(funcall method indent-point state)))))))
 
-(defcustom enki-body-indent 2
+(defcustom enki-body-indent 4
   "Number of columns to indent the second line of a `(def...)' form."
   :group 'enki
   :type 'integer)
