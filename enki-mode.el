@@ -1,126 +1,160 @@
 ;; -*- Mode: Emacs-Lisp -*-
 
-(defconst enki-font-lock-keywords-1
-  `(;; Definitions.
+(defconst enki-font-lock-keywords
+  `(
+    ;; '(' <word.1> '(' <word.2> ... 
     (,(concat
        "(" (regexp-opt
-            '("define" "macro" "set") t)
-       "\\>"
-       ;; Any whitespace and defined object.
-       "[ \t'\(]*"
-       "\\(setf[ \t]+\\sw+)\\|\\sw+\\)?")
+            '("define" "macro") t)
+       "\\>[ \t']*(\\(\\sw+\\)")
      (1 font-lock-keyword-face)
-     (9 (cond ((match-beginning 3) font-lock-function-name-face)
-              ((match-beginning 6) font-lock-variable-name-face)
-              (t font-lock-type-face))
-        nil t))
+     (2 font-lock-function-name-face nil t))
+    
+    ;; '(' <word.1> '(' <word.2> ...  ')'
+    (,(concat
+       "(" (regexp-opt
+            '("lambda") t)
+       "\\>[ \t']*(\\(\\(\\sw+[ \t']*\\)+\\)?)")
+     (1 font-lock-keyword-face)
+     (2 font-lock-type-face nil t))
 
-    ;; Regexp negated char group.
-    ("\\[\\(\\^\\)" 1 font-lock-negation-char-face prepend))
-  
-  "Subdued level highlighting for Enki modes.")
+    ;; '(' <word.1> '(' <word.2> ... . <word.2> ')'
+    (,(concat
+       "(" (regexp-opt
+            '("lambda") t)
+       "\\>[ \t']*(\\(\\(\\sw+[ \t']*\\)+\\.[ \t']*\\sw+\\)?)")
+     (1 font-lock-keyword-face)
+     (2 font-lock-type-face nil t))
 
-(defconst enki-font-lock-keywords-2
-  (append enki-font-lock-keywords-1
-          `(;; Control structures. Enki forms.
-            (,(concat
-               "(" (regexp-opt
-                    '("if" "let" "let*" "letrec" "begin" "lambda" "delay" "force") t)
-               "\\>") . 1)
-            ;; Control structures.  Common Enki forms.
-            (,(concat
-               "(" (regexp-opt
-                    '("when" "and" "or" "while" "unless") t)
-               "\\>") . 1)
-
-            ;; Exit/Feature symbols as constants.
-            (,(concat
-               "(" (regexp-opt
-                    '("catch" "throw" "provide" "require") t)
-               "\\>[ \t']*\\(\\sw+\\)?") (1 font-lock-keyword-face) (2 font-lock-constant-face nil t))
-
-            ;; Erroneous structures.
-            (,(concat
-               "(" (regexp-opt
-                    '("abort" "assert" "warn" "error" "signal") t)
-               "\\>") 1 font-lock-warning-face)
-
-            ;; Words inside \\[] tend to be for `substitute-command-keys'.
-            ("\\\\\\\\\\[\\(\\sw+\\)\\]" 1 font-lock-constant-face prepend)
-
-            ;; Words inside `' tend to be symbol names.
-            ("`\\(\\sw\\sw+\\)'" 1 font-lock-constant-face prepend)
-
-            ;; Constant values.
-            ("\\<:\\sw+\\>" 0 font-lock-builtin-face)
-
-            ;; `&' keywords as types.
-            ("\\<\\&\\sw+\\>" . font-lock-type-face)
-
-            ;; regexp grouping constructs
-            ((lambda (bound)
-               (catch 'found
-                 ;; The following loop is needed to continue searching after matches
-                 ;; that do not occur in strings.  The associated regexp matches one
-                 ;; of `\\\\' `\\(' `\\(?:' `\\|' `\\)'.  `\\\\' has been included to
-                 ;; avoid highlighting, for example, `\\(' in `\\\\('.
-                 (while (re-search-forward "\\(\\\\\\\\\\)\\(?:\\(\\\\\\\\\\)\\|\\((\\(?:\\?[0-9]*:\\)?\\|[|)]\\)\\)" bound t)
-                   (unless (match-beginning 2)
-                     (let ((face (get-text-property (1- (point)) 'face)))
-                       (when (or (and (listp face)
-                                      (memq 'font-lock-string-face face))
-                                 (eq 'font-lock-string-face face))
-                         (throw 'found t)))))))
-             (1 'font-lock-regexp-grouping-backslash prepend)
-             (3 'font-lock-regexp-grouping-construct prepend))
-            ))
+    ;; '(' <word.1> <word.2> ...
+    (,(concat
+       "(" (regexp-opt
+            '("lambda") t)
+       "\\>[ \t']*\\(\\sw+\\)?")
+     (1 font-lock-keyword-face)
+     (2 font-lock-type-face nil t))
+    
+    ;; '(' <word.1> <word.2> ... 
+    (,(concat
+       "(" (regexp-opt
+            '("let" "let*" "letrec" "begin") t)
+       "\\>[ \t']*\\(\\sw+\\)?")
+     (1 font-lock-keyword-face)
+     (2 font-lock-function-name-face nil t))
+    
+    ;; '(' <word>
+    (,(concat
+       "(" (regexp-opt
+            '("if" "when" "and" "or" "while" "unless" "begin"
+              "let" "let*" "letrec"
+              "define" "set" "macro"
+              "delay" "force") t)
+       "\\>") 1 font-lock-keyword-face)
+        
+    ;; '(' <word> ...
+    (,(concat
+       "(" (regexp-opt
+            '("abort" "assert" "warn" "error" "signal") t)
+       "\\>") 1 font-lock-warning-face)
+    
+    ;; '(' <word> ...
+    ;;("(\\(\\sw\\sw+\\)" 1 font-lock-variable-name-face prepend)
+    
+    ;; '`' <word> tend to be symbol names.
+    ("`\\(\\sw\\sw+\\)" 1 font-lock-constant-face prepend)
+    
+    ;; '\'' <word> tend to be symbol names.
+    ("'\\(\\sw\\sw+\\)" 1 font-lock-constant-face prepend)
+    
+    ;; '.' <word>
+    ("\\.\\(\\sw\\sw+\\)" 1 font-lock-constant-face prepend)
+    
+    ;; `&' <word> keywords as types.
+    ("\\&\\(\\sw\\sw+\\)" 1 font-lock-type-face prepend)
+    
+    ;; regexp grouping constructs
+    ((lambda (bound)
+       (catch 'found
+         ;; The following loop is needed to continue searching after matches
+         ;; that do not occur in strings.  The associated regexp matches one
+         ;; of `\\\\' `\\(' `\\(?:' `\\|' `\\)'.  `\\\\' has been included to
+         ;; avoid highlighting, for example, `\\(' in `\\\\('.
+         (while (re-search-forward "\\(\\\\\\\\\\)\\(?:\\(\\\\\\\\\\)\\|\\((\\(?:\\?[0-9]*:\\)?\\|[|)]\\)\\)" bound t)
+           (unless (match-beginning 2)
+             (let ((face (get-text-property (1- (point)) 'face)))
+               (when (or (and (listp face)
+                              (memq 'font-lock-string-face face))
+                         (eq 'font-lock-string-face face))
+                 (throw 'found t)))))))
+     (1 'font-lock-regexp-grouping-backslash prepend)
+     (3 'font-lock-regexp-grouping-construct prepend))
+    )
   "Gaudy level highlighting for Enki modes.")
-
-(defvar enki-font-lock-keywords enki-font-lock-keywords-1
-  "Default expressions to highlight in Enki modes.")
 
 (defvar enki-mode-abbrev-table nil)
 
 (define-abbrev-table 'enki-mode-abbrev-table ())
 
+;;(make-syntax-table) -> (make-char-table 'syntax-table nil)
 (defvar enki-mode-syntax-table
-  (let ((table (make-syntax-table)))
+  (let ((table (make-char-table 'syntax-table nil)))
     (let ((i 0))
-      (while (< i ?0)
-	(modify-syntax-entry i "_   " table)
+      (while (< i ?\s)
+	(modify-syntax-entry i "    " table) ;; 00-1f
 	(setq i (1+ i)))
-      (setq i (1+ ?9))
-      (while (< i ?A)
-	(modify-syntax-entry i "_   " table)
-	(setq i (1+ i)))
-      (setq i (1+ ?Z))
-      (while (< i ?a)
-	(modify-syntax-entry i "_   " table)
-	(setq i (1+ i)))
-      (setq i (1+ ?z))
-      (while (< i 128)
-	(modify-syntax-entry i "_   " table)
-	(setq i (1+ i)))
-      (modify-syntax-entry ?\s "    " table)
-      ;; Non-break space acts as whitespace.
-      (modify-syntax-entry ?\x8a0 "    " table)
-      (modify-syntax-entry ?\t "    " table)
-      (modify-syntax-entry ?\f "    " table)
-      (modify-syntax-entry ?\n ">   " table)
-      (modify-syntax-entry ?\; "<   " table)
-      (modify-syntax-entry ?` "'   " table)
-      (modify-syntax-entry ?' "'   " table)
-      (modify-syntax-entry ?, "'   " table)
-      (modify-syntax-entry ?@ "'   " table)
-      ;; Used to be singlequote; changed for flonums.
-      (modify-syntax-entry ?. "_   " table)
-      (modify-syntax-entry ?# "'   " table)
-      (modify-syntax-entry ?\" "\"    " table)
-      (modify-syntax-entry ?\\ "\\   " table)
-      (modify-syntax-entry ?\( "()  " table)
-      (modify-syntax-entry ?\) ")(  " table)
-      (modify-syntax-entry ?\[ "(]  " table)
-      (modify-syntax-entry ?\] ")[  " table))
+      ;; symbols
+      (modify-syntax-entry ?! "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?$ "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?% "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?& "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?* "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?+ "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?- "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?/ "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?< "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?= "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?> "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?@ "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?^ "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?| "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?~ "_   " table) ;; symbol constituent
+
+      ;; whitespace
+      (modify-syntax-entry ?\s "    " table) ;; whitespace
+      (modify-syntax-entry ?\t "    " table) ;; whitespace
+      (modify-syntax-entry ?\f "    " table) ;; whitespace
+
+      ;; comment
+      (modify-syntax-entry ?\# "<   " table) ;; comment starter
+      (modify-syntax-entry ?\n ">   " table) ;; comment ender
+
+      ;; word
+      (modify-syntax-entry ?_  "w   " table) ;; word constituent
+
+      ;; expression prefix
+      (modify-syntax-entry ?`  "'   " table) ;; expression prefix
+      (modify-syntax-entry ?'  "'   " table) ;; expression prefix
+      (modify-syntax-entry ?@  "'   " table) ;; expression prefix
+
+      ;; punctuation
+      (modify-syntax-entry ?,  ".   " table) ;; punctuation character
+      (modify-syntax-entry ?\; ".   " table) ;; punctuation character
+      (modify-syntax-entry ?:  ".   " table) ;; punctuation character
+      (modify-syntax-entry ?.  ".   " table) ;; punctuation character
+
+      ;; quoting
+      (modify-syntax-entry ?\? "/   " table)  ;; character quote
+      (modify-syntax-entry ?\" "\"   " table) ;; string quote
+      (modify-syntax-entry ?\\ "\\   " table) ;; escape character
+
+      ;; expression delimiters
+      (modify-syntax-entry ?\( "()  " table) ;; open  (
+      (modify-syntax-entry ?\) ")(  " table) ;; close )
+      (modify-syntax-entry ?\[ "(]  " table) ;; open  [
+      (modify-syntax-entry ?\] ")[  " table) ;; close ]
+      (modify-syntax-entry ?\{ "(}  " table) ;; open  {
+      (modify-syntax-entry ?\} "){  " table) ;; close }
+      )
     table))
 
 (put 'require 'doc-string-elt 3)
@@ -213,7 +247,7 @@ font-lock keywords will not be case sensitive."
   (setq multibyte-syntax-as-symbol t)
   (set (make-local-variable 'syntax-begin-function) 'beginning-of-defun)
   (setq font-lock-defaults
-	`((enki-font-lock-keywords enki-font-lock-keywords-1 enki-font-lock-keywords-2)
+	`((enki-font-lock-keywords)
 	  nil
           nil
           (("+-*/.<>=!?$%_&~^:@" . "w"))

@@ -1,0 +1,66 @@
+dump
+
+(dumpln (~ 1))
+(dumpln "1")
+(dumpln '1)
+(dumpln (type-of '1))
+(dumpln nil)
+
+(assert 'integer (type-of 1))
+(assert 'text    (type-of "1"))
+(assert 'symbol  (type-of 'val))
+(assert nil      (type-of nil))
+(assert 'primitive (type-of println))
+(assert 'fixed    (type-of let))
+
+`one
+'one
+.word
+&word
+
+(let foo 
+(let* foo 
+(letrec foo 
+(when one
+
+(define (fooness bar two three)
+(macro (fooness bar two three)
+
+(let one ((two 
+(let* one ((two 
+(letrec one ((two 
+
+(let    ((two 
+(let*   ((two 
+(letrec ((two 
+
+(define fooness 'fooness)
+(define barness (lambda ()
+                  (dumpln ok)
+                  (println (type-of ok))
+                  1
+                  ))
+
+(define barness (lambda bar
+                  (dumpln ok)
+                  (println (type-of ok))
+                  1
+                  ))
+
+(define barness (lambda (bar and)
+                  (dumpln ok)
+                  (println (type-of ok))
+                  1
+                  ))
+
+(define barness (lambda (bar . and)
+                  (dumpln ok)
+                  (println (type-of ok))
+                  1
+                  ))
+
+(println (barness "testing\n\""))
+
+(let ((xxx 1)(yyy 2))
+  (dumpln (environment 'current)))
+
