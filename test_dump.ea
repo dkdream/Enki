@@ -25,4 +25,3 @@ dump
 (let ((xxx 1)(yyy 2))
   (dumpln (environment 'current)))
 
-(exit 0)

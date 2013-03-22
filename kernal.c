@@ -11,6 +11,7 @@
 #include "treadmill.h"
 #include "debug.h"
 #include "text_buffer.h"
+#include "set_ids.h"
 
 /* */
 #include <error.h>
@@ -1359,6 +1360,8 @@ static SUBR(format) {
     text_Create(buffer, result.text);
 }
 
+static SetIds loaded_inodes = SET_INITIALISER;
+
 static SUBR(require) {
     Node path;
 
@@ -1380,10 +1383,22 @@ static SUBR(require) {
         return;
     }
 
-    readFile(file);
-    fclose(file);
+    long long id = stbuf.st_ino;
 
-    integer_Create(stbuf.st_ino, result.integer);
+    switch (set_add(&loaded_inodes, id)) {
+    case -1:
+        fatal("loaded_inodes not init-ed for require");
+        break;
+
+    case 1: // added
+        readFile(file);
+        fclose(file);
+
+    default: // found
+        break;
+    }
+
+    integer_Create(id, result.integer);
 }
 
 struct os_file {
@@ -1707,6 +1722,8 @@ void startEnkiLibrary() {
     clock_t cbegin = clock();
 
      cstart = cbegin;
+
+     set_init(&loaded_inodes, SET_COLUMNS);
 
     _zero_space = &enki_zero_space;
 
