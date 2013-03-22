@@ -172,7 +172,7 @@ static unsigned short chartab[]= {
 ** [ -> tuple ']'
 ** \ -> unquote
 ** ` -> quasiqute
-** { -> delay '}'
+** { -> block '}'
 **/
 
 static inline int isPrint(int c)   { return 0x20 <= c && c <= 0x7e; }
