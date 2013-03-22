@@ -11,7 +11,7 @@
 #include "treadmill.h"
 #include "debug.h"
 #include "text_buffer.h"
-#include "set_ids.h"
+#include "id_set.h"
 
 /* */
 #include <error.h>
@@ -1360,7 +1360,7 @@ static SUBR(format) {
     text_Create(buffer, result.text);
 }
 
-static SetIds loaded_inodes = SET_INITIALISER;
+static ID_set loaded_inodes = SET_INITIALISER;
 
 static SUBR(require) {
     Node path;
