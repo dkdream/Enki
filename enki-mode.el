@@ -131,11 +131,6 @@
       )
     table))
 
-(put 'require 'doc-string-elt 3)
-(put 'define  'doc-string-elt 3)
-(put 'lambda  'doc-string-elt 2)
-(put 'macro   'doc-string-elt 3)
-
 (defvar enki-doc-string-elt-property 'doc-string-elt
   "The symbol property that holds the docstring position info.")
 
@@ -176,47 +171,56 @@
     font-lock-comment-face))
 
 (defun enki-mode-variables ()
-  "Common initialization routine for enki modes.
-KEYWORDS-CASE-INSENSITIVE non-nil means that for
-font-lock keywords will not be case sensitive."
+  "Common initialization routine for enki modes."
   (set-syntax-table enki-mode-syntax-table)
   (setq local-abbrev-table enki-mode-abbrev-table)
+
   (make-local-variable 'paragraph-ignore-fill-prefix)
   (setq paragraph-ignore-fill-prefix t)
+
   (make-local-variable 'fill-paragraph-function)
   (setq fill-paragraph-function 'enki-fill-paragraph)
+
   ;; Adaptive fill mode gets the fill wrong for a one-line paragraph made of
   ;; a single docstring.  Let's fix it here.
   (set (make-local-variable 'adaptive-fill-function)
        (lambda () (if (looking-at "\\s-+\"[^\n\"]+\"\\s-*$") "")))
+
   ;; Adaptive fill mode gets in the way of auto-fill,
   ;; and should make no difference for explicit fill
   ;; because enki-fill-paragraph should do the job.
-  ;;  I believe that newcomment's auto-fill code properly deals with it  -stef
   ;;(set (make-local-variable 'adaptive-fill-mode) nil)
   (make-local-variable 'indent-line-function)
   (setq indent-line-function 'enki-indent-line)
+
   (make-local-variable 'parse-sexp-ignore-comments)
   (setq parse-sexp-ignore-comments t)
-  (make-local-variable 'outline-regexp)
-  (setq outline-regexp ";;;\\(;* [^ \t\n]\\|###autoload\\)\\|(")
+
   (make-local-variable 'comment-start)
-  (setq comment-start ";")
-  (make-local-variable 'comment-start-skip)
-  ;; Look within the line for a ; following an even number of backslashes
+  (setq comment-start "#")
+
+  ;; Look within the line for a # following an even number of backslashes
   ;; after either a non-backslash or the line beginning.
-  (setq comment-start-skip "\\(\\(^\\|[^\\\\\n]\\)\\(\\\\\\\\\\)*\\);+ *")
-  (make-local-variable 'font-lock-comment-start-skip)
+  (make-local-variable 'comment-start-skip)
+  (setq comment-start-skip "\\(\\(^\\|[^\\\\\n]\\)\\(\\\\\\\\\\)*\\)#+ *")
+
   ;; Font lock mode uses this only when it KNOWS a comment is starting.
-  (setq font-lock-comment-start-skip ";+ *")
+  (make-local-variable 'font-lock-comment-start-skip)
+  (setq font-lock-comment-start-skip "#+ *")
+
+  ;; default to `##' in comment-region
   (make-local-variable 'comment-add)
-  (setq comment-add 1)			;default to `;;' in comment-region
+  (setq comment-add 1)
+
   (make-local-variable 'comment-column)
   (setq comment-column 40)
-  ;; Don't get confused by `;' in doc strings when paragraph-filling.
+
+  ;; Don't get confused by `#' in doc strings when paragraph-filling.
   (set (make-local-variable 'comment-use-global-state) t)
+
   (make-local-variable 'multibyte-syntax-as-symbol)
   (setq multibyte-syntax-as-symbol t)
+
   (set (make-local-variable 'syntax-begin-function) 'beginning-of-defun)
   (setq font-lock-defaults
 	`((enki-font-lock-keywords enki-font-lock-keywords-1)      ;; keywords
@@ -229,7 +233,7 @@ font-lock keywords will not be case sensitive."
 
 (defvar enki-mode-shared-map
   (let ((map (make-sparse-keymap)))
-    (define-key map "\e\C-q" 'indent-sexp)
+    (define-key map "\e\C-q" 'enki-indent-sexp)
     (define-key map "\177" 'backward-delete-char-untabify)
     ;; This gets in the way when viewing a Enki file in view-mode.  As
     ;; long as [backspace] is mapped into DEL via the
@@ -251,7 +255,7 @@ font-lock keywords will not be case sensitive."
       '(menu-item "Eval defun" enki-eval-defun
 		  :help "Send the current defun to the Enki process made by M-x run-enki"))
     (define-key menu-map [ind-sexp]
-      '(menu-item "Indent sexp" indent-sexp
+      '(menu-item "Indent sexp" enki-indent-sexp
 		  :help "Indent each line of the list starting just after point"))
     map)
   "Keymap for ordinary Enki mode.
@@ -276,7 +280,7 @@ if that value is non-nil."
   (setq mode-name "Enki")
   (enki-mode-variables)
   (make-local-variable 'comment-start-skip)
-  (setq comment-start-skip "\\(\\(^\\|[^\\\\\n]\\)\\(\\\\\\\\\\)*\\)\\(;+\\|#|\\) *")
+  (setq comment-start-skip "\\(\\(^\\|[^\\\\\n]\\)\\(\\\\\\\\\\)*\\)\\(#+\\|#!\\) *")
   (setq imenu-case-fold-search t)
   (set-syntax-table enki-mode-syntax-table)
   (run-mode-hooks 'enki-mode-hook))
@@ -315,6 +319,7 @@ function is `common-enki-indent-function'."
 With argument, indent any additional lines of the same expression
 rigidly along with this one."
   (interactive "P")
+  (message "CALLING INDENT-LINE %s\n" whole-exp)
   (let ((indent (calculate-enki-indent)) shift-amt end
 	(pos (- (point-max) (point)))
 	(beg (progn (beginning-of-line) (point))))
@@ -362,6 +367,7 @@ This means that following lines at the same level of indentation
 should not necessarily be indented the same as this line.
 Then COLUMN is the column to indent to, and CONTAINING-SEXP-START
 is the buffer position of the start of the containing expression."
+  (message "CALLING CALCULATE-ENKI-INDENT %s\n" parse-start)
   (save-excursion
     (beginning-of-line)
     (let ((indent-point (point))
@@ -516,6 +522,7 @@ that specifies how to do the indentation.  The property value can be
 
 This function also returns nil meaning don't specify the indentation."
   (let ((normal-indent (current-column)))
+    (message "CALLING INDENT-FUNCTION %s - %s\n" indent-point state)
     (goto-char (1+ (elt state 1)))
     (parse-partial-sexp (point) calculate-enki-indent-last-sexp 0 t)
     (if (and (elt state 2)
@@ -537,21 +544,23 @@ This function also returns nil meaning don't specify the indentation."
       (let ((function (buffer-substring (point)
 					(progn (forward-sexp 1) (point))))
 	    method)
-	(setq method (or (get (intern-soft function) 'enki-indent-function)
-			 (get (intern-soft function) 'enki-indent-hook)))
+;;	(setq method (or (get (intern-soft function) 'enki-indent-function)
+;;			 (get (intern-soft function) 'enki-indent-hook)))
+        (setq method (get (intern-soft function) 'enki-indent-function))
+        (message "method is %s\n", method)
+        (message "function is %s\n", function)
 	(cond ((or (eq method 'defun)
 		   (and (null method)
 			(> (length function) 3)
-			(string-match "\\`def" function)))
-	       (enki-indent-defform state indent-point))
+			(string-match "def" function)))
+                 (enki-indent-defform state indent-point))
 	      ((integerp method)
-	       (enki-indent-specform method state
-				     indent-point normal-indent))
-	      (method
-		(funcall method indent-point state)))))))
+	       (enki-indent-specform method state indent-point normal-indent))
+	      (method 
+               (funcall method indent-point state)))))))
 
 (defcustom enki-body-indent 4
-  "Number of columns to indent the second line of a `(def...)' form."
+  "Number of columns to indent the second line of a (def...)' form."
   :group 'enki
   :type 'integer)
 
@@ -615,44 +624,21 @@ This function also returns nil meaning don't specify the indentation."
 ;; like defun if the first form is placed on the next line, otherwise
 ;; it is indented like any other form (i.e. forms line up under first).
 
-(put 'lambda 'enki-indent-function 'defun)
-(put 'autoload 'enki-indent-function 'defun)
-(put 'progn 'enki-indent-function 0)
-(put 'prog1 'enki-indent-function 1)
-(put 'prog2 'enki-indent-function 2)
-(put 'save-excursion 'enki-indent-function 0)
-(put 'save-window-excursion 'enki-indent-function 0)
-(put 'save-selected-window 'enki-indent-function 0)
-(put 'save-restriction 'enki-indent-function 0)
-(put 'save-match-data 'enki-indent-function 0)
-(put 'save-current-buffer 'enki-indent-function 0)
-(put 'with-current-buffer 'enki-indent-function 1)
-(put 'combine-after-change-calls 'enki-indent-function 0)
-(put 'with-output-to-string 'enki-indent-function 0)
-(put 'with-temp-file 'enki-indent-function 1)
-(put 'with-temp-buffer 'enki-indent-function 0)
-(put 'with-temp-message 'enki-indent-function 1)
-(put 'with-syntax-table 'enki-indent-function 1)
-(put 'let 'enki-indent-function 1)
-(put 'let* 'enki-indent-function 1)
-(put 'while 'enki-indent-function 1)
-(put 'if 'enki-indent-function 2)
-(put 'read-if 'enki-indent-function 2)
-(put 'catch 'enki-indent-function 1)
-(put 'condition-case 'enki-indent-function 2)
-(put 'unwind-protect 'enki-indent-function 1)
-(put 'with-output-to-temp-buffer 'enki-indent-function 1)
-(put 'eval-after-load 'enki-indent-function 1)
-(put 'dolist 'enki-indent-function 1)
-(put 'dotimes 'enki-indent-function 1)
-(put 'when 'enki-indent-function 1)
-(put 'unless 'enki-indent-function 1)
+;;(put 'lambda 'enki-indent-function 1)
+;;(put 'let 'enki-indent-function 1)
+;;(put 'let* 'enki-indent-function 1)
+;;(put 'letrec 'enki-indent-function 1)
+;;(put 'while 'enki-indent-function 1)
+;;(put 'if 'enki-indent-function 2)
+;;(put 'when 'enki-indent-function 1)
+;;(put 'unless 'enki-indent-function 1)
 
-(defun indent-sexp (&optional endpos)
+(defun enki-indent-sexp (&optional endpos)
   "Indent each line of the list starting just after point.
 If optional arg ENDPOS is given, indent each line, stopping when
 ENDPOS is encountered."
   (interactive)
+  (message "CALLING INDENT-SEXP FUNCTION %s\n" endpos)
   (let ((indent-stack (list nil))
 	(next-depth 0)
 	;; If ENDPOS is non-nil, use nil as STARTING-POINT
@@ -758,7 +744,7 @@ ENDPOS is encountered."
       (goto-char start)
       (and (bolp) (not (eolp))
 	   (enki-indent-line))
-      (indent-sexp endmark)
+      (enki-indent-sexp endmark)
       (set-marker endmark nil))))
 
 (add-to-list 'auto-mode-alist '("\\.ea\\'" . enki-mode))

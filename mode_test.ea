@@ -1,3 +1,4 @@
+#!/bin/xx
 (require "boot.ea")
 
 (dumpln (~ 1))
@@ -17,13 +18,14 @@
 'one
 .word
 
-#this is a test
+## this is a test
+## one two
 
 `(one two three)
 '(one two three)
 
 (define (fooness bar two three)
-        (one two three))
+     (one two three))
 
 (macro (fooness bar two three)
        (one two three))
@@ -34,11 +36,15 @@
 (let* one ((two  three)))
 (letrec one ((two  three)))
 
-(let    ((two three)))
+(let ((two three))
+     (foo bar))
+
 (let*   ((two three)))
 (letrec ((two three)))
 
-(define fooness 'fooness)
+(define
+ fooness 'fooness)
+
 (define barness (lambda ()
                         (dumpln ok)
                         (println (type-of ok))
@@ -67,3 +73,6 @@
 
 (let ((xxx 1)(yyy 2))
   (dumpln (environment 'current)))
+
+(define foo
+ bar)
