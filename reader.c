@@ -162,17 +162,19 @@ static unsigned short chartab[]= {
 };
 
 /* syntax: " # ' ( ) , : ; [ \ ] ` { } */
-/* " -> string
-** # -> comment
-** ' -> quote
-** ( -> list ')'
-** , -> s_comma
-** : -> s_colon
-** ; -> s_semi
-** [ -> tuple ']'
-** \ -> unquote
-** ` -> quasiqute
-** { -> block '}'
+/* "  -> string
+** #  -> line-comment
+** '  -> quote
+** (  -> list ')'
+** ,  -> s_comma
+** :  -> s_colon
+** ;  -> s_semi
+** [  -> tuple ']'
+** \  -> unquote
+** \@ -> unquote_splicing
+** `  -> quasiqute
+** {  -> block '}'
+
 **/
 
 static inline int isPrint(int c)   { return 0x20 <= c && c <= 0x7e; }

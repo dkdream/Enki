@@ -1,22 +1,6 @@
 ;; -*- Mode: Emacs-Lisp -*-
-    
-;;    ;; regexp grouping constructs
-;;    ((lambda (bound)
-;;       (catch 'found
-;;         ;; The following loop is needed to continue searching after matches
-;;         ;; that do not occur in strings.  The associated regexp matches one
-;;         ;; of `\\\\' `\\(' `\\(?:' `\\|' `\\)'.  `\\\\' has been included to
-;;         ;; avoid highlighting, for example, `\\(' in `\\\\('.
-;;         (while (re-search-forward "\\(\\\\\\\\\\)\\(?:\\(\\\\\\\\\\)\\|\\((\\(?:\\?[0-9]*:\\)?\\|[|)]\\)\\)" bound t)
-;;           (unless (match-beginning 2)
-;;             (let ((face (get-text-property (1- (point)) 'face)))
-;;               (when (or (and (listp face)
-;;                              (memq 'font-lock-string-face face))
-;;                         (eq 'font-lock-string-face face))
-;;                 (throw 'found t)))))))
-;;     (1 'font-lock-regexp-grouping-backslash prepend)
-;;     (3 'font-lock-regexp-grouping-construct prepend))
 
+;; http://zvon.org/other/elisp/Output/SEC337.html#SEC340
 (defconst enki-font-lock-keywords-1
   `(
     ;; '(' <word.1> '(' <word.2> <3...> ')'
@@ -25,9 +9,8 @@
             '("define" "macro") t)
        "\\>[ \t']*(\\(\\sw+\\)\\([^\)]*\\))")
      (1 font-lock-keyword-face)
-     (2 font-lock-function-name-face nil t)
-     (3 font-lock-type-face nil t)
-     )
+     (2 font-lock-function-name-face t t)
+     (3 font-lock-type-face t t))
 
     ;; '(' <word.1> '(' <2...> ')'
     (,(concat
@@ -35,7 +18,7 @@
             '("lambda") t)
        "\\>[ \t']*(\\([^\)]*\\)?)")
      (1 font-lock-keyword-face)
-     (2 font-lock-type-face nil t))
+     (2 font-lock-type-face t t))
 
     ;; '(' <word.1> <word.2> ...
     (,(concat
@@ -43,7 +26,7 @@
             '("lambda") t)
        "\\>[ \t']*\\(\\sw+\\)?")
      (1 font-lock-keyword-face)
-     (2 font-lock-type-face nil t))
+     (2 font-lock-type-face t t))
     
     ;; '(' <word.1> <word.2> ... 
     (,(concat
@@ -51,7 +34,7 @@
             '("let" "let*" "letrec") t)
        "\\>[ \t']*\\(\\sw+\\)?")
      (1 font-lock-keyword-face)
-     (2 font-lock-function-name-face nil t))
+     (2 font-lock-function-name-face t t))
     
     ;; '(' <word>
     (,(concat
@@ -61,25 +44,25 @@
               "define" "set" "macro"
               "delay" "force" "require"
               "type-of") t)
-       "\\>") 1 font-lock-keyword-face)
+       "\\>") (1 font-lock-keyword-face))
         
     ;; '(' <word> ...
     (,(concat
        "(" (regexp-opt
             '("abort" "assert" "warn" "error" "signal") t)
-       "\\>") 1 font-lock-warning-face)
+       "\\>") (1 font-lock-warning-face))
     
     ;; '`' <word> tend to be symbol names.
-    ("`\\(\\sw\\sw+\\)" 1 font-lock-constant-face prepend)
+    ("`\\(\\sw\\sw+\\)" (1 font-lock-constant-face append))
     
     ;; '\'' <word> tend to be symbol names.
-    ("'\\(\\sw\\sw+\\)" 1 font-lock-constant-face prepend)
+    ("'\\(\\sw\\sw+\\)" (1 font-lock-constant-face append))
     
     ;; '.' <word>
-    ("\\.\\(\\sw\\sw+\\)" 1 font-lock-constant-face prepend)
+    ("\\.\\(\\sw\\sw+\\)" (1 font-lock-constant-face append))
     
     ;; `&' <word> keywords as types.
-    ("\\&\\(\\sw\\sw+\\)" 1 font-lock-type-face prepend)
+    ("\\&\\(\\sw\\sw+\\)" (1 font-lock-type-face append))
     )
   "Gaudy level highlighting for Enki modes.")
 
@@ -135,7 +118,6 @@
       (modify-syntax-entry ?.  ".   " table) ;; punctuation character
 
       ;; quoting
-      (modify-syntax-entry ?\? "/   " table)  ;; character quote
       (modify-syntax-entry ?\" "\"   " table) ;; string quote
       (modify-syntax-entry ?\\ "\\   " table) ;; escape character
 
@@ -218,8 +200,6 @@ font-lock keywords will not be case sensitive."
   (setq parse-sexp-ignore-comments t)
   (make-local-variable 'outline-regexp)
   (setq outline-regexp ";;;\\(;* [^ \t\n]\\|###autoload\\)\\|(")
-  (make-local-variable 'outline-level)
-  (setq outline-level 'enki-outline-level)
   (make-local-variable 'comment-start)
   (setq comment-start ";")
   (make-local-variable 'comment-start-skip)
@@ -246,13 +226,6 @@ font-lock keywords will not be case sensitive."
           nil                            ;; syntax-begin
 	  (font-lock-mark-block-function . mark-defun) ;; other-vars...
 	  (font-lock-syntactic-face-function . enki-font-lock-syntactic-face-function))))
-
-(defun enki-outline-level ()
-  "Enki mode `outline-level' function."
-  (let ((len (- (match-end 0) (match-beginning 0))))
-    (if (looking-at "(\\|;;;###autoload")
-	1000
-      len)))
 
 (defvar enki-mode-shared-map
   (let ((map (make-sparse-keymap)))
