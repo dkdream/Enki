@@ -1,4 +1,5 @@
 #!/bin/xx
+
 (require "boot.ea")
 
 (dumpln (~ 1))
@@ -14,65 +15,71 @@
 (assert 'primitive (type-of println))
 (assert 'fixed     (type-of let))
 
-`one
-'one
-.word
+`one-word'
+`one-word
+'one-word
+.one-word
+&one-word
+:one-word
+
+(abort one)
+(require one)
+
+
 
 ## this is a test
 ## one two
+#[
+foo bar
+
+]#
 
 `(one two three)
 '(one two three)
 
 (define (fooness bar two three)
-     (one two three))
+  (one two three))
 
 (macro (fooness bar two three)
        (one two three))
 
-
 (let one ((two three)))
-         
+
 (let* one ((two  three)))
 (letrec one ((two  three)))
 
 (let ((two three))
-     (foo bar))
+  (foo bar))
 
 (let*   ((two three)))
 (letrec ((two three)))
 
 (define
- fooness 'fooness)
+  fooness 'fooness)
 
-(define barness (lambda ()
-                        (dumpln ok)
-                        (println (type-of ok))
-                        1
-                        ))
+(define barness 
+  (lambda ()
+    (dumpln ok)
+    (println (type-of ok))
+    1
+    ))
 
 (define barness (lambda bar
-                 (dumpln ok)
-                 (println (type-of ok))
-                 1
-                 ))
+                  (dumpln ok)
+                  (println (type-of ok))))
 
 (define barness (lambda (bar and)
-                        (dumpln ok)
-                        (println (type-of ok))
-                        1
-                        ))
+                  (dumpln ok)
+                  (println (type-of ok))))
 
 (define barness (lambda (bar . and)
-                        (dumpln ok)
-                        (println (type-of ok))
-                        1
-                        ))
+                  (dumpln ok)
+                  (println (type-of ok))))
 
 (println (barness "testing\n\""))
 
 (let ((xxx 1)(yyy 2))
   (dumpln (environment 'current)))
 
-(define foo
- bar)
+(define foo bar)
+
