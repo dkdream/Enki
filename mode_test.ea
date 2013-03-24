@@ -15,9 +15,9 @@
 (assert 'primitive (type-of println))
 (assert 'fixed     (type-of let))
 
-`one-word'
 `one-word
 'one-word
+@one-word
 .one-word
 &one-word
 :one-word
@@ -25,9 +25,10 @@
 (abort one)
 (require one)
 
+### this
+    ### is 
 
-
-## this is a test
+## this is a test 
 ## one two
 #[
 foo bar
@@ -38,10 +39,10 @@ foo bar
 '(one two three)
 
 (define (fooness bar two three)
-  (one two three))
+   (one two three))
 
 (macro (fooness bar two three)
-       (one two three))
+   (one two three))
 
 (let one ((two three)))
 
@@ -49,37 +50,71 @@ foo bar
 (letrec one ((two  three)))
 
 (let ((two three))
-  (foo bar))
+   (foo bar))
 
 (let*   ((two three)))
 (letrec ((two three)))
 
-(define
-  fooness 'fooness)
+(define fooness 'fooness)
 
 (define barness 
-  (lambda ()
-    (dumpln ok)
-    (println (type-of ok))
-    1
-    ))
+   (lambda ()
+      (dumpln ok)
+      (println (type-of ok))
+      1
+      ))
 
 (define barness (lambda bar
-                  (dumpln ok)
-                  (println (type-of ok))))
+                   ## test                   
+                   (dumpln ok)
+                   (println (type-of ok))))
 
 (define barness (lambda (bar and)
-                  (dumpln ok)
-                  (println (type-of ok))))
+                   (dumpln ok)
+                   (println (type-of ok))))
 
 (define barness (lambda (bar . and)
-                  (dumpln ok)
-                  (println (type-of ok))))
+                   (dumpln ok)
+                   (println (type-of ok))))
 
 (println (barness "testing\n\""))
 
 (let ((xxx 1)(yyy 2))
-  (dumpln (environment 'current)))
+   (dumpln (environment 'current)))
 
 (define foo bar)
+
+(fooness
+ one
+ two
+ three)
+
+(begin
+   one
+   two
+   three)
+
+(if (test)
+      (one)
+   (two))
+
+(unless
+      (test)
+   (one)
+   (two))
+
+(progn
+   one
+   two
+   three)
+
+(prog1
+      one
+   two
+   three)
+
+(prog2
+      one
+      two
+   three)
 

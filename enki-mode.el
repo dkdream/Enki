@@ -7,21 +7,10 @@
      (list 
       (concat
        "(" (regexp-opt
-            '("defadvice" "defvaralias" "defalias" "defgeneric" "defmacro" "defmacro*" "defmethod"
-              "defsetf" "defsubst" "defsubst*" "defun" "defun*" "define-condition" "define-function"
-              "define-compiler" "define-modify" "define-symbol" "define-macro" "defconst""defconstant"
-              "defcustom" "defface" "defvar"
-              "define" "macro"
+            '("define" "macro" "lambda"
               ) t)
        "\\>")
-      '(1 font-lock-keyword-face)
-      '(9 (cond ((match-beginning 3) font-lock-function-name-face)
-                ((match-beginning 6) font-lock-variable-name-face)
-                (t font-lock-type-face))
-          nil t))
-     ;;
-     ;; Emacs Enki autoload cookies.
-     '("^;;;###\\(autoload\\)" 1 font-lock-warning-face prepend)
+      '(1 font-lock-keyword-face))
      )
   "Subdued level highlighting for Enki modes.")
 
@@ -29,36 +18,27 @@
   (append enki-font-lock-keywords-1
      (list
       ;;
-      ;; Control structures.  Emacs Enki forms.
+      ;; Control structures.
       (cons (concat
 	     "(" (regexp-opt
-		  '("cond" "if" "while" "let" "let*" "letrec"
-		    "prog" "progn" "progv" "prog1" "prog2" "prog*"
-		    "inline" "lambda" "save-restriction" "save-excursion"
-		    "save-window-excursion" "save-selected-window"
-		    "save-match-data" "save-current-buffer" "unwind-protect"
-		    "condition-case" "track-mouse"
-		    "eval-after-load" "eval-and-compile" "eval-when-compile"
-		    "eval-when"
-		    "with-current-buffer" "with-electric-help"
-		    "with-output-to-string" "with-output-to-temp-buffer"
-		    "with-temp-buffer" "with-temp-file" "with-temp-message"
-		    "with-timeout") t)
+		  '("if"
+                    "let"
+                    "let*"
+                    "letrec"
+                    "and"
+                    "or"
+                    "begin") t)
 	     "\\>")
 	    1)
       ;;
-      ;; Control structures.  Common Enki forms.
+      ;; Control structures
       (cons (concat
 	     "(" (regexp-opt
-		  '("when" "unless" "case" "ecase" "typecase" "etypecase"
-		    "ccase" "ctypecase" "handler-case" "handler-bind"
-		    "restart-bind" "restart-case" "in-package"
-		    "cerror" "break" "ignore-errors"
-		    "loop" "do" "do*" "dotimes" "dolist" "the" "locally"
-		    "proclaim" "declaim" "declare" "symbol-macrolet"
-		    "lexical-let" "lexical-let*" "flet" "labels" "compiler-let"
-		    "destructuring-bind" "macrolet" "tagbody" "block"
-		    "return" "return-from") t)
+		  '("when"
+                    "unless"
+		    "loop"
+                    "do"
+                    "do*") t)
 	     "\\>")
 	    1)
       ;;
@@ -80,17 +60,19 @@
         "\\>")
        1 font-lock-warning-face)
       ;;
-      ;; Words inside \\[] tend to be for `substitute-command-keys'.
-      '("\\\\\\\\\\[\\(\\sw+\\)]" 1 font-lock-constant-face prepend)
       ;;
-      ;; Words inside `' tend to be symbol names.
-      '("`\\(\\sw\\sw+\\)'" 1 font-lock-constant-face prepend)
+      ;; Words inside \\s' tend to be symbol names.
+      '("\\s'\\(\\sw+\\)" 1 font-lock-constant-face prepend)
+      ;;
+      ;;
+      '("\\.\\(\\sw+\\)" 1 font-lock-function-name-face prepend)
+
       ;;
       ;; Constant values.
-      '("\\<:\\sw\\sw+\\>" 0 font-lock-builtin-face)
+      '(":\\(\\sw+\\)" 1 font-lock-builtin-face)
       ;;
       ;; Enki `&' keywords as types.
-      '("\\&\\sw+\\>" . font-lock-type-face)
+      '("&\\(\\sw+\\)"  1 font-lock-type-face)
       ))
   "Gaudy level highlighting for Enki modes.")
 
@@ -129,7 +111,6 @@
       (modify-syntax-entry ?< "_   " table) ;; symbol constituent
       (modify-syntax-entry ?= "_   " table) ;; symbol constituent
       (modify-syntax-entry ?> "_   " table) ;; symbol constituent
-      (modify-syntax-entry ?@ "_   " table) ;; symbol constituent
       (modify-syntax-entry ?^ "_   " table) ;; symbol constituent
       (modify-syntax-entry ?| "_   " table) ;; symbol constituent
       (modify-syntax-entry ?~ "_   " table) ;; symbol constituent
@@ -212,14 +193,14 @@
   (setq indent-line-function 'enki-indent-line)
   (setq indent-region-function 'enki-indent-region)
   (setq parse-sexp-ignore-comments t)
-  (setq outline-regexp ";;;;* \\|(")
+  (setq outline-regexp "#[ \\|(")
   (setq outline-level 'enki-outline-level)
-  (setq comment-start ";")
+  (setq comment-start "#")
 
-  ;; Look within the line for a ; following an even number of backslashes
+  ;; Look within the line for a # following an even number of backslashes
   ;; after either a non-backslash or the line beginning.
-  (setq comment-start-skip "\\(\\(^\\|[^\\\\\n]\\)\\(\\\\\\\\\\)*\\);+ *")
-  (setq comment-add 1)			;default to `;;' in comment-region
+  (setq comment-start-skip "\\(\\(^\\|[^\\\\\n]\\)\\(\\\\\\\\\\)*\\)\\s<+ *")
+  (setq comment-add 1)
   (setq comment-column 40)
   (setq comment-indent-function 'enki-comment-indent)
   (setq multibyte-syntax-as-symbol t)
@@ -242,9 +223,9 @@
 
 (defvar enki-mode-shared-map
   (let ((map (make-sparse-keymap)))
-    (define-key map "\t" 'enki-indent-line)
+    (define-key map "\t"     'enki-indent-line)
     (define-key map "\e\C-q" 'enki-indent-sexp)
-    (define-key map "\177" 'backward-delete-char-untabify)
+    (define-key map "\177"   'backward-delete-char-untabify)
     ;; This gets in the way when viewing a Enki file in view-mode.  As
     ;; long as [backspace] is mapped into DEL via the
     ;; function-key-map, this should remain disabled!!
@@ -280,7 +261,9 @@ if that value is non-nil."
   (setq imenu-case-fold-search t))
 
 (defun enki-comment-indent ()
-  (if (looking-at "\\s<\\s<\\s<")
+  (if (or (looking-at "\\s<!")         ;;; #!/xxxxx
+          (looking-at "\\s<\\s(")      ;;; #[...
+          (looking-at "\\s<\\s<\\s<")) ;;; ###         
       (current-column)
     (if (looking-at "\\s<\\s<")
 	(let ((tem (or (calculate-enki-indent) (current-column))))
@@ -314,12 +297,18 @@ rigidly along with this one."
     (beginning-of-line)
     (setq beg (point))
     (skip-chars-forward " \t")
-    (if (or (null indent) (looking-at "\\s<\\s<\\s<"))
-	;; Don't alter indentation of a ;;; comment line
+    (if (or (null indent)
+            (looking-at "\\s<!")
+            (looking-at "\\s<\\s(")
+            (looking-at "\\s<\\s<\\s<"))
+	;; Don't alter indentation of a #[ or #! or ### comment line
 	;; or a line that starts in a string.
 	(goto-char (- (point-max) pos))
-      (if (and (looking-at "\\s<") (not (looking-at "\\s<\\s<")))
-	  ;; Single-semicolon comment lines should be indented
+      (if (and (looking-at "\\s<")
+               (not (looking-at "\\s<!"))
+               (not (looking-at "\\s<\\s("))
+               (not (looking-at "\\s<\\s<")))
+	  ;; Single-hash comment lines should be indented
 	  ;; as comment lines, not as code.
 	  (progn (indent-for-comment) (forward-char -1))
 	(if (listp indent) (setq indent (car indent)))
@@ -470,10 +459,10 @@ is the buffer position of the start of the containing expression."
 	    method)
 	(setq method (or (get (intern-soft function) 'enki-indent-function)
 			 (get (intern-soft function) 'enki-indent-hook)))
-	(cond ((or (eq method 'defun)
+	(cond ((or (eq method 'define)
 		   (and (null method)
-			(> (length function) 3)
-			(string-match "\\`def" function)))
+			(> (length function) 6)
+			(string-match "\\`define" function)))
 	       (enki-indent-defform state indent-point))
 	      ((integerp method)
 	       (enki-indent-specform method state
@@ -538,41 +527,24 @@ is the buffer position of the start of the containing expression."
 	(+ enki-body-indent (current-column)))))
 
 
-;; (put 'progn 'enki-indent-function 0), say, causes progn to be indented
-;; like defun if the first form is placed on the next line, otherwise
+;; (put 'begin 'enki-indent-function 0), say, causes 'begin' to be indented
+;; like define if the first form is placed on the next line, otherwise
 ;; it is indented like any other form (i.e. forms line up under first).
 
-(put 'lambda 'enki-indent-function 'defun)
-(put 'macro  'enki-indent-function 'defun)
-(put 'autoload 'enki-indent-function 'defun)
-(put 'progn 'enki-indent-function 0)
-(put 'prog1 'enki-indent-function 1)
-(put 'prog2 'enki-indent-function 2)
-(put 'save-excursion 'enki-indent-function 0)
-(put 'save-window-excursion 'enki-indent-function 0)
-(put 'save-selected-window 'enki-indent-function 0)
-(put 'save-restriction 'enki-indent-function 0)
-(put 'save-match-data 'enki-indent-function 0)
-(put 'save-current-buffer 'enki-indent-function 0)
-(put 'with-current-buffer 'enki-indent-function 1)
-(put 'combine-after-change-calls 'enki-indent-function 0)
-(put 'with-output-to-string 'enki-indent-function 0)
-(put 'with-temp-file 'enki-indent-function 1)
-(put 'with-temp-buffer 'enki-indent-function 0)
-(put 'with-temp-message 'enki-indent-function 1)
-(put 'with-syntax-table 'enki-indent-function 1)
-(put 'let 'enki-indent-function 1)
-(put 'let* 'enki-indent-function 1)
-(put 'while 'enki-indent-function 1)
-(put 'if 'enki-indent-function 2)
-(put 'catch 'enki-indent-function 1)
-(put 'condition-case 'enki-indent-function 2)
-(put 'unwind-protect 'enki-indent-function 1)
-(put 'with-output-to-temp-buffer 'enki-indent-function 1)
-(put 'eval-after-load 'enki-indent-function 1)
-(put 'dolist 'enki-indent-function 1)
-(put 'dotimes 'enki-indent-function 1)
-(put 'when 'enki-indent-function 1)
+(put 'lambda 'enki-indent-function 'define)
+(put 'macro  'enki-indent-function 'define)
+(put 'define 'enki-indent-function 'define)
+(put 'begin  'enki-indent-function 0)
+(put 'progn  'enki-indent-function 0)
+(put 'prog1  'enki-indent-function 1)
+(put 'prog2  'enki-indent-function 2)
+(put 'let    'enki-indent-function 1)
+(put 'let*   'enki-indent-function 1)
+(put 'while  'enki-indent-function 1)
+(put 'if     'enki-indent-function 2)
+(put 'unless 'enki-indent-function 2)
+(put 'catch  'enki-indent-function 1)
+(put 'when   'enki-indent-function 1)
 (put 'unless 'enki-indent-function 1)
 
 (defun enki-indent-sexp (&optional endpos)
