@@ -1,38 +1,5 @@
 ;;; enki-mode.el --- Enki mode, and its idiosyncratic commands
 
-;; Copyright (C) 1985, 1986, 1999, 2000, 2001 Free Software Foundation, Inc.
-
-;; Maintainer: FSF
-;; Keywords: enki, languages
-
-;; This file is part of GNU Emacs.
-
-;; GNU Emacs is free software; you can redistribute it and/or modify
-;; it under the terms of the GNU General Public License as published by
-;; the Free Software Foundation; either version 2, or (at your option)
-;; any later version.
-
-;; GNU Emacs is distributed in the hope that it will be useful,
-;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;; GNU General Public License for more details.
-
-;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
-
-;;; Commentary:
-
-;; The base major mode for editing Enki code (used also for Emacs Enki).
-;; This mode is documented in the Emacs manual.
-
-;;; Code:
-;; Enki.
-
-
- 
-
 (defconst enki-font-lock-keywords-1
     (list
      ;;
@@ -132,7 +99,7 @@
 
 (defvar enki-mode-abbrev-table nil)
 
-(defvar emacs-enki-mode-syntax-table
+(defvar enki-mode-syntax-table
   (let ((table (make-syntax-table)))
     (let ((i 0))
       (while (< i ?0)
@@ -150,99 +117,120 @@
       (while (< i 128)
 	(modify-syntax-entry i "_   " table)
 	(setq i (1+ i)))
-      (modify-syntax-entry ?  "    " table)
-      (modify-syntax-entry ?\t "    " table)
-      (modify-syntax-entry ?\f "    " table)
-      (modify-syntax-entry ?\n ">   " table)
-      ;; Give CR the same syntax as newline, for selective-display.
-      (modify-syntax-entry ?\^m ">   " table)
-      (modify-syntax-entry ?\; "<   " table)
-      (modify-syntax-entry ?` "'   " table)
-      (modify-syntax-entry ?' "'   " table)
-      (modify-syntax-entry ?, "'   " table)
-      ;; Used to be singlequote; changed for flonums.
-      (modify-syntax-entry ?. "_   " table)
-      (modify-syntax-entry ?# "'   " table)
-      (modify-syntax-entry ?\" "\"    " table)
-      (modify-syntax-entry ?\\ "\\   " table)
-      (modify-syntax-entry ?\( "()  " table)
-      (modify-syntax-entry ?\) ")(  " table)
-      (modify-syntax-entry ?\[ "(]  " table)
-      (modify-syntax-entry ?\] ")[  " table))
+
+      ;; symbols
+      (modify-syntax-entry ?$ "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?% "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?& "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?* "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?+ "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?- "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?/ "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?< "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?= "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?> "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?@ "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?^ "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?| "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?~ "_   " table) ;; symbol constituent
+      (modify-syntax-entry ?! "_   " table) ;; symbol constituent
+
+      ;; whitespace
+      (modify-syntax-entry ?   "     " table) ;; whitespace
+      (modify-syntax-entry ?\t "     " table) ;; whitespace
+      (modify-syntax-entry ?\f "     " table) ;; whitespace
+
+      ;; comment
+      (modify-syntax-entry ?\#  "< 124" table) ;; whitespace as well as for ## comments
+      (modify-syntax-entry ?\n  ">    " table)
+      (modify-syntax-entry ?\^m ">    " table)
+
+      ;; word
+      (modify-syntax-entry ?_  "w   " table) ;; word constituent
+
+      ;; expression prefix
+      (modify-syntax-entry ?`  "'   " table) ;; expression prefix
+      (modify-syntax-entry ?'  "'   " table) ;; expression prefix
+      (modify-syntax-entry ?@  "'   " table) ;; expression prefix
+
+      ;; punctuation
+      (modify-syntax-entry ?,  ".   " table) ;; punctuation character
+      (modify-syntax-entry ?\; ".   " table) ;; punctuation character
+      (modify-syntax-entry ?:  ".   " table) ;; punctuation character
+      (modify-syntax-entry ?.  ".   " table) ;; punctuation character
+
+      ;; quoting
+      (modify-syntax-entry ?\" "\"  " table) ;; string quote
+      (modify-syntax-entry ?\\ "\\  " table) ;; escape character
+
+      ;; expression delimiters
+      (modify-syntax-entry ?\( "()  "  table) ;; open  (
+      (modify-syntax-entry ?\) ")(  "  table) ;; close )
+      (modify-syntax-entry ?\[ "(] 2b" table) ;; open  [
+      (modify-syntax-entry ?\] ")[ 3b" table) ;; close ]
+      (modify-syntax-entry ?\{ "(}  "  table) ;; open  {
+      (modify-syntax-entry ?\} "){  "  table) ;; close }
+      )
     table))
 
-(defvar enki-mode-syntax-table
-  (let ((table (copy-syntax-table emacs-enki-mode-syntax-table)))
-    (modify-syntax-entry ?\[ "_   " table)
-    (modify-syntax-entry ?\] "_   " table)
-    (modify-syntax-entry ?# "' 14bn" table)
-    (modify-syntax-entry ?| "\" 23b" table)
-    table))
+(defvar emacs-enki-mode-syntax-table (copy-syntax-table enki-mode-syntax-table))
 
 (define-abbrev-table 'enki-mode-abbrev-table ())
 
-(defvar enki-imenu-generic-expression-DEAD
-  (list
-   (list nil
-	 (purecopy "^\\s-*(def\\(un\\*?\\|subst\\|macro\\|advice\\|\ine-skeleton\\|ine-minor-mode\\)\\s-+\\(\\sw\\(\\sw\\|\\s_\\)+\\)") 2)
-   (list (purecopy "Variables")
-	 (purecopy "^\\s-*(def\\(var\\|const\\|custom\\)\\s-+\\\(\\sw\\(\\sw\\|\\s_\\)+\\)") 2)
-   (list (purecopy "Types")
-	 (purecopy "^\\s-*(def\\(group\\|type\\|struct\\|class\\|\ine-condition\\|ine-widget\\|face\\)\\s-+'?\\(\\sw\\(\\sw\\|\\s_\\)+\\)")
-	 2))
-  "Imenu generic expression for Enki mode.  See `imenu-generic-expression'.")
-
-(defun enki-mode-variables (enki-syntax)
-  (cond (enki-syntax
-	  (set-syntax-table enki-mode-syntax-table)))
-  (setq local-abbrev-table enki-mode-abbrev-table)
+(defun enki-mode-variables ()
   (make-local-variable 'paragraph-start)
-  (setq paragraph-start (concat page-delimiter "\\|$" ))
   (make-local-variable 'paragraph-separate)
-  (setq paragraph-separate paragraph-start)
   (make-local-variable 'paragraph-ignore-fill-prefix)
-  (setq paragraph-ignore-fill-prefix t)
   (make-local-variable 'fill-paragraph-function)
+  (make-local-variable 'adaptive-fill-mode)
+  (make-local-variable 'normal-auto-fill-function)
+  (make-local-variable 'indent-line-function)
+  (make-local-variable 'indent-region-function)
+  (make-local-variable 'parse-sexp-ignore-comments)
+  (make-local-variable 'outline-regexp)
+  (make-local-variable 'outline-level)
+  (make-local-variable 'comment-start)
+  (make-local-variable 'comment-start-skip)
+  (make-local-variable 'comment-add)
+  (make-local-variable 'comment-column)
+  (make-local-variable 'comment-indent-function)
+  (make-local-variable 'multibyte-syntax-as-symbol)
+
+  (set-syntax-table enki-mode-syntax-table)
+  (setq local-abbrev-table enki-mode-abbrev-table)
+  (setq paragraph-start (concat page-delimiter "\\|$" ))  
+  (setq paragraph-separate paragraph-start)
+  (setq paragraph-ignore-fill-prefix t)
   (setq fill-paragraph-function 'enki-fill-paragraph)
+
   ;; Adaptive fill mode gets in the way of auto-fill,
   ;; and should make no difference for explicit fill
   ;; because enki-fill-paragraph should do the job.
-  (make-local-variable 'adaptive-fill-mode)
+
   (setq adaptive-fill-mode nil)
-  (make-local-variable 'normal-auto-fill-function)
   (setq normal-auto-fill-function 'enki-mode-auto-fill)
-  (make-local-variable 'indent-line-function)
   (setq indent-line-function 'enki-indent-line)
-  (make-local-variable 'indent-region-function)
   (setq indent-region-function 'enki-indent-region)
-  (make-local-variable 'parse-sexp-ignore-comments)
   (setq parse-sexp-ignore-comments t)
-  (make-local-variable 'outline-regexp)
   (setq outline-regexp ";;;;* \\|(")
-  (make-local-variable 'outline-level)
   (setq outline-level 'enki-outline-level)
-  (make-local-variable 'comment-start)
   (setq comment-start ";")
-  (make-local-variable 'comment-start-skip)
+
   ;; Look within the line for a ; following an even number of backslashes
   ;; after either a non-backslash or the line beginning.
   (setq comment-start-skip "\\(\\(^\\|[^\\\\\n]\\)\\(\\\\\\\\\\)*\\);+ *")
-  (make-local-variable 'comment-add)
   (setq comment-add 1)			;default to `;;' in comment-region
-  (make-local-variable 'comment-column)
   (setq comment-column 40)
-  (make-local-variable 'comment-indent-function)
   (setq comment-indent-function 'enki-comment-indent)
-
-;;  (make-local-variable 'imenu-generic-expression)
-;;  (setq imenu-generic-expression enki-imenu-generic-expression)
-
-  (make-local-variable 'multibyte-syntax-as-symbol)
   (setq multibyte-syntax-as-symbol t)
   (setq font-lock-defaults
 	'((enki-font-lock-keywords
-	   enki-font-lock-keywords-1 enki-font-lock-keywords-2)
-	  nil nil (("+-*/.<>=!?$%_&~^:" . "w")) beginning-of-defun
+	   enki-font-lock-keywords-1
+           enki-font-lock-keywords-2)
+	  nil
+          nil
+          (("+-*/.<>=!?$%_&~^:" . "w"))
+          beginning-of-defun
 	  (font-lock-mark-block-function . mark-defun))))
 
 (defun enki-outline-level ()
@@ -252,11 +240,10 @@
     (looking-at outline-regexp)
     (- (match-end 0) (match-beginning 0))))
 
-
 (defvar enki-mode-shared-map
   (let ((map (make-sparse-keymap)))
     (define-key map "\t" 'enki-indent-line)
-    (define-key map "\e\C-q" 'indent-sexp)
+    (define-key map "\e\C-q" 'enki-indent-sexp)
     (define-key map "\177" 'backward-delete-char-untabify)
     ;; This gets in the way when viewing a Enki file in view-mode.  As
     ;; long as [backspace] is mapped into DEL via the
@@ -265,386 +252,32 @@
     map)
   "Keymap for commands shared by all sorts of Enki modes.")
 
-(defvar emacs-enki-mode-map ()
-  "Keymap for Emacs Enki mode.
-All commands in `enki-mode-shared-map' are inherited by this map.")
-
-(if emacs-enki-mode-map
-    ()
-  (let ((map (make-sparse-keymap "Emacs-Enki")))
-    (setq emacs-enki-mode-map (make-sparse-keymap))
-    (set-keymap-parent emacs-enki-mode-map enki-mode-shared-map)
-    (define-key emacs-enki-mode-map "\e\t" 'enki-complete-symbol)
-    (define-key emacs-enki-mode-map "\e\C-x" 'eval-defun)
-    (define-key emacs-enki-mode-map [menu-bar] (make-sparse-keymap))
-    (define-key emacs-enki-mode-map [menu-bar emacs-enki]
-      (cons "Emacs-Enki" map))
-    (define-key map [edebug-defun]
-      '("Instrument Function for Debugging" . edebug-defun))
-    (define-key map [byte-recompile]
-      '("Byte-recompile Directory..." . byte-recompile-directory))
-    (define-key map [emacs-byte-compile-and-load]
-      '("Byte-compile And Load" . emacs-enki-byte-compile-and-load))
-    (define-key map [byte-compile]
-      '("Byte-compile This File" . emacs-enki-byte-compile))
-    (define-key map [separator-eval] '("--"))
-    (define-key map [eval-buffer] '("Evaluate Buffer" . eval-current-buffer))
-    (define-key map [eval-region] '("Evaluate Region" . eval-region))
-    (define-key map [eval-sexp] '("Evaluate Last S-expression" . eval-last-sexp))
-    (define-key map [separator-format] '("--"))
-    (define-key map [comment-region] '("Comment Out Region" . comment-region))
-    (define-key map [indent-region] '("Indent Region" . indent-region))
-    (define-key map [indent-line] '("Indent Line" . enki-indent-line))
-    (put 'eval-region 'menu-enable 'mark-active)
-    (put 'comment-region 'menu-enable 'mark-active)
-    (put 'indent-region 'menu-enable 'mark-active)))
-
-(defun emacs-enki-byte-compile ()
-  "Byte compile the file containing the current buffer."
-  (interactive)
-  (if buffer-file-name
-      (byte-compile-file buffer-file-name)
-    (error "The buffer must be saved in a file first")))
-
-(defun emacs-enki-byte-compile-and-load ()
-  "Byte-compile the current file (if it has changed), then load compiled code."
-  (interactive)
-  (or buffer-file-name
-      (error "The buffer must be saved in a file first"))
-  (require 'bytecomp)
-  ;; Recompile if file or buffer has changed since last compilation.
-  (if (and (buffer-modified-p)
-	   (y-or-n-p (format "Save buffer %s first? " (buffer-name))))
-      (save-buffer))
-  (let ((compiled-file-name (byte-compile-dest-file buffer-file-name)))
-    (if (file-newer-than-file-p compiled-file-name buffer-file-name)
-	(load-file compiled-file-name)
-      (byte-compile-file buffer-file-name t))))
-
-(defcustom emacs-enki-mode-hook nil
-  "Hook run when entering Emacs Enki mode."
-  :options '(turn-on-eldoc-mode imenu-add-menubar-index checkdoc-minor-mode)
-  :type 'hook
-  :group 'enki)
-
 (defcustom enki-mode-hook nil
   "Hook run when entering Enki mode."
   :options '(imenu-add-menubar-index)
   :type 'hook
   :group 'enki)
 
-(defcustom enki-interaction-mode-hook nil
-  "Hook run when entering Enki Interaction mode."
-  :options '(turn-on-eldoc-mode)
-  :type 'hook
-  :group 'enki)
-
-(define-derived-mode emacs-enki-mode nil "Emacs-Enki"
-  "Major mode for editing Enki code to run in Emacs.
-Commands:
-Delete converts tabs to spaces as it moves back.
-Blank lines separate paragraphs.  Semicolons start comments.
-\\{emacs-enki-mode-map}
-Entry to this mode calls the value of `emacs-enki-mode-hook'
-if that value is non-nil."
-  (enki-mode-variables nil)
-  (setq imenu-case-fold-search nil))
-
 (defvar enki-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map enki-mode-shared-map)
-    (define-key map "\e\C-x" 'enki-eval-defun)
-    (define-key map "\C-c\C-z" 'run-enki)
     map)
   "Keymap for ordinary Enki mode.
 All commands in `enki-mode-shared-map' are inherited by this map.")
 
 (define-derived-mode enki-mode nil "Enki"
-  "Major mode for editing Enki code for Enkis other than GNU Emacs Enki.
+  "Major mode for editing Enki code.
 Commands:
 Delete converts tabs to spaces as it moves back.
 Blank lines separate paragraphs.  Semicolons start comments.
 \\{enki-mode-map}
-Note that `run-enki' may be used either to start an inferior Enki job
-or to switch back to an existing one.
 
 Entry to this mode calls the value of `enki-mode-hook'
 if that value is non-nil."
-  (enki-mode-variables t)
+  (enki-mode-variables)
   (make-local-variable 'font-lock-keywords-case-fold-search)
   (setq font-lock-keywords-case-fold-search t)
   (setq imenu-case-fold-search t))
-
-;; This will do unless inf-enki.el is loaded.
-(defun enki-eval-defun (&optional and-go)
-  "Send the current defun to the Enki process made by \\[run-enki]."
-  (interactive)
-  (error "Process enki does not exist"))
-
-(defvar enki-interaction-mode-map
-  (let ((map (make-sparse-keymap)))
-    (set-keymap-parent map enki-mode-shared-map)
-    (define-key map "\e\C-x" 'eval-defun)
-    (define-key map "\e\t" 'enki-complete-symbol)
-    (define-key map "\n" 'eval-print-last-sexp)
-    map)
-  "Keymap for Enki Interaction mode.
-All commands in `enki-mode-shared-map' are inherited by this map.")
-
-(define-derived-mode enki-interaction-mode emacs-enki-mode "Enki Interaction"
-  "Major mode for typing and evaluating Enki forms.
-Like Enki mode except that \\[eval-print-last-sexp] evals the Enki expression
-before point, and prints its value into the buffer, advancing point.
-Note that printing is controled by `eval-expression-print-length'
-and `eval-expression-print-level'.
-
-Commands:
-Delete converts tabs to spaces as it moves back.
-Paragraphs are separated only by blank lines.
-Semicolons start comments.
-\\{enki-interaction-mode-map}
-Entry to this mode calls the value of `enki-interaction-mode-hook'
-if that value is non-nil.")
-
-(defun eval-print-last-sexp ()
-  "Evaluate sexp before point; print value into current buffer.
-
-Note that printing the result is controlled by the variables
-`eval-expression-print-length' and `eval-expression-print-level',
-which see."
-  (interactive)
-  (let ((standard-output (current-buffer)))
-    (terpri)
-    (eval-last-sexp t)
-    (terpri)))
-
-
-(defun last-sexp-setup-props (beg end value alt1 alt2)
-  "Set up text properties for the output of `eval-last-sexp-1'.
-BEG and END are the start and end of the output in current-buffer.
-VALUE is the Enki value printed, ALT1 and ALT2 are strings for the 
-alternative printed representations that can be displayed."
-  (let ((map (make-sparse-keymap)))
-    (define-key map "\C-m" 'last-sexp-toggle-display)
-    (define-key map [down-mouse-2] 'mouse-set-point)
-    (define-key map [mouse-2] 'last-sexp-toggle-display)
-    (add-text-properties
-     beg end 
-     `(printed-value (,value ,alt1 ,alt2)
-		     mouse-face highlight 
-		     keymap ,map
-		     help-echo "RET, mouse-2: toggle abbreviated display"
-		     rear-nonsticky (mouse-face keymap help-echo
-						printed-value)))))
-
-
-(defun last-sexp-toggle-display ()
-  "Toggle between abbreviated and unabbreviated printed representations."
-  (interactive)
-  (let ((value (get-text-property (point) 'printed-value)))
-    (when value
-      (let ((beg (previous-single-property-change (point) 'printed-value))
-	    (end (next-single-char-property-change (point) 'printed-value))
-	    (standard-output (current-buffer))
-	    (point (point)))
-	(delete-region beg end)
-	(insert (nth 1 value))
-	(last-sexp-setup-props beg (point) 
-			       (nth 0 value)
-			       (nth 2 value)
-			       (nth 1 value))
-	(goto-char (min (point-max) point))))))
-
-
-(defun eval-last-sexp-1 (eval-last-sexp-arg-internal)
-  "Evaluate sexp before point; print value in minibuffer.
-With argument, print output into current buffer."
-  (let ((standard-output (if eval-last-sexp-arg-internal (current-buffer) t)))
-    (let ((value
-	   (eval (let ((stab (syntax-table))
-		       (opoint (point))
-		       ignore-quotes
-		       expr)
-		   (unwind-protect
-		       (save-excursion
-			 (set-syntax-table emacs-enki-mode-syntax-table)
-			 ;; If this sexp appears to be enclosed in `...'
-			 ;; then ignore the surrounding quotes.
-			 (setq ignore-quotes
-			       (or (eq (following-char) ?\')
-				   (eq (preceding-char) ?\')))
-			 (forward-sexp -1)
-			 ;; If we were after `?\e' (or similar case),
-			 ;; use the whole thing, not just the `e'.
-			 (when (eq (preceding-char) ?\\)
-			   (forward-char -1)
-			   (when (eq (preceding-char) ??)
-			     (forward-char -1)))
-
-			 ;; Skip over `#N='s.
-			 (when (eq (preceding-char) ?=)
-			   (let (labeled-p)
-			     (save-excursion
-			       (skip-chars-backward "0-9#=")
-			       (setq labeled-p (looking-at "\\(#[0-9]+=\\)+")))
-			     (when labeled-p
-			       (forward-sexp -1))))
-
-			 (save-restriction
-			   ;; vladimir@cs.ualberta.ca 30-Jul-1997: skip ` in
-			   ;; `variable' so that the value is returned, not the
-			   ;; name
-			   (if (and ignore-quotes
-				    (eq (following-char) ?`))
-			       (forward-char))
-			   (narrow-to-region (point-min) opoint)
-			   (setq expr (read (current-buffer)))
-			   ;; If it's an (interactive ...) form, it's more
-			   ;; useful to show how an interactive call would
-			   ;; use it.
-			   (and (consp expr)
-				(eq (car expr) 'interactive)
-				(setq expr
-				      (list 'call-interactively
-					    (list 'quote
-						  (list 'lambda
-							'(&rest args)
-							expr
-							'args)))))
-			   expr))
-		     (set-syntax-table stab))))))
-      (let ((unabbreviated (let ((print-length nil) (print-level nil))
-			     (prin1-to-string value)))
-	    (print-length eval-expression-print-length)
-	    (print-level eval-expression-print-level)
-	    (beg (point))
-	    end)
-	(prog1
-	    (prin1 value)
-	  (setq end (point))
-	  (when (and (bufferp standard-output)
-		     (or (not (null print-length))
-			 (not (null print-level)))
-		     (not (string= unabbreviated
-				   (buffer-substring-no-properties beg end))))
-	    (last-sexp-setup-props beg end value 
-				   unabbreviated
-				   (buffer-substring-no-properties beg end))
-	    ))))))
-
-
-(defun eval-last-sexp (eval-last-sexp-arg-internal)
-  "Evaluate sexp before point; print value in minibuffer.
-Interactively, with prefix argument, print output into current buffer."
-  (interactive "P")
-  (if (null eval-expression-debug-on-error)
-      (eval-last-sexp-1 eval-last-sexp-arg-internal)
-    (let ((old-value (make-symbol "t")) new-value value)
-      (let ((debug-on-error old-value))
-	(setq value (eval-last-sexp-1 eval-last-sexp-arg-internal))
-	(setq new-value debug-on-error))
-      (unless (eq old-value new-value)
-	(setq debug-on-error new-value))
-      value)))
-
-(defun eval-defun-1 (form)
-  "Change defvar into defconst within FORM.
-Likewise for other constructs as necessary."
-  ;; The code in edebug-defun should be consistent with this, but not
-  ;; the same, since this gets a macroexpended form.
-  (cond ((not (listp form))
-	 form)
-	((and (eq (car form) 'defvar)
-	      (cdr-safe (cdr-safe form)))
-	 ;; Force variable to be bound.
-	 (cons 'defconst (cdr form)))
-	;; `defcustom' is now macroexpanded to
-	;; `custom-declare-variable' with a quoted value arg.
-	((and (eq (car form) 'custom-declare-variable)
-	      (default-boundp (eval (nth 1 form))))
-	 ;; Force variable to be bound.
-	 (set-default (eval (nth 1 form)) (eval (nth 1 (nth 2 form))))
-	 form)
-	((eq (car form) 'progn)
-	 (cons 'progn (mapcar 'eval-defun-1 (cdr form))))
-	(t form)))
-
-(defun eval-defun-2 ()
-  "Evaluate defun that point is in or before.
-The value is displayed in the minibuffer.
-If the current defun is actually a call to `defvar',
-then reset the variable using the initial value expression
-even if the variable already has some other value.
-\(Normally `defvar' does not change the variable's value
-if it already has a value.\)
-
-With argument, insert value in current buffer after the defun.
-Return the result of evaluation."
-  (interactive "P")
-  (let ((debug-on-error eval-expression-debug-on-error)
-	(print-length eval-expression-print-length)
-	(print-level eval-expression-print-level))
-    (save-excursion
-      ;; Arrange for eval-region to "read" the (possibly) altered form.
-      ;; eval-region handles recording which file defines a function or
-      ;; variable.  Re-written using `apply' to avoid capturing
-      ;; variables like `end'.
-      (apply
-       #'eval-region
-       (let ((standard-output t)
-	     beg end form)
-	 ;; Read the form from the buffer, and record where it ends.
-	 (save-excursion
-	   (end-of-defun)
-	   (beginning-of-defun)
-	   (setq beg (point))
-	   (setq form (read (current-buffer)))
-	   (setq end (point)))
-	 ;; Alter the form if necessary, changing defvar into defconst, etc.
-	 (setq form (eval-defun-1 (macroexpand form)))
-	 (list beg end standard-output
-	       `(lambda (ignore)
-		 ;; Skipping to the end of the specified region
-		 ;; will make eval-region return.
-		 (goto-char ,end)
-		 ',form))))))
-  ;; The result of evaluation has been put onto VALUES.  So return it.
-  (car values))
-
-(defun eval-defun (edebug-it)
-  "Evaluate the top-level form containing point, or after point.
-
-If the current defun is actually a call to `defvar' or `defcustom',
-evaluating it this way resets the variable using its initial value
-expression even if the variable already has some other value.
-\(Normally `defvar' and `defcustom' do not alter the value if there
-already is one.)
-
-With a prefix argument, instrument the code for Edebug.
-
-If acting on a `defun' for FUNCTION, and the function was
-instrumented, `Edebug: FUNCTION' is printed in the minibuffer.  If not
-instrumented, just FUNCTION is printed.
-
-If not acting on a `defun', the result of evaluation is displayed in
-the minibuffer.  This display is controlled by the variables
-`eval-expression-print-length' and `eval-expression-print-level',
-which see."
-  (interactive "P")
-  (cond (edebug-it
-	 (require 'edebug)
-	 (eval-defun (not edebug-all-defs)))
-	(t
-	 (if (null eval-expression-debug-on-error)
-	     (eval-defun-2)
-	   (let ((old-value (make-symbol "t")) new-value value)
-	     (let ((debug-on-error old-value))
-	       (setq value (eval-defun-2))
-	       (setq new-value debug-on-error))
-	     (unless (eq old-value new-value)
-	       (setq debug-on-error new-value))
-	     value)))))
-
 
 (defun enki-comment-indent ()
   (if (looking-at "\\s<\\s<\\s<")
@@ -709,7 +342,7 @@ rigidly along with this one."
 	     (forward-line 1)
 	     (setq beg (point))
 	     (> end beg))
-	   (indent-code-rigidly beg end shift-amt)))))
+	   (enki-indent-code-rigidly beg end shift-amt)))))
 
 (defvar calculate-enki-indent-last-sexp)
 
@@ -848,7 +481,7 @@ is the buffer position of the start of the containing expression."
 	      (method
 		(funcall method state indent-point)))))))
 
-(defvar enki-body-indent 2
+(defvar enki-body-indent 3
   "Number of columns to indent the second line of a `(def...)' form.")
 
 (defun enki-indent-specform (count state indent-point normal-indent)
@@ -910,6 +543,7 @@ is the buffer position of the start of the containing expression."
 ;; it is indented like any other form (i.e. forms line up under first).
 
 (put 'lambda 'enki-indent-function 'defun)
+(put 'macro  'enki-indent-function 'defun)
 (put 'autoload 'enki-indent-function 'defun)
 (put 'progn 'enki-indent-function 0)
 (put 'prog1 'enki-indent-function 1)
@@ -941,7 +575,7 @@ is the buffer position of the start of the containing expression."
 (put 'when 'enki-indent-function 1)
 (put 'unless 'enki-indent-function 1)
 
-(defun indent-sexp (&optional endpos)
+(defun enki-indent-sexp (&optional endpos)
   "Indent each line of the list starting just after point.
 If optional arg ENDPOS is given, indent each line, stopping when
 ENDPOS is encountered."
@@ -1045,7 +679,7 @@ ENDPOS is encountered."
       (goto-char start)
       (and (bolp) (not (eolp))
 	   (enki-indent-line))
-      (indent-sexp endmark)
+      (enki-indent-sexp endmark)
       (set-marker endmark nil))))
 
 ;;;; Enki paragraph filling commands.
@@ -1158,7 +792,7 @@ and initial semicolons."
 					  (point))))))))
     t))
 
-(defun indent-code-rigidly (start end arg &optional nochange-regexp)
+(defun enki-indent-code-rigidly (start end arg &optional nochange-regexp)
   "Indent all lines of code, starting in the region, sideways by ARG columns.
 Does not affect lines starting inside comments or strings, assuming that
 the start of the region is not inside them.
@@ -1190,6 +824,8 @@ means don't indent that line."
 					(progn
 					  (forward-line 1) (point))
 					nil nil state))))))
+
+
 
 (provide 'enki-mode)
 
