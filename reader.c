@@ -296,7 +296,8 @@ static bool readInteger(FILE *fp, int first, Target result);
 static bool readString(FILE *fp, int end, Target result);
 static bool readQuote(FILE *fp, Node symbol, Target result);
 static bool readSymbol(FILE *fp, int first, Target result);
-static bool readComment(FILE *fp);
+static bool skipBlock(FILE *fp, const int delim);
+static bool skipComment(FILE *fp);
 
 static bool list2type(Pair list, Symbol type) {
     Tuple tuple;
@@ -576,12 +577,40 @@ static bool readSymbol(FILE *fp, int first, Target result)
     return false;
 }
 
-static bool readComment(FILE *fp)
+static bool skipBlock(FILE *fp, const int delim)
 {
     for (;;) {
         int chr = getc(fp);
-        if ('\n' == chr || '\r' == chr || EOF == chr) break;
+
+        if (EOF == chr) return false;
+
+        if (delim == chr) {
+            chr = getc(fp);
+            if ('#' == chr) return true;
+        }
     }
+}
+
+static bool skipComment(FILE *fp)
+{
+    int chr = getc(fp);
+
+    switch (chr) {
+    case '(':
+        return skipBlock(fp, ')');
+    case '[':
+        return skipBlock(fp, ']');
+    case '{':
+        return skipBlock(fp, '}');
+    default:
+        break;
+    }
+
+    for (;;) {
+        if ('\n' == chr || '\r' == chr || EOF == chr) break;
+        chr = getc(fp);
+    }
+
     return true;
 }
 
@@ -597,7 +626,7 @@ extern bool readExpr(FILE *fp, Target result)
         case ' ' : continue;
         case '#':
             {
-                readComment(fp);
+                skipComment(fp);
                 continue;
             }
 

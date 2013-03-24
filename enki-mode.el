@@ -145,12 +145,12 @@
       (modify-syntax-entry ?\\ "\\  " table) ;; escape character
 
       ;; expression delimiters
-      (modify-syntax-entry ?\( "()  "  table) ;; open  (
-      (modify-syntax-entry ?\) ")(  "  table) ;; close )
+      (modify-syntax-entry ?\( "() 2b" table) ;; open  (
+      (modify-syntax-entry ?\) ")( 3b" table) ;; close )
       (modify-syntax-entry ?\[ "(] 2b" table) ;; open  [
       (modify-syntax-entry ?\] ")[ 3b" table) ;; close ]
-      (modify-syntax-entry ?\{ "(}  "  table) ;; open  {
-      (modify-syntax-entry ?\} "){  "  table) ;; close }
+      (modify-syntax-entry ?\{ "(} 2b" table) ;; open  {
+      (modify-syntax-entry ?\} "){ 3b" table) ;; close }
       )
     table))
 

@@ -31,8 +31,7 @@
 ## this is a test 
 ## one two
 #[
-foo bar
-
+xxx
 ]#
 
 `(one two three)
