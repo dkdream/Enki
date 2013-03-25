@@ -1,0 +1,106 @@
+
+(add-tests-with-string-output "fxadd1"
+                              '(((fxadd1 0) . "1\n")
+                                ((fxadd1 -1) . "0\n")
+                                ((fxadd1 1) . "2\n")
+                                ((fxadd1 -100) . "-99\n")
+                                ((fxadd1 1000) . "1001\n")
+                                ((fxadd1 536870910) . "536870911\n")
+                                ((fxadd1 -536870912) . "-536870911\n")
+                                ((fxadd1 (fxadd1 0)) . "2\n")
+                                ((fxadd1 (fxadd1 (fxadd1 (fxadd1 (fxadd1 (fxadd1 12)))))) . "18\n")))
+
+(add-tests-with-string-output "fixnum->char and char->fixnum"
+                              `(((fixnum->char 65) . "?A\n")
+                                ((fixnum->char 97) . "?a\n")
+                                ((fixnum->char 122) . "?z\n")
+                                ((fixnum->char 90) . "?Z\n")
+                                ((fixnum->char 48) . "?0\n")
+                                ((fixnum->char 57) . "?9\n")
+                                ((char->fixnum ?A) . "65\n")
+                                ((char->fixnum ?a) . "97\n")
+                                ((char->fixnum ?z) . "122\n")
+                                ((char->fixnum ?Z) . "90\n")
+                                ((char->fixnum ?0) . "48\n")
+                                ((char->fixnum ?9) . "57\n")
+                                ((char->fixnum (fixnum->char 12)) . "12\n")
+                                ((fixnum->char (char->fixnum ?x)) . "?x\n")))
+
+(add-tests-with-string-output "fixnum?"
+                              '(((fixnum? 0) . "true\n")
+                                ((fixnum? 1) . "true\n")
+                                ((fixnum? -1) . "true\n")
+                                ((fixnum? 37287) . "true\n")
+                                ((fixnum? -23873) . "true\n")
+                                ((fixnum? 536870911) . "true\n")
+                                ((fixnum? -536870912) . "true\n")
+                                ((fixnum? true) . "false\n")
+                                ((fixnum? false) . "false\n")
+                                ((fixnum? ()) . "false\n")
+                                ((fixnum? ?Q) . "false\n")
+                                ((fixnum? (fixnum? 12)) . "false\n")
+                                ((fixnum? (fixnum? false)) . "false\n")
+                                ((fixnum? (fixnum? ?A)) . "false\n")
+                                ((fixnum? (char->fixnum ?r)) . "true\n")
+                                ((fixnum? (fixnum->char 12)) . "false\n")))
+
+
+(add-tests-with-string-output "fxzero?"
+                              '(((fxzero? 0) . "true\n")
+                                ((fxzero? 1) . "false\n")
+                                ((fxzero? -1) . "false\n")))
+                                
+
+(add-tests-with-string-output "null?"
+                              '(((null? ()) . "true\n")
+                                ((null? false) . "false\n")
+                                ((null? true) . "false\n")
+                                ((null? (null? ())) . "false\n")
+                                ((null? ?a) . "false\n")
+                                ((null? 0) . "false\n")
+                                ((null? -10) . "false\n")
+                                ((null? 10) . "false\n")))
+
+(add-tests-with-string-output "boolean?"
+                              '(((boolean? true) . "true\n")
+                                ((boolean? false) . "true\n")
+                                ((boolean? 0) . "false\n")
+                                ((boolean? 1) . "false\n")
+                                ((boolean? -1) . "false\n")
+                                ((boolean? ()) . "false\n")
+                                ((boolean? ?a) . "false\n")
+                                ((boolean? (boolean? 0)) . "true\n")
+                                ((boolean? (fixnum? (boolean? 0))) . "true\n")))
+
+(add-tests-with-string-output "char?"
+                              '(((char? ?a) . "true\n")
+                                ((char? ?Z) . "true\n")
+                                ((char? ?newline) . "true\n")
+                                ((char? true) . "false\n")
+                                ((char? false) . "false\n")
+                                ((char? ()) . "false\n")
+                                ((char? (char? true)) . "false\n")
+                                ((char? 0) . "false\n")
+                                ((char? 23870) . "false\n")
+                                ((char? -23789) . "false\n")))
+
+(add-tests-with-string-output "not"
+                              '(((not true) . "false\n")
+                                ((not false) . "true\n")
+                                ((not 15) . "false\n")
+                                ((not ()) . "false\n")
+                                ((not ?A) . "false\n")
+                                ((not (not true)) . "true\n")
+                                ((not (not false)) . "false\n")
+                                ((not (not 15)) . "true\n")
+                                ((not (fixnum? 15)) . "false\n")
+                                ((not (fixnum? false)) . "true\n")))
+
+(add-tests-with-string-output "fxlognot"
+                              '(((fxlognot 0) . "-1\n")
+                                ((fxlognot -1) . "0\n")
+                                ((fxlognot 1) . "-2\n")
+                                ((fxlognot -2) . "1\n")
+                                ((fxlognot 536870911) . "-536870912\n")
+                                ((fxlognot -536870912) . "536870911\n")
+                                ((fxlognot (fxlognot 237463)) . "237463\n")))
