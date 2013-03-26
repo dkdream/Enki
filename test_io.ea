@@ -1,0 +1,42 @@
+
+(let ((out (open-out "io.out")))
+   (fprint out "one" "two" "three")
+   (close-out out)
+   (let ((in (open-in "io.out"))) 
+      (let ((line (read-line in)))
+         (assert t (eof-in in))
+         (close-in in)
+         (assert "onetwothree" line))))
+
+
+(let ((out (open-out "io.out")))
+   (fprint out "one" "two" "three" "\n")
+   (close-out out)
+   (let ((in (open-in "io.out"))) 
+      (let ((line (read-line in)))
+         (assert "onetwothree\n" line)
+         (assert nil (eof-in in))
+         (set line  (read-line in))
+         (assert nil line)
+         (assert t (eof-in in))
+         (close-in in)
+         )))
+
+(let ((out (open-out "io.out")))
+   (fprint out "(one two three)")
+   (close-out out)
+   (let ((in (open-in "io.out"))) 
+      (let ((data (read-sexpr in)))
+         (assert '(one two three) data)
+         (assert nil (eof-in in))
+         (set data  (read-line in))
+         (assert nil data)
+         (assert t (eof-in in))
+         (close-in in)
+         )))
+
+(let ((data (format "  movl $@{q}, %eax" -536870912)))
+   (assert "  movl $\"-536870912\", %eax" data))
+
+(print "done\n")
+

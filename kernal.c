@@ -1530,7 +1530,6 @@ static SUBR(fprint) {
 
 static SUBR(read_line) {
     static TextBuffer buffer = BUFFER_INITIALISER;
-    buffer_reset(&buffer);
 
     Node file;
 
@@ -1543,10 +1542,23 @@ static SUBR(read_line) {
 
     FILE* in = ((OSFile)(file.reference))->file;
 
-    size_t  len  = buffer.size;
-    ssize_t read = getline(&(buffer.buffer), &len, in);
+    if (feof(in)) {
+        ASSIGN(result, NIL);
+        return;
+    }
 
-    buffer.size     = len;
+    buffer_reset(&buffer);
+
+    size_t  len  = buffer.size;
+    ssize_t read = getdelim(&(buffer.buffer), &len, '\n', in);
+
+    buffer.size = len;
+
+    if (0 > read) {
+        ASSIGN(result, NIL);
+        return;
+    }
+
     buffer.position = read;
 
     text_Create(buffer, result.text);
@@ -1585,6 +1597,11 @@ static SUBR(read_sexpr) {
     }
 
     FILE* in = ((OSFile)(file.reference))->file;
+
+    if (feof(in)) {
+        ASSIGN(result, NIL);
+        return;
+    }
 
     readExpr(in, result);
 }

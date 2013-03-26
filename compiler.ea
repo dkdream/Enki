@@ -1,4 +1,4 @@
-(require "run_compiler_tests.ea")
+(require "tests_driver.ea")
 (require "echo_tests/group_1.1.ea")
 
 (define compile-program 
