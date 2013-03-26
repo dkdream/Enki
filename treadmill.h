@@ -100,17 +100,27 @@ enum gc_color {
 #define WORD_SIZE     (sizeof(long))
 #define POINTER_SIZE  (sizeof(Node))
 
+#define BOX_TAG_MASK 0x03
+#define BOX_TAG      0x00
+#define BOX_NIL      0x00
+
+#define FIX_TAG_MASK 0x03
+#define FIX_TAG      0x01
+#define FIX_SHIFT    2
+
+#define BOOL_TAG_MASK 0x0f
+#define BOOL_TAG      0x02
+#define BOOL_TRUE     0xf2
+#define BOOL_FALSE    0x02
+
 struct gc_kind {
     Node type;
-    unsigned long count : BITS_PER_WORD - 12 __attribute__((__packed__));
-    union {
-        unsigned int flags : 12 __attribute__((__packed__));
-        struct {
-            enum gc_color color  : 2;
-            unsigned int  atom   : 1; // is this a tuple of values
-            unsigned int  live   : 1; // is this alive
-            unsigned int  inside : 1; // is this inside a space (malloc/free by the treadmill)
-        } __attribute__((__packed__));
+    unsigned long count : BITS_PER_WORD - 8 __attribute__((__packed__));
+    struct {
+        enum gc_color color  : 2;
+        unsigned int  atom   : 1; // is this a tuple of values
+        unsigned int  live   : 1; // is this alive
+        unsigned int  inside : 1; // is this inside a space (malloc/free by the treadmill)
     } __attribute__((__packed__));
 };
 
@@ -175,6 +185,31 @@ extern void clink_Final(Clink *link)                 __attribute__((nonnull));
     clink_Final((Clink*)(& __LOCAL_GC))
 
 //extern bool node_ExternalInit(const EA_Type, Header);
+
+extern inline bool boxed_Tag(const Node node) __attribute__((always_inline));
+extern inline bool boxed_Tag(const Node node) {
+    return (BOX_TAG == (node.value & BOX_TAG_MASK));
+}
+
+extern inline bool fixed_Tag(const Node node) __attribute__((always_inline));
+extern inline bool fixed_Tag(const Node node) {
+    return (FIX_TAG == (node.value & FIX_TAG_MASK));
+}
+
+extern inline long fixed_Value(const Node node) __attribute__((always_inline));
+extern inline long fixed_Value(const Node node) {
+    if (!fixed_Tag(node)) return 0;
+    return (node.value >> FIX_SHIFT);
+}
+
+extern inline bool bool_Tag(const Node node) __attribute__((always_inline));
+extern inline bool bool_Tag(const Node node) {
+    return (BOOL_TAG == (node.value & BOOL_TAG_MASK));
+}
+extern inline bool bool_Value(const Node node) __attribute__((always_inline));
+extern inline bool bool_Value(const Node node) {
+    return (node.value == BOOL_TRUE);
+}
 
 extern bool darken_Node(const Node node);
 extern void check_Node(const Node node);

@@ -64,6 +64,13 @@ extern Symbol s_infile;
 extern Symbol s_outfile;
 extern Symbol s_opaque;
 
+//
+extern Symbol s_pointer;
+extern Symbol s_word;
+extern Symbol s_header;
+extern Symbol s_kind;
+extern Symbol s_node;
+
 extern bool symbol_Create(TextBuffer value, Symbol*);
 extern bool symbol_Convert(const char* value, Symbol*);
 extern void check_SymbolTable__(const char*, unsigned);

@@ -19,14 +19,6 @@
 #include "dump.h"
 #include "node.h"
 /* */
-#ifdef USE_HASH
-#include "hash.h"
-#endif
-
-#ifdef USE_SET
-#include "set.h"
-#endif
-/* */
 /***************************
  ** end of file
  **************************/

@@ -7,6 +7,7 @@
  **/
 #include "symbol.h"
 #include "treadmill.h"
+#include "debug.h"
 
 /* */
 #include <stdlib.h>
@@ -49,6 +50,12 @@ Symbol s_forced = 0;
 Symbol s_infile = 0;
 Symbol s_outfile = 0;
 Symbol s_opaque = 0;
+
+Symbol s_pointer = 0;
+Symbol s_word = 0;
+Symbol s_header = 0;
+Symbol s_kind = 0;
+Symbol s_node = 0;
 
 struct _internal_SymbolRow {
     unsigned lock;
@@ -123,6 +130,12 @@ extern void init_global_symboltable() {
     MK_SYM(infile);
     MK_SYM(outfile);
     MK_SYM(opaque);
+
+    MK_SYM(pointer);
+    MK_SYM(word);
+    MK_SYM(header);
+    MK_SYM(kind);
+    MK_SYM(node);
 }
 
 extern void final_global_symboltable() {
@@ -216,6 +229,11 @@ extern bool symbol_Create(TextBuffer value, Symbol *target) {
     if (!entry) return false;
 
     Symbol result = (Symbol)asReference(entry);
+
+    if (!boxed_Tag(result)) {
+        VM_ERROR("unable to allocate a boxed node %p as a symbol",
+                 result);
+    }
 
     // assume s_symbol is constructed first
     if (s_symbol) {

@@ -18,8 +18,6 @@ extern void boom();
 #undef VM_ON_DEBUG
 #undef VM_ERROR
 
-/* define VM_ERROR(args...) error_at_line(1, 0,  __FILE__,  __LINE__, args) */
-
 #define BOOM() boom()
 #define VM_ERROR(args...) error_Message(__FILE__,  __LINE__, args)
 #define VM_TRACE(args...) debug_Message(__FILE__,  __LINE__, true, args)

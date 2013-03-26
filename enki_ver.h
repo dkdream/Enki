@@ -1,1 +1,1 @@
-#define ENKI_VERSION "pre_release"
+#define ENKI_VERSION "pre_release-dirty"

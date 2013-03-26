@@ -44,6 +44,8 @@ typedef struct tuple          *Tuple;
 
 union  __attribute__ ((__transparent_union__ __packed__))
 node {
+    long          value;
+    /**/
     Reference     reference;
     /**/
     Integer       integer;
@@ -59,6 +61,8 @@ typedef union node Node;
 
 union __attribute__ ((__transparent_union__ __packed__))
 node_target {
+    long          *value;
+    /**/
     Reference     *reference;
     /**/
     Integer       *integer;

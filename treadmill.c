@@ -366,6 +366,8 @@ static void release_Header(const Header header) {
 extern bool darken_Node(const Node node) {
     if (!node.reference) return true;
 
+    if (!boxed_Tag(node)) return true;
+
     const Header header = asHeader(node);
 
     if (!header->kind.inside) return true;
@@ -431,6 +433,8 @@ extern bool darken_Node(const Node node) {
 
 extern void check_Node(const Node node) {
      if (!node.reference) return;
+
+     if (!boxed_Tag(node)) return;
 
      const Header header = asHeader(node);
      const Space  space  = header->space;
@@ -559,6 +563,13 @@ extern bool node_Allocate(const Space space,
 
     target.reference[0] = asReference(header);
 
+    if (!boxed_Tag(target.reference[0])) {
+        VM_ERROR("unable to allocate a boxed node %p to black list of %p",
+                 asReference(header),
+                 space);
+        return false;
+    }
+
     // only return (true) after its in the black chain
     return true;
 }
@@ -584,7 +595,7 @@ extern void space_Init(const Space space) {
     bottom->space = space;
     root->space   = space;
 
-    // create a two node circular doubly link list
+    // create a three node circular doubly link list
     top->after     = root;
     root->after    = bottom;
     bottom->after  = top;

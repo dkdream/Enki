@@ -1056,18 +1056,24 @@ static SUBR(tuple) {
 }
 
 static SUBR(allocate) {
-    Node kind; Node size;
+    Node type; Node size;
     checkArgs(args, "allocate", 2, s_symbol, s_integer);
 
     ASSIGN(result,NIL);
 
-    forceArgs(args, &kind, &size, 0);
+    forceArgs(args, &type, &size, 0);
 
     long slots = size.integer->value;
 
     if (1 > slots) return;
 
-    tuple_Create(slots, result.tuple);
+    Tuple value;
+
+    tuple_Create(slots, &value);
+
+    setType(value, type.symbol);
+
+    ASSIGN(result,value);
 }
 
 static SUBR(encode_quote) {
@@ -1634,6 +1640,35 @@ static SUBR(inode) {
     integer_Create(stbuf.st_ino, result.integer);
 }
 
+// size of pointer (in bytes)
+static SUBR(sizeof) {
+    Node kind;
+    checkArgs(args, "sizeof", 1, s_symbol);
+    forceArgs(args, &kind, 0);
+
+    ASSIGN(result, NIL);
+
+    if (isIdentical(kind, s_pointer)) {
+        integer_Create(POINTER_SIZE, result.integer);
+    }
+
+    if (isIdentical(kind, s_word)) {
+        integer_Create(WORD_SIZE, result.integer);
+    }
+
+    if (isIdentical(kind, s_header)) {
+        integer_Create(sizeof(struct gc_header), result.integer);
+    }
+
+    if (isIdentical(kind, s_kind)) {
+        integer_Create(sizeof(struct gc_kind), result.integer);
+    }
+
+    if (isIdentical(kind, s_node)) {
+        integer_Create(sizeof(Node), result.integer);
+    }
+}
+
 /***************************************************************
  ***************************************************************
  ***************************************************************
@@ -1737,6 +1772,14 @@ static Node defineEFixed(const char* neval,  Operator oeval,
 
 void startEnkiLibrary() {
     if (__initialized) return;
+
+    if (sizeof(void*) != sizeof(Node)) {
+        fatal("sizeof(void*) != sizeof(Node)");
+    }
+
+    if (sizeof(void*) != sizeof(long)) {
+        fatal("sizeof(void*) != sizeof(long)");
+    }
 
     clock_t cbegin = clock();
 
@@ -1848,6 +1891,7 @@ void startEnkiLibrary() {
     MK_OPR(eof-in,eof_in);
     MK_OPR(read-sexpr,read_sexpr);
     MK_PRM(inode);
+    MK_PRM(sizeof);
 
     clock_t cend = clock();
 
