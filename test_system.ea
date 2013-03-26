@@ -11,7 +11,7 @@
    (fprint test (format "  movl $@{s}, %eax\n" -500))
    (fprint test "  ret\n")
    (close-out test)
-   (system "gcc -o test.x startup.c test.s")
+   (system "gcc -o test.x link_integer.c test.s")
    (system "./test.x > test.out")
    (set test (open-in "test.out"))
    (assert "-500\n" (read-line test))

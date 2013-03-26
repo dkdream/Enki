@@ -45,7 +45,7 @@ LIBFLAGS := $(COPPER_LIB)
 ARFLAGS  := rcu
 
 
-MAINS     := enki_main.c startup.c
+MAINS     := enki_main.c $(notdir $(wildcard link_*.c))
 C_SOURCES := $(filter-out $(MAINS),$(notdir $(wildcard *.c)))
 H_SOURCES := $(filter-out enki.h, $(notdir $(wildcard *.h)))
 
