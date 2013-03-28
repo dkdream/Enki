@@ -28,7 +28,6 @@
 #include <unistd.h>
 
 static bool __initialized = false;
-
 //
 unsigned int ea_global_debug = 0;
 
@@ -1696,6 +1695,35 @@ static SUBR(sizeof) {
     }
 }
 
+static SUBR(car) {
+    Pair pair;
+    checkArgs(args, "car", 1, s_pair);
+    forceArgs(args, &pair, 0);
+
+    pair_GetCar(pair, result);
+}
+
+static SUBR(cdr) {
+    Pair pair;
+
+    checkArgs(args, "car", 1, s_pair);
+    forceArgs(args, &pair, 0);
+
+    pair_GetCdr(pair, result);
+}
+
+static SUBR(pair_q) {
+    Node value;
+    checkArgs(args, "pair?", 1, NIL);
+    pair_GetCar(args.pair, &value);
+
+    if (isType(value, s_pair)) {
+        ASSIGN(result, true_v);
+    } else {
+        ASSIGN(result, NIL);
+    }
+}
+
 /***************************************************************
  ***************************************************************
  ***************************************************************
@@ -1920,6 +1948,9 @@ void startEnkiLibrary() {
     MK_OPR(read-sexpr,read_sexpr);
     MK_PRM(inode);
     MK_PRM(sizeof);
+    MK_PRM(car);
+    MK_PRM(cdr);
+    MK_OPR(pair?,pair_q);
 
     clock_t cend = clock();
 

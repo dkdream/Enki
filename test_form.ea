@@ -1,52 +1,41 @@
 
-(define pair? (lambda (x) (= (type-of x) 'pair)))
-
-(define car (lambda (x)
-              (if (pair? x)
-                  (element x 0)
-                  nil)))
-
-(define cdr (lambda (x)
-              (if (pair? x)
-                  (element x 1)
-                  nil)))
-
 (define cadr (lambda (x) (car (cdr x))))
 (define cddr (lambda (x) (cdr (cdr x))))
 
 (define concat-list
-  (lambda (x y)
-    (if (pair? x)
-        (cons (car x) (concat-list (cdr x) y))
-      y)))
+   (lambda (x y)
+      (if (pair? x)
+            (cons (car x) (concat-list (cdr x) y))
+         y)))
 
-(mark-time 23)
+(mark-time 17)
 
 (define expand-quote
-  (let ((qq-list) (qq-element) (qq-object))
-    (set qq-list (lambda (l)
-                   (if (pair? l)
-                       (let ((obj (car l)))
-                         (if (and (pair? obj) (= (car obj) 'unquote-splicing))
-                             (if (cdr l)
-                                 (list 'concat-list (cadr obj) (qq-list (cdr l)))
-                                 (cadr obj))
-                             (list 'cons (qq-object obj) (qq-list (cdr l)))))
-                       (list 'quote l))))
-    (set qq-element (lambda (l)
-                      (let ((head (car l)))
-                        (if (= head 'unquote)
-                            (cadr l)
-                            (qq-list l)))))
-    (set qq-object (lambda (object)
-                     (if (pair? object)
-                         (qq-element object)
-                         (list 'quote object))))
-    (lambda (expr)
-      (qq-object expr))))
+   (let ((qq-list) (qq-element) (qq-object))
+      (set qq-list (lambda (l)
+                      (if (pair? l)
+                            (let ((obj (car l))
+                                  (rst (cdr l)))
+                               (if (and (pair? obj)
+                                        (= (car obj) 'unquote-splicing))
+                                     (let ((value (cadr obj)))
+                                        (if rst
+                                              (list 'concat-list value (qq-list rst))
+                                           value))
+                                  (list 'cons (qq-object obj) (qq-list rst))))
+                         (list 'quote l))))
+      (set qq-element (lambda (l)
+                         (let ((head (car l)))
+                            (if (= head 'unquote)
+                                  (cadr l)
+                               (qq-list l)))))
+      (set qq-object (lambda (object)
+                        (if (pair? object)
+                              (qq-element object)
+                           (list 'quote object))))
+      qq-object))
 
-
-(mark-time 49)
+(mark-time 45)
 
 (define quasiquote (form expand-quote))
 
@@ -54,32 +43,33 @@
               (name 'fooness)
               (args '(one two three))
               (body '(and one anda two)))
-          `(\%define \name (lambda \args \@body))))
+           `(\%define \name (lambda \args \@body))))
 
 
-(mark-time 60)
+(mark-time 56)
 
 (define %define-with (lambda (%define)
-                       (lambda (pattern . body)
-                         (if (pair? pattern)
-                             (let ((name (car pattern))
-                                   (args (cdr pattern)))
-                               `(\%define \name (lambda \args \@body)))
-                             `(\%define \pattern \@body)))))
+                        (lambda (pattern . body)
+                           (if (pair? pattern)
+                                 (let ((name (car pattern))
+                                       (args (cdr pattern)))
+                                    `(\%define \name (lambda \args \@body)))
+                              `(\%define \pattern \@body)))))
 
 
-(mark-time 71)
+(mark-time 67)
 
 (define %define-kind (lambda (%define %kind)
-                       (lambda (pattern . body)
-                         (if (pair? pattern)
-                             (let ((name (car pattern))
-                                   (args (cdr pattern)))
-                               `(\%define \name (\%kind (lambda \args \@body))))
-                             `(\%define \pattern (\%kind \@body))))))
+                        (lambda (pattern . body)
+                           (if (pair? pattern)
+                                 (let ((name (car pattern))
+                                       (args (cdr pattern)))
+                                    `(\%define \name (\%kind (lambda \args \@body))))
+                              `(\%define \pattern (\%kind \@body))))))
 
 
-(mark-time 82)
+(mark-time 78)
+
 
 (define expand-define (%define-with define))
 
@@ -87,20 +77,20 @@
 
 (define expand-macro  (%define-kind define form))
 
-(mark-time 90)
+(mark-time 86)
 
 (define define (form expand-define))
 (define macro  (form expand-macro))
 
 (dumpln (apply expand-define
-         '((list-length list)
-           (if (pair? list)
-               (+ 1 (list-length (cdr list)))
-               0))))
+               '((list-length list)
+                 (if (pair? list)
+                       (+ 1 (list-length (cdr list)))
+                    0))))
 
 (define (list-length-cooked list)
-  (if (pair? list)
-      (+ 1 (list-length-cooked (cdr list)))
+   (if (pair? list)
+         (+ 1 (list-length-cooked (cdr list)))
       0))
 
 (dumpln "cooked list-length" (list-length-cooked '(1 2 3 4)))
@@ -114,19 +104,19 @@
 
 
 (macro (begin . body)
-  `(let () \@body))
+   `(let () \@body))
 
 (begin 
-  (print 1)
-  (print 2)
-  (println 3))
+   (print 1)
+   (print 2)
+   (println 3))
 
 
 (define expand-let* (lambda (bindings body)
-                      (if (pair? (cdr bindings))
-                          `(let (\(car bindings)) \(expand-let* (cdr bindings) body))
-                          `(let \bindings \@body))))
+                       (if (pair? (cdr bindings))
+                             `(let (\(car bindings)) \(expand-let* (cdr bindings) body))
+   `(let \bindings \@body))))
 
 (dumpln (apply expand-let* '(((x 1)(y 2)(z 3)) (do-it))))
-       
+
 (dumpln "End")
