@@ -184,8 +184,6 @@ extern void clink_Final(Clink *link)                 __attribute__((nonnull));
 #define GC_End() \
     clink_Final((Clink*)(& __LOCAL_GC))
 
-//extern bool node_ExternalInit(const EA_Type, Header);
-
 extern inline bool boxed_Tag(const Node node) __attribute__((always_inline));
 extern inline bool boxed_Tag(const Node node) {
     return (BOX_TAG == (node.value & BOX_TAG_MASK));
@@ -195,7 +193,6 @@ extern inline bool fixed_Tag(const Node node) __attribute__((always_inline));
 extern inline bool fixed_Tag(const Node node) {
     return (FIX_TAG == (node.value & FIX_TAG_MASK));
 }
-
 extern inline long fixed_Value(const Node node) __attribute__((always_inline));
 extern inline long fixed_Value(const Node node) {
     if (!fixed_Tag(node)) return 0;
@@ -227,6 +224,7 @@ extern inline Reference asReference(Header header) {
 
 extern inline Header asHeader(const Node value) __attribute__((always_inline));
 extern inline Header asHeader(const Node value) {
+    if (!boxed_Tag(value)) return (Header)0;
     if (!value.reference) return (Header)0;
     return (((Header)value.reference) - 1);
 }

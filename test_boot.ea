@@ -1,0 +1,25 @@
+(require "boot.ea")
+
+(dumpln (apply expand-define
+               '((list-length list)
+                 (if (pair? list)
+                       (+ 1 (list-length (cdr list)))
+                    0))))
+
+(define (list-length-cooked list)
+   (if (pair? list)
+         (+ 1 (list-length-cooked (cdr list)))
+      0))
+
+(dumpln "cooked list-length" (list-length-cooked '(1 2 3 4)))
+
+(dumpln (apply expand-define '(x y z)))
+
+(begin
+   (print 1)
+   (print 2)
+   (println 3))
+
+(dumpln (apply expand-let* '(((x 1)(y 2)(z 3)) (do-it))))
+
+(dumpln "End")

@@ -1,40 +1,19 @@
+(require "boot.ea")
 
 (let ((target nil)) 
-   (define compile-open
-      (lambda (name)
-         (set target (open-out name))))
-   (define compile-close
-      (lambda ()
-         (close-out target)))
-   (define compile-target
-      (lambda () target)))
-         
-(define emit
-   (lambda args
-      (fprint (compile-target) (apply format args))
-      (fprint (compile-target) "\n")))
+   (define (compile-open name) (set target (open-out name)))
+   (define (compile-close)     (close-out target))
+   (define (compile-target)    target))
 
-(define integer?
-   (lambda (value)
-      (= (type-of value) 'integer)))
+(define (emit . args)
+   (fprint (compile-target) (apply format args))
+   (fprint (compile-target) "\n"))
 
+(define (emit-function-header name)
+   (emit "  .text")
+   (emit "  .globl @{s}" name)
+   (emit "  .type @{s}, @function" name)
+   (emit "@{s}:" name))
 
-(define emit-constant
-   (lambda (value)
-      (emit "  movl $@{s}, %eax" value)))
-
-(define emit-function-header
-   (lambda (name)
-      (emit "  .text")
-      (emit "  .globl @{s}" name)
-      (emit "  .type @{s}, @function" name)
-      (emit "@{s}:" name)
-  
-(define compile-program 
-  (lambda (value)
-    (unless (integer? value)
-      (error value "not an integer"))
-    (emit-function-header 'enki_entry)
-    (emit-constant value)
-    (emit "  ret")))
-
+(define (emit-constant value)
+   (emit "  movl $@{s}, %eax" value))

@@ -1,3 +1,4 @@
+(require "compiler.ea")
 
 (assert 1 (system "false"))
 (assert 0 (system "true"))
@@ -8,7 +9,6 @@
       (if (integer? val)
             (| (<< val 2) 0x01)
          0)))
-            
 
 (let ((test (open-out "test.s")))
    (fprint test "  .text\n")
@@ -24,4 +24,14 @@
    (assert "-500\n" (read-line test))
    (close-in test))
 
-
+(let ((test nil))
+   (compile-open "test1.s")
+   (emit-function-header "enki_entry")
+   (emit-constant (to-fixed -500))
+   (emit "  ret")
+   (compile-close)   
+   (system "gcc -I. -o test1.x link_constants.c test1.s")
+   (system "./test1.x > test.out")
+   (set test (open-in "test.out"))
+   (assert "-500\n" (read-line test))
+   (close-in test))

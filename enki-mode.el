@@ -38,7 +38,9 @@
                     "unless"
 		    "loop"
                     "do"
-                    "do*") t)
+                    "do*"
+                    "require"
+                    ) t)
 	     "\\>")
 	    1)
       ;;
@@ -46,7 +48,7 @@
       (list
        (concat
         "(" (regexp-opt
-             '( "catch" "throw" "featurep" "provide" "require") t)
+             '( "catch" "throw" "featurep" "provide") t)
         "\\>"
         "[ \t']*\\(\\sw+\\)?")
        '(1 font-lock-keyword-face)
@@ -62,17 +64,17 @@
       ;;
       ;;
       ;; Words inside \\s' tend to be symbol names.
-      '("\\s'\\(\\sw+\\)" 1 font-lock-constant-face prepend)
+      '("\\s'\\(\\sw+\\)" 1 font-lock-constant-face append)
       ;;
       ;;
-      '("\\.\\(\\sw+\\)" 1 font-lock-function-name-face prepend)
+      '("\\.\\(\\sw+\\)" 1 font-lock-function-name-face append)
 
       ;;
       ;; Constant values.
-      '(":\\(\\sw+\\)" 1 font-lock-builtin-face)
+      '(":\\(\\sw+\\)" 1 font-lock-builtin-face append)
       ;;
       ;; Enki `&' keywords as types.
-      '("&\\(\\sw+\\)"  1 font-lock-type-face)
+      '("&\\(\\sw+\\)"  1 font-lock-type-face append)
       ))
   "Gaudy level highlighting for Enki modes.")
 
