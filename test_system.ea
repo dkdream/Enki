@@ -3,15 +3,22 @@
 (assert 0 (system "true"))
 (assert 1 (system "printf \"hello\\n\"; exit 1"))
 
+(define to-fixed 
+   (lambda (val)
+      (if (integer? val)
+            (| (<< val 2) 0x01)
+         0)))
+            
+
 (let ((test (open-out "test.s")))
    (fprint test "  .text\n")
    (fprint test "  .globl enki_entry\n")
    (fprint test "  .type enki_entry, @function\n")
    (fprint test "enki_entry:\n")
-   (fprint test (format "  movl $@{s}, %eax\n" -500))
+   (fprint test (format "  movl $@{s}, %eax\n" (to-fixed -500)))
    (fprint test "  ret\n")
    (close-out test)
-   (system "gcc -o test.x link_integer.c test.s")
+   (system "gcc -I. -o test.x link_constants.c test.s")
    (system "./test.x > test.out")
    (set test (open-in "test.out"))
    (assert "-500\n" (read-line test))

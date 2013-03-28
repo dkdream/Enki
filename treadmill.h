@@ -108,7 +108,7 @@ enum gc_color {
 #define FIX_TAG      0x01
 #define FIX_SHIFT    2
 
-#define BOOL_TAG_MASK 0x0f
+#define BOOL_TAG_MASK 0x03
 #define BOOL_TAG      0x02
 #define BOOL_TRUE     0xf2
 #define BOOL_FALSE    0x02
