@@ -2,6 +2,14 @@
 
 #include <stdio.h>
 
+/*
+  internally enki keeps dose not use
+  bit encoding of type information
+  (so the asm is simpler)
+  since C need to know the return type
+  we encoded it before returning it.
+ */
+
 static void print_ptr(ptr val) {
     if (isNil(val)) {
         printf("nil\n");

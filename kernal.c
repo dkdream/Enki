@@ -77,7 +77,7 @@ extern bool opaque_Create(Symbol type, long size, Reference* target) {
     return result;
 }
 
-static unsigned checkArgs(Node args, const char* name, unsigned min, ...)
+extern unsigned checkArgs(Node args, const char* name, unsigned min, ...)
 {
     unsigned count  = 0;
     bool     dotted = false;
@@ -91,7 +91,7 @@ static unsigned checkArgs(Node args, const char* name, unsigned min, ...)
     return count;
 }
 
-static void forceArg(Node arg, Target result) {
+extern void forceArg(Node arg, Target result) {
     GC_Begin(2);
     Node tmp;
 
@@ -119,7 +119,7 @@ static void forceArg(Node arg, Target result) {
     GC_End();
 }
 
-static void forceArgs(Node args, ...)
+extern void forceArgs(Node args, ...)
 {
     GC_Begin(2);
     Node tmp;
@@ -157,7 +157,7 @@ static void forceArgs(Node args, ...)
     GC_End();
 }
 
-static void fetchArgs(Node args, ...)
+extern void fetchArgs(Node args, ...)
 {
     va_list ap;
     va_start(ap, args);
@@ -185,7 +185,7 @@ static void fetchArgs(Node args, ...)
     va_end(ap);
 }
 
-static void eval_binding(Node binding, Node env, Target entry)
+extern void eval_binding(Node binding, Node env, Target entry)
 {
     GC_Begin(2);
     Node symbol, expr, value;
@@ -203,7 +203,7 @@ static void eval_binding(Node binding, Node env, Target entry)
     GC_End();
 }
 
-static void eval_begin(Node body, Node env, Target last)
+extern void eval_begin(Node body, Node env, Target last)
 {
     GC_Begin(2);
 
@@ -222,13 +222,13 @@ static void eval_begin(Node body, Node env, Target last)
     GC_End();
 }
 
-static SUBR(system_check)
+extern SUBR(system_check)
 {
     check_SymbolTable__(__FILE__, __LINE__);
     ASSIGN(result, NIL);
 }
 
-static SUBR(if)
+extern SUBR(if)
 { //Fixed
     GC_Begin(2);
 
@@ -250,7 +250,7 @@ static SUBR(if)
     GC_End();
 }
 
-static SUBR(and)
+extern SUBR(and)
 { //Fixed
     GC_Begin(2);
     Node body, expr, ans;
@@ -272,7 +272,7 @@ static SUBR(and)
     GC_End();
 }
 
-static SUBR(or)
+extern SUBR(or)
 { //Fixed
     GC_Begin(2);
     Node body, expr, ans;
@@ -295,7 +295,7 @@ static SUBR(or)
 }
 
 #if 0
-static SUBR(while)
+extern SUBR(while)
 { //Fixed
     Node tst  = NIL;
     Node body = NIL;
@@ -314,7 +314,7 @@ static SUBR(while)
 }
 #endif
 
-static SUBR(set)
+extern SUBR(set)
 { //Fixed
     Node symbol = NIL;
     Node expr   = NIL;
@@ -347,7 +347,7 @@ static SUBR(set)
     ASSIGN(result,value);
 }
 
-static SUBR(define)
+extern SUBR(define)
 { //Fixed
     Node symbol = NIL;
     Node expr   = NIL;
@@ -372,12 +372,12 @@ static SUBR(define)
     ASSIGN(result, value);
 }
 
-static SUBR(quote)
+extern SUBR(quote)
 { //Fixed
     pair_GetCar(args.pair, result);
 }
 
-static SUBR(let)
+extern SUBR(let)
 { //Fixed
     Node env2     = NIL;
     Node bindings = NIL;
@@ -393,13 +393,13 @@ static SUBR(let)
     eval_begin(body, env2, result);
 }
 
-static SUBR(lambda)
+extern SUBR(lambda)
 {
     pair_Create(args, env, result.pair);
     setType(*result.reference, s_lambda);
 }
 
-static SUBR(delay)
+extern SUBR(delay)
 {
     Tuple tuple, expr;
 
@@ -413,7 +413,7 @@ static SUBR(delay)
     ASSIGN(result, tuple);
 }
 
-static SUBR(gensym)
+extern SUBR(gensym)
 {
     static unsigned long counter = 0;
     static char data[20];
@@ -426,7 +426,7 @@ static SUBR(gensym)
     symbol_Convert(data, result.symbol);
 }
 
-static SUBR(find)
+extern SUBR(find)
 {
     Node tst = NIL;
     Node lst = NIL;
@@ -451,7 +451,7 @@ static SUBR(find)
     }
 }
 
-static SUBR(eval_symbol)
+extern SUBR(eval_symbol)
 {
     GC_Begin(2);
     Node symbol, tmp;
@@ -487,7 +487,7 @@ static SUBR(eval_symbol)
     }
 }
 
-static SUBR(eval_pair)
+extern SUBR(eval_pair)
 {
     GC_Begin(5);
     Node obj, head, tail, tmp;
@@ -537,7 +537,7 @@ static SUBR(eval_pair)
     GC_End();
 }
 
-static SUBR(apply_lambda)
+extern SUBR(apply_lambda)
 {
     GC_Begin(3);
     Node cenv, tmp;
@@ -617,7 +617,7 @@ static SUBR(apply_lambda)
     GC_End();
 }
 
-static SUBR(apply_form)
+extern SUBR(apply_form)
 {
     Node form, cargs, func;
 
@@ -628,7 +628,7 @@ static SUBR(apply_form)
     apply(func, cargs, env, result);
 }
 
-static SUBR(expand)
+extern SUBR(expand)
 {
     GC_Begin(3);
 
@@ -649,7 +649,7 @@ static SUBR(expand)
     GC_End();
 }
 
-static SUBR(encode)
+extern SUBR(encode)
 {
     GC_Begin(3);
 
@@ -670,7 +670,7 @@ static SUBR(encode)
     GC_End();
 }
 
-static SUBR(eval)
+extern SUBR(eval)
 {
     GC_Begin(3);
 
@@ -691,7 +691,7 @@ static SUBR(eval)
     GC_End();
 }
 
-static SUBR(reduce)
+extern SUBR(reduce)
 {
     GC_Begin(3);
 
@@ -714,7 +714,7 @@ static SUBR(reduce)
     GC_End();
 }
 
-static SUBR(apply)
+extern SUBR(apply)
 {
     Node func  = NIL;
     Node cargs = NIL;
@@ -729,7 +729,7 @@ static SUBR(apply)
     apply(func, cargs, cenv, result);
 }
 
-static SUBR(form)
+extern SUBR(form)
 {
   Tuple tuple; Node func = NIL;
 
@@ -743,7 +743,7 @@ static SUBR(form)
   ASSIGN(result, (Node)tuple);
 }
 
-static SUBR(fixed)
+extern SUBR(fixed)
 {
   Tuple tuple;
   Node  func = NIL;
@@ -769,7 +769,7 @@ static SUBR(fixed)
   ASSIGN(result, (Node)tuple);
 }
 
-static SUBR(type_of)
+extern SUBR(type_of)
 {
     Node value, type;
     int count = checkArgs(args, "type-of", 1, NIL);
@@ -785,7 +785,7 @@ static SUBR(type_of)
     }
 }
 
-static SUBR(com) {
+extern SUBR(com) {
     Node val = NIL;
     checkArgs(args, "~", 1, s_integer);
     forceArgs(args, &val, 0);
@@ -805,7 +805,7 @@ static SUBR(com) {
     _do(bitand, &) _do(bitor, |) _do(bitxor, ^) _do(shl, <<)  _do(shr, >>)
 
 #define _do(NAME, OP) \
-static SUBR(NAME) \
+extern SUBR(NAME) \
 { \
     Node left; Node right; \
     checkArgs(args, #OP, 2, s_integer, s_integer); \
@@ -821,7 +821,7 @@ _do_binary()
     _do(lt, <) _do(le, <=) _do(ge, >=) _do(gt, >)
 
 #define _do(NAME, OP) \
-static SUBR(NAME) \
+extern SUBR(NAME) \
 { \
     Node left; Node right; \
     checkArgs(args, #OP, 2, s_integer, s_integer); \
@@ -837,7 +837,7 @@ _do_relation()
 
 #undef _do
 
-static SUBR(eq)
+extern SUBR(eq)
 {
     Node left; Node right;
     checkArgs(args, "=", 2, NIL, NIL);
@@ -849,7 +849,7 @@ static SUBR(eq)
         ASSIGN(result, NIL);
     }
 }
-static SUBR(neq)
+extern SUBR(neq)
 {
     Node left; Node right;
     checkArgs(args, "!=", 2, NIL, NIL);
@@ -862,7 +862,7 @@ static SUBR(neq)
     }
 }
 
-static SUBR(iso)
+extern SUBR(iso)
 {
     Node depth; Node left; Node right;
     checkArgs(args, "iso", 3, s_integer, NIL, NIL);
@@ -875,7 +875,7 @@ static SUBR(iso)
     }
 }
 
-static SUBR(assert)
+extern SUBR(assert)
 {
     Node left; Node right;
     checkArgs(args, "assert", 2, NIL, NIL);
@@ -894,7 +894,7 @@ static SUBR(assert)
     }
 }
 
-static SUBR(exit)
+extern SUBR(exit)
 {
     Node value = NIL;
     forceArgs(args, &value, 0);
@@ -906,12 +906,12 @@ static SUBR(exit)
     }
 }
 
-static SUBR(abort)
+extern SUBR(abort)
 {
     fatal("aborted");
 }
 
-static SUBR(environment)
+extern SUBR(environment)
 {
     Node value = NIL;
     forceArgs(args, &value, 0);
@@ -923,7 +923,7 @@ static SUBR(environment)
     }
 }
 
-static SUBR(dump)
+extern SUBR(dump)
 {
     Node value = NIL;
 
@@ -944,7 +944,7 @@ static SUBR(dump)
     ASSIGN(result,NIL);
 }
 
-static SUBR(dumpln)
+extern SUBR(dumpln)
 {
     Node value = NIL;
 
@@ -966,7 +966,7 @@ static SUBR(dumpln)
     ASSIGN(result,NIL);
 }
 
-static SUBR(print)
+extern SUBR(print)
 {
     Node value = NIL;
 
@@ -980,7 +980,7 @@ static SUBR(print)
     ASSIGN(result,NIL);
 }
 
-static SUBR(println)
+extern SUBR(println)
 {
     Node value = NIL;
 
@@ -995,7 +995,7 @@ static SUBR(println)
     ASSIGN(result,NIL);
 }
 
-static SUBR(debug)
+extern SUBR(debug)
 {
     Node value = NIL;
     long level = 1;
@@ -1018,7 +1018,7 @@ static SUBR(debug)
     ASSIGN(result,NIL);
 }
 
-static SUBR(level)
+extern SUBR(level)
 {
     Node value = NIL;
 
@@ -1035,7 +1035,7 @@ static SUBR(level)
     ASSIGN(result,value);
 }
 
-static SUBR(element) {
+extern SUBR(element) {
     Node tuple, index, value;
     int count = checkArgs(args, "element", 2, NIL, s_integer);
 
@@ -1050,7 +1050,7 @@ static SUBR(element) {
     }
 }
 
-static SUBR(cons) {
+extern SUBR(cons) {
     Node car; Node cdr;
 
     checkArgs(args, "cons", 2, NIL, NIL);
@@ -1059,11 +1059,11 @@ static SUBR(cons) {
     pair_Create(car, cdr, result.pair);
 }
 
-static SUBR(list) {
+extern SUBR(list) {
     ASSIGN(result, args);
 }
 
-static SUBR(tuple) {
+extern SUBR(tuple) {
     unsigned size = 0;
     bool     dotted = false;
 
@@ -1087,7 +1087,7 @@ static SUBR(tuple) {
     GC_End();
 }
 
-static SUBR(allocate) {
+extern SUBR(allocate) {
     Node type; Node size;
     checkArgs(args, "allocate", 2, s_symbol, s_integer);
 
@@ -1108,16 +1108,16 @@ static SUBR(allocate) {
     ASSIGN(result,value);
 }
 
-static SUBR(encode_quote) {
+extern SUBR(encode_quote) {
      ASSIGN(result,args);
 }
 
-static void environ_Lambda(Node symbol, Node env, Target result)
+extern void environ_Lambda(Node symbol, Node env, Target result)
 {
     pair_Create(symbol, NIL, result.pair);
 }
 
-static SUBR(encode_lambda) {
+extern SUBR(encode_lambda) {
     Node formals; Node body; Node lenv;
 
     pair_GetCar(args.pair, &formals);
@@ -1132,14 +1132,14 @@ static SUBR(encode_lambda) {
     pair_Create(formals, body, result.pair);
 }
 
-static void environ_Let(Node local, Node env, Target result)
+extern void environ_Let(Node local, Node env, Target result)
 {
     Node symbol;
     pair_GetCar(local.pair, &symbol);
     pair_Create(symbol, NIL, result.pair);
 }
 
-static SUBR(encode_let) {
+extern SUBR(encode_let) {
     Node locals; Node lenv;
 
     pair_GetCar(args.pair, &locals);
@@ -1154,18 +1154,18 @@ static SUBR(encode_let) {
     list_Map(encode, args.pair, lenv, result);
 }
 
-static SUBR(encode_delay) {
+extern SUBR(encode_delay) {
     list_Map(encode, args.pair, env, result);
 }
 
-static SUBR(force) {
+extern SUBR(force) {
     Node value = NIL;
     checkArgs(args, "force", 1, NIL);
     forceArgs(args, &value, 0);
     ASSIGN(result, value);
 }
 
-static SUBR(concat_text) {
+extern SUBR(concat_text) {
     static TextBuffer buffer = BUFFER_INITIALISER;
     static char data[20];
     buffer_reset(&buffer);
@@ -1201,7 +1201,7 @@ static SUBR(concat_text) {
     text_Create(buffer, result.text);
 }
 
-static SUBR(concat_symbol) {
+extern SUBR(concat_symbol) {
     static TextBuffer buffer = BUFFER_INITIALISER;
     static char data[20];
     buffer_reset(&buffer);
@@ -1239,13 +1239,13 @@ static SUBR(concat_symbol) {
 
 static clock_t cstart;
 static clock_t csegment;
-static SUBR(start_time) {
+extern SUBR(start_time) {
     clock_t current = clock();
     cstart   = current;
     csegment = current;
 }
 
-static SUBR(mark_time) {
+extern SUBR(mark_time) {
     clock_t current = clock();
 
     Node value = NIL;
@@ -1283,7 +1283,7 @@ static SUBR(mark_time) {
     csegment = clock();
 }
 
-static SUBR(system) {
+extern SUBR(system) {
     Node command = NIL;
     checkArgs(args, "system", 1, s_text);
     forceArgs(args, &command, 0);
@@ -1303,7 +1303,7 @@ static SUBR(system) {
     }
 }
 
-static SUBR(error) {
+extern SUBR(error) {
     Node kind    = NIL;
     Node message = NIL;
 
@@ -1314,7 +1314,7 @@ static SUBR(error) {
     fatal("%s", text_Text(message.text));
 }
 
-static void formatAppendTo(TextBuffer *buffer, Node value) {
+extern void formatAppendTo(TextBuffer *buffer, Node value) {
     char data[20];
 
     if (isNil(value)) return;
@@ -1340,7 +1340,7 @@ static void formatAppendTo(TextBuffer *buffer, Node value) {
     }
 }
 
-static SUBR(format) {
+extern SUBR(format) {
     static TextBuffer buffer = BUFFER_INITIALISER;
 
     buffer_reset(&buffer);
@@ -1412,7 +1412,7 @@ static SUBR(format) {
 
 static ID_set loaded_inodes = SET_INITIALISER;
 
-static SUBR(require) {
+extern SUBR(require) {
     Node path;
 
     checkArgs(args, "require", 1, s_text);
@@ -1466,7 +1466,7 @@ struct os_file {
 
 typedef struct os_file* OSFile;
 
-static SUBR(open_in) {
+extern SUBR(open_in) {
     Node path;
     checkArgs(args, "open-in", 1, s_text);
     forceArgs(args, &path, 0);
@@ -1489,7 +1489,7 @@ static SUBR(open_in) {
     ASSIGN(result, infile);
 }
 
-static SUBR(open_out) {
+extern SUBR(open_out) {
     Node path;
     checkArgs(args, "open-out", 1, s_text);
     forceArgs(args, &path, 0);
@@ -1512,7 +1512,7 @@ static SUBR(open_out) {
     ASSIGN(result, outfile);
 }
 
-static SUBR(close_in) {
+extern SUBR(close_in) {
     Node file;
     checkArgs(args, "close-in", 1, s_infile);
     forceArgs(args, &file, 0);
@@ -1532,7 +1532,7 @@ static SUBR(close_in) {
     setType(file, s_opaque);
 }
 
-static SUBR(close_out) {
+extern SUBR(close_out) {
     Node file;
     checkArgs(args, "close-out", 1, s_outfile);
     forceArgs(args, &file, 0);
@@ -1552,7 +1552,7 @@ static SUBR(close_out) {
     setType(file, s_opaque);
 }
 
-static SUBR(fprint) {
+extern SUBR(fprint) {
     FILE* out = 0;
 
     checkArgs(args, "fprint", 1, s_outfile);
@@ -1585,7 +1585,7 @@ static SUBR(fprint) {
     }
 }
 
-static SUBR(read_line) {
+extern SUBR(read_line) {
     static TextBuffer buffer = BUFFER_INITIALISER;
 
     Node file;
@@ -1621,7 +1621,7 @@ static SUBR(read_line) {
     text_Create(buffer, result.text);
 }
 
-static SUBR(eof_in) {
+extern SUBR(eof_in) {
     Node file;
 
     checkArgs(args, "eof_in", 1, s_infile);
@@ -1640,7 +1640,7 @@ static SUBR(eof_in) {
     }
 }
 
-static SUBR(read_sexpr) {
+extern SUBR(read_sexpr) {
     static TextBuffer buffer = BUFFER_INITIALISER;
     buffer_reset(&buffer);
 
@@ -1663,7 +1663,7 @@ static SUBR(read_sexpr) {
     readExpr(in, result);
 }
 
-static SUBR(inode) {
+extern SUBR(inode) {
     struct stat stbuf;
     Node fname;
 
@@ -1692,7 +1692,7 @@ static SUBR(inode) {
 }
 
 // size of pointer (in bytes)
-static SUBR(sizeof) {
+extern SUBR(sizeof) {
     Node kind;
     checkArgs(args, "sizeof", 1, s_symbol);
     forceArgs(args, &kind, 0);
@@ -1720,7 +1720,7 @@ static SUBR(sizeof) {
     }
 }
 
-static SUBR(car) {
+extern SUBR(car) {
     Pair pair;
     checkArgs(args, "car", 1, s_pair);
     forceArgs(args, &pair, 0);
@@ -1728,7 +1728,7 @@ static SUBR(car) {
     pair_GetCar(pair, result);
 }
 
-static SUBR(cdr) {
+extern SUBR(cdr) {
     Pair pair;
 
     checkArgs(args, "car", 1, s_pair);
@@ -1737,7 +1737,7 @@ static SUBR(cdr) {
     pair_GetCdr(pair, result);
 }
 
-static SUBR(pair_q) {
+extern SUBR(pair_q) {
     Node value;
     checkArgs(args, "pair?", 1, NIL);
     pair_GetCar(args.pair, &value);
@@ -1749,7 +1749,7 @@ static SUBR(pair_q) {
     }
 }
 
-static SUBR(integer_q) {
+extern SUBR(integer_q) {
     Node value;
     checkArgs(args, "integer?", 1, NIL);
     pair_GetCar(args.pair, &value);
@@ -1761,7 +1761,7 @@ static SUBR(integer_q) {
     }
 }
 
-static SUBR(gc_scan) {
+extern SUBR(gc_scan) {
     Node value;
 
     checkArgs(args, "gc-scan", 1, s_integer);

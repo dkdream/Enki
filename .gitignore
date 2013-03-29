@@ -7,11 +7,14 @@
 *.run
 *.log
 .depends
+.assembly
 *.vm
 *.a
 *.silk
 papers
 *.out
 *.in
-#*#
+\#*
+
+
 
