@@ -520,22 +520,26 @@ extern bool node_Allocate(const Space space,
                           Size size_in_char,
                           Target target)
 {
+    static unsigned counter = 0;
+
     if (!target.reference) return false;
 
     bool inside = (!space ? false : true);
 
-#if 0
     if (inside) {
-        unsigned count = 1;
-        // scan first
-        space_Scan(space, count);
+        ++counter;
+        if (10 < counter) {
+            unsigned count = 3;
+            // scan first
+            space_Scan(space, count);
 
-        // can we flip
-        if (space_CanFlip(space)) {
-            space_Flip(space);
+            // can we flip
+            if (space_CanFlip(space)) {
+                space_Flip(space);
+            }
+            counter = 0;
         }
     }
-#endif
 
     const Header header = fresh_tuple(inside, size_in_char);
 
@@ -668,8 +672,6 @@ extern void space_Flip(const Space space) {
     const Header scan   = space->scan;
 
     if (scan != top) return;
-
-    fprintf(stderr, "flip space %p(%ld)\n", space, space->count);
 
     VM_DEBUG(2, "flip space %p(%ld) begin", space, space->count);
 

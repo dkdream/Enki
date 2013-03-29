@@ -1435,10 +1435,13 @@ static SUBR(require) {
 
     long long id = stbuf.st_ino;
 
+#if 0
+
     readFile(file);
     fclose(file);
 
-#if 0
+#else
+
     switch (set_add(&loaded_inodes, id)) {
     case -1:
         fatal("loaded_inodes not init-ed for require");
@@ -1451,6 +1454,7 @@ static SUBR(require) {
     default: // found
         break;
     }
+
 #endif
 
     integer_Create(id, result.integer);
@@ -1757,6 +1761,21 @@ static SUBR(integer_q) {
     }
 }
 
+static SUBR(gc_scan) {
+    Node value;
+
+    checkArgs(args, "gc-scan", 1, s_integer);
+    forceArgs(args, &value, 0);
+
+    unsigned int count = value.integer->value;
+
+    space_Scan(_zero_space, count);
+
+    space_Flip(_zero_space);
+
+    ASSIGN(result, NIL);
+}
+
 /***************************************************************
  ***************************************************************
  ***************************************************************
@@ -1871,9 +1890,9 @@ void startEnkiLibrary() {
 
     clock_t cbegin = clock();
 
-     cstart = cbegin;
+    cstart = cbegin;
 
-     set_init(&loaded_inodes, SET_COLUMNS);
+    set_init(&loaded_inodes, SET_COLUMNS);
 
     _zero_space = &enki_zero_space;
 
@@ -1987,6 +2006,7 @@ void startEnkiLibrary() {
     MK_PRM(cdr);
     MK_OPR(pair?,pair_q);
     MK_OPR(integer?,integer_q);
+    MK_OPR(gc-scan,gc_scan);
 
     clock_t cend = clock();
 
