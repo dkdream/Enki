@@ -1771,9 +1771,12 @@ static SUBR(gc_scan) {
 
     space_Scan(_zero_space, count);
 
-    space_Flip(_zero_space);
-
-    ASSIGN(result, NIL);
+    if (!space_CanFlip(_zero_space)) {
+        ASSIGN(result, NIL);
+    } else {
+        space_Flip(_zero_space);
+        ASSIGN(result, true_v);
+    }
 }
 
 /***************************************************************

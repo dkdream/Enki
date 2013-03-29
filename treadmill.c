@@ -509,12 +509,6 @@ extern inline void scan_Node(const Header header) {
     VM_DEBUG(5, "scan (%p) end", slot);
 }
 
-static inline bool space_CanFlip(const Space space) {
-    const Header scan = space->scan;
-    const Header top  = &(space->top);
-    return (scan == top);
-}
-
 extern bool node_Allocate(const Space space,
                           bool atom,
                           Size size_in_char,

@@ -362,6 +362,13 @@ extern inline Header fresh_tuple(bool inside, unsigned long size_in_chars)
     return header;
 }
 
+extern inline bool space_CanFlip(const Space space) __attribute__((always_inline));
+extern inline bool space_CanFlip(const Space space) {
+    const Header scan = space->scan;
+    const Header top  = &(space->top);
+    return (scan == top);
+}
+
 /* macros */
 
 /***************************
