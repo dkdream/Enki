@@ -34,12 +34,18 @@ typedef unsigned long      Size;
 
 typedef void *Reference;
 /*    */
-typedef struct integer        *Integer;
-typedef struct pair           *Pair;
-typedef struct primitive      *Primitive;
-typedef struct symbol         *Symbol;
-typedef struct text           *Text;
-typedef struct tuple          *Tuple;
+typedef struct integer   *Integer;
+typedef struct pair      *Pair;
+typedef struct primitive *Primitive;
+typedef struct symbol    *Symbol;
+typedef struct text      *Text;
+typedef struct tuple     *Tuple;
+typedef struct type      *Type;
+typedef struct sort      *Sort;
+typedef struct axiom     *Axiom;
+typedef struct rule      *Rule;
+typedef struct name      *Name;
+
 /*    */
 
 union  __attribute__ ((__transparent_union__ __packed__))
@@ -54,6 +60,11 @@ node {
     Symbol        symbol;
     Text          text;
     Tuple         tuple;
+    Type          type;
+    Sort          sort;
+    Axiom         axiom;
+    Rule          rule;
+    Name          name;
     /**/
 };
 
@@ -71,6 +82,11 @@ node_target {
     Symbol        *symbol;
     Text          *text;
     Tuple         *tuple;
+    Type          *type;
+    Sort          *sort;
+    Axiom         *axiom;
+    Rule          *rule;
+    Name          *name;
     /**/
     Node          *node;
     /**/

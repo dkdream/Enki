@@ -49,14 +49,20 @@ extern Symbol s_symbol;
 extern Symbol s_text;
 extern Symbol s_tuple;
 
-//
+// the type system
+extern Symbol s_base;
+extern Symbol s_type;
+extern Symbol s_sort;
+extern Symbol s_axiom;
+extern Symbol s_rule;
+extern Symbol s_name;
+
+// raw struct names
 extern Symbol s_pair;
 extern Symbol s_lambda;
 extern Symbol s_form;
 extern Symbol s_fixed;
 extern Symbol s_delay;
-extern Symbol s_type;
-extern Symbol s_sort;
 extern Symbol s_forced;
 
 // c-library type names

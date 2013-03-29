@@ -16,46 +16,48 @@
 
 /* */
 Symbol _empty_symbol = 0;
+Symbol s_symbol = 0;
 Symbol s_dot = 0;
-Symbol s_global = 0;
-Symbol s_current = 0;
-Symbol s_lambda = 0;
-Symbol s_nil = 0;
-Symbol s_quasiquote = 0;
-Symbol s_quote = 0;
-Symbol s_set = 0;
-Symbol s_t = 0;
-Symbol s_true = 0;
-Symbol s_unquote = 0;
-Symbol s_unquote_splicing = 0;
-
 Symbol s_comma = 0;
 Symbol s_colon = 0;
 Symbol s_semi  = 0;
+Symbol s_unquote_splicing = 0;
+
+Symbol s_axiom = 0;
+Symbol s_base = 0;
 Symbol s_block = 0;
-
-Symbol s_integer = 0;
-Symbol s_primitive = 0;
-Symbol s_symbol = 0;
-Symbol s_text = 0;
-Symbol s_tuple = 0;
-Symbol s_pair = 0;
-Symbol s_expression = 0;
-Symbol s_form = 0;
-Symbol s_fixed = 0;
+Symbol s_current = 0;
 Symbol s_delay = 0;
-Symbol s_type = 0;
-Symbol s_sort = 0;
+Symbol s_expression = 0;
+Symbol s_fixed = 0;
 Symbol s_forced = 0;
-Symbol s_infile = 0;
-Symbol s_outfile = 0;
-Symbol s_opaque = 0;
-
-Symbol s_pointer = 0;
-Symbol s_word = 0;
+Symbol s_form = 0;
+Symbol s_global = 0;
 Symbol s_header = 0;
+Symbol s_infile = 0;
+Symbol s_integer = 0;
 Symbol s_kind = 0;
+Symbol s_lambda = 0;
+Symbol s_name = 0;
+Symbol s_nil = 0;
 Symbol s_node = 0;
+Symbol s_opaque = 0;
+Symbol s_outfile = 0;
+Symbol s_pair = 0;
+Symbol s_pointer = 0;
+Symbol s_primitive = 0;
+Symbol s_quasiquote = 0;
+Symbol s_quote = 0;
+Symbol s_rule = 0;
+Symbol s_set = 0;
+Symbol s_sort = 0;
+Symbol s_t = 0;
+Symbol s_text = 0;
+Symbol s_true = 0;
+Symbol s_tuple = 0;
+Symbol s_type = 0;
+Symbol s_unquote = 0;
+Symbol s_word = 0;
 
 struct _internal_SymbolRow {
     unsigned lock;
@@ -100,42 +102,45 @@ extern void init_global_symboltable() {
     symbol_Convert(",", &s_comma);
     symbol_Convert(":", &s_colon);
     symbol_Convert(";", &s_semi);
-
     symbol_Convert("unquote-splicing", &s_unquote_splicing);
 
-    MK_SYM(global);
+    MK_SYM(axiom);
+    MK_SYM(base);
+    MK_SYM(block);
     MK_SYM(current);
+    MK_SYM(delay);
+    MK_SYM(fixed);
+    MK_SYM(forced);
+    MK_SYM(form);
+    MK_SYM(global);
+    MK_SYM(header);
+    MK_SYM(infile);
+    MK_SYM(integer);
+    MK_SYM(kind);
     MK_SYM(lambda);
+    MK_SYM(lambda);
+    MK_SYM(name);
     MK_SYM(nil);
+    MK_SYM(node);
+    MK_SYM(opaque);
+    MK_SYM(outfile);
+    MK_SYM(pair);
+    MK_SYM(pointer);
+    MK_SYM(primitive);
     MK_SYM(quasiquote);
     MK_SYM(quote);
+    MK_SYM(rule);
     MK_SYM(set);
-    MK_SYM(t);
-    MK_SYM(true);
-    MK_SYM(unquote);
-
-    MK_SYM(integer);
-    MK_SYM(primitive);
-    MK_SYM(text);
-    MK_SYM(tuple);
-    MK_SYM(pair);
-    MK_SYM(lambda);
-    MK_SYM(form);
-    MK_SYM(fixed);
-    MK_SYM(delay);
-    MK_SYM(type);
     MK_SYM(sort);
-    MK_SYM(forced);
-    MK_SYM(block);
-    MK_SYM(infile);
-    MK_SYM(outfile);
-    MK_SYM(opaque);
-
-    MK_SYM(pointer);
+    MK_SYM(sort);
+    MK_SYM(t);
+    MK_SYM(text);
+    MK_SYM(true);
+    MK_SYM(tuple);
+    MK_SYM(type);
+    MK_SYM(type);
+    MK_SYM(unquote);
     MK_SYM(word);
-    MK_SYM(header);
-    MK_SYM(kind);
-    MK_SYM(node);
 }
 
 extern void final_global_symboltable() {
@@ -193,13 +198,7 @@ extern bool symbol_Create(TextBuffer value, Symbol *target) {
     Header group = _global_symboltable->row[row].first;
 
     for ( ; group; group = group->after) {
-        if (!isIdentical(group->kind.type, s_symbol)) {
-            fatal("found a non-symbol in row %d of the symbol-table", row);
-        }
-
         Symbol test = (Symbol) asReference(group);
-
-
 
         if (test->size != size)         continue;
         if (test->hashcode != hashcode) continue;
