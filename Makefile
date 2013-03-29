@@ -40,7 +40,7 @@ RUNFLAGS :=
 INCFLAGS := -I. $(COPPER_INC)
 DBFLAGS  := -ggdb -Wall -mtune=i686 -rdynamic
 CFLAGS   := $(DBFLAGS) $(INCFLAG) $(TAILFLAGS)
-SFLAGS   := $(DBFLAGS) -O3 -fdelete-null-pointer-checks -fverbose-asm
+SFLAGS   := -mtune=i686 -rdynamic -fdelete-null-pointer-checks -fverbose-asm
 LIBFLAGS := $(COPPER_LIB)
 ARFLAGS  := rcu
 
@@ -80,10 +80,9 @@ depends : $(DEPENDS)
 $(RUNS) : enki.vm
 
 clean ::
-	rm -f $(OBJS) $(MAINS:%.c=%.o) $(UNIT_TESTS:%.gcc=%.x)
+	rm -f $(OBJS) $(ASMS) $(RUNS) $(MAINS:%.c=%.o) $(UNIT_TESTS:%.gcc=%.x)
 	rm -f enki.x test.x enki.vm libEnki.a
-	rm -f $(RUNS)
-	rm -f *~
+	rm -f *~ ./#*
 	rm -f *.s test.*.out test.out
 
 scrub :: 
