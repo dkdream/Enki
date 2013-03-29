@@ -736,17 +736,25 @@ extern void readFile(FILE *stream)
 
 //        clock_t cstart = clock();
 
+        check_SymbolTable__(__FILE__, __LINE__);
+
         expand(obj, NIL, &obj);
 
 //        clock_t cexpand = clock();
+
+        check_SymbolTable__(__FILE__, __LINE__);
 
         encode(obj, NIL, &obj);
 
 //        clock_t cencode = clock();
 
+        check_SymbolTable__(__FILE__, __LINE__);
+
         eval(obj, NIL, &obj);
 
 //        clock_t ceval = clock();
+
+        check_SymbolTable__(__FILE__, __LINE__);
 
 #if 0
         fprintf(stderr, "expand %.3f cpu sec; ", ((double)cexpand - (double)cstart)* 1.0e-6);

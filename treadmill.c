@@ -368,6 +368,8 @@ extern bool darken_Node(const Node node) {
 
     if (!boxed_Tag(node)) return true;
 
+    return true;
+
     const Header header = asHeader(node);
 
     if (!header->kind.inside) return true;
@@ -522,8 +524,9 @@ extern bool node_Allocate(const Space space,
 
     bool inside = (!space ? false : true);
 
+#if 0
     if (inside) {
-        unsigned count = 2;
+        unsigned count = 1;
         // scan first
         space_Scan(space, count);
 
@@ -532,6 +535,7 @@ extern bool node_Allocate(const Space space,
             space_Flip(space);
         }
     }
+#endif
 
     const Header header = fresh_tuple(inside, size_in_char);
 
@@ -665,7 +669,9 @@ extern void space_Flip(const Space space) {
 
     if (scan != top) return;
 
-    VM_DEBUG(5, "flip space %p(%ld) begin", space, space->count);
+    fprintf(stderr, "flip space %p(%ld)\n", space, space->count);
+
+    VM_DEBUG(2, "flip space %p(%ld) begin", space, space->count);
 
     space->count = 0;
 

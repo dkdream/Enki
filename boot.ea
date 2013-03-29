@@ -14,7 +14,7 @@
                             (let ((obj (car l))
                                   (rst (cdr l)))
                                (if (and (pair? obj)
-                                        (= (car obj) 'unquote-splicing))
+                                        (== (car obj) 'unquote-splicing))
                                      (let ((value (cadr obj)))
                                         (if rst
                                               (list 'concat-list value (qq-list rst))
@@ -23,7 +23,7 @@
                          (list 'quote l))))
       (set qq-element (lambda (l)
                          (let ((head (car l)))
-                            (if (= head 'unquote)
+                            (if (== head 'unquote)
                                   (cadr l)
                                (qq-list l)))))
       (set qq-object (lambda (object)

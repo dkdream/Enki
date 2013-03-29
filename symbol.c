@@ -65,7 +65,7 @@ struct _internal_SymbolRow {
 struct _internal_SymbolTable {
     unsigned lock;
     unsigned size;
-    struct _internal_SymbolRow row[];
+    struct _internal_SymbolRow row[1];
 };
 
 static struct _internal_SymbolTable *_global_symboltable = 0;
@@ -139,27 +139,23 @@ extern void init_global_symboltable() {
 }
 
 extern void final_global_symboltable() {
-     if (0 ==  _global_symboltable) return;
+     if (0 == _global_symboltable) return;
 }
 
 extern void check_SymbolTable__(const char* filename, unsigned line) {
     if (!_global_symboltable) return;
 
-    printf("begin scan for(%s:%u)\n", filename, line);
-
     int row = _global_symboltable->size;
 
     for ( ; row-- ; ) {
         Header group = _global_symboltable->row[row].first;
-
         for ( ; group; group = group->after) {
-            Symbol test = (Symbol) asReference(group);
-
-            printf("   symbol %s\n", symbol_Text(test));
+            if (!isIdentical(group->kind.type, s_symbol)) {
+                fprintf(stderr, "%s:%u",filename, line);
+                fatal("found a non-symbol in row %d of the symbol-table", row);
+            }
         }
     }
-
-    printf("end\n");
 }
 
 static inline HashCode hash_full(TextBuffer value) {
@@ -187,8 +183,8 @@ extern bool symbol_Create(TextBuffer value, Symbol *target) {
         return true;
     }
 
-    unsigned int size = value.position;
-    HashCode hashcode = hash_full(value);
+    const unsigned int size = value.position;
+    const HashCode hashcode = hash_full(value);
 
     const int       row = hashcode % _global_symboltable->size;
     const int     cells = size / sizeof(const unsigned long);
@@ -197,7 +193,13 @@ extern bool symbol_Create(TextBuffer value, Symbol *target) {
     Header group = _global_symboltable->row[row].first;
 
     for ( ; group; group = group->after) {
+        if (!isIdentical(group->kind.type, s_symbol)) {
+            fatal("found a non-symbol in row %d of the symbol-table", row);
+        }
+
         Symbol test = (Symbol) asReference(group);
+
+
 
         if (test->size != size)         continue;
         if (test->hashcode != hashcode) continue;
@@ -222,7 +224,7 @@ extern bool symbol_Create(TextBuffer value, Symbol *target) {
         continue;
     }
 
-    const unsigned int fullsize = (sizeof(struct symbol) + (size + 1));
+    const unsigned int fullsize = (sizeof(struct symbol) + (size + 5));
 
     Header entry = fresh_atom(0, fullsize);
 

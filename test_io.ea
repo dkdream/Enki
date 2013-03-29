@@ -1,3 +1,4 @@
+(require "blank.ea")
 
 (let ((out (open-out "io.out")))
    (fprint out "one" "two" "three")

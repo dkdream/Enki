@@ -84,6 +84,7 @@ clean ::
 	rm -f enki.x test.x enki.vm libEnki.a
 	rm -f $(RUNS)
 	rm -f *~
+	rm -f *.s test.*.out test.out
 
 scrub :: 
 	@make clean
@@ -149,9 +150,7 @@ enki_ver.h : FORCE
 	@$(GCC) $(CFLAGS) -c -o $@ $<
 
 %.run : %.ea
-	@echo $(ENKI.test) $(RUNFLAGS) $<
-	@$(ENKI.test) $(RUNFLAGS) $< 2>&1 | tee $@
-	@echo '==============================================================='
+	@./run.it $(ENKI.test) "$(RUNFLAGS)" $< $@
 
 %.o : %.gcc
 	@echo $(GCC) $(DBFLAGS) -c -o $@ $<

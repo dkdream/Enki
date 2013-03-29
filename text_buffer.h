@@ -28,7 +28,7 @@ extern inline void buffer_reset(TextBuffer *tbuf) {
 extern inline void buffer_append(TextBuffer *tbuf, int chr) __attribute__((always_inline nonnull(1)));
 extern inline void buffer_append(TextBuffer *tbuf, int chr)
 {
-    if (tbuf->position == tbuf->size) {
+    while ((tbuf->position + 3) > tbuf->size) {
         if (tbuf->buffer) {
             tbuf->buffer = realloc(tbuf->buffer, tbuf->size *= 2);
         } else {
@@ -50,7 +50,7 @@ extern inline void buffer_join(TextBuffer *tbuf, TextBuffer *data)
     if (0 >  len) return;
     if (0 == len) return;
 
-    while ((tbuf->position + len + 2) >  tbuf->size) {
+    while ((tbuf->position + len + 2) > tbuf->size) {
         if (tbuf->buffer) {
             tbuf->buffer = realloc(tbuf->buffer, tbuf->size *= 2);
         } else {
@@ -73,7 +73,7 @@ extern inline void buffer_add(TextBuffer *tbuf, const char *string)
     if (0 >  len) return;
     if (0 == len) return;
 
-    while ((tbuf->position + len + 2) >  tbuf->size) {
+    while ((tbuf->position + len + 2) > tbuf->size) {
         if (tbuf->buffer) {
             tbuf->buffer = realloc(tbuf->buffer, tbuf->size *= 2);
         } else {

@@ -1,0 +1,14 @@
+#!/bin/sh
+
+ENKI_test="$1"; shift
+ENKI_flags="$1"; shift
+ENKI_file="$1"; shift
+ENKI_log="$1"; shift
+
+rm -f $ENKI_log
+
+echo '=================================================================='
+echo $ENKI_test $ENKI_flags $ENKI_file
+( $ENKI_test $ENKI_flags $ENKI_file 2>&1 || rm -f $ENKI_log ) | tee $ENKI_log
+
+exec test -f $ENKI_log

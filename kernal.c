@@ -222,6 +222,12 @@ static void eval_begin(Node body, Node env, Target last)
     GC_End();
 }
 
+static SUBR(system_check)
+{
+    check_SymbolTable__(__FILE__, __LINE__);
+    ASSIGN(result, NIL);
+}
+
 static SUBR(if)
 { //Fixed
     GC_Begin(2);
@@ -1377,11 +1383,21 @@ static SUBR(format) {
 
                     if ('q' == code) {
                         buffer_append(&buffer, '"');
-                    }
-                    formatAppendTo(&buffer, value);
-
-                    if ('q' == code) {
+                        formatAppendTo(&buffer, value);
                         buffer_append(&buffer, '"');
+                        continue;
+                    }
+
+                    if ('s' == code) {
+                        formatAppendTo(&buffer, value);
+                        continue;
+                    }
+
+                    if ('p' == code) {
+                        char data[20];
+                        sprintf(data, "%p", value.reference);
+                        buffer_add(&buffer, data);
+                        continue;
                     }
                 }
                 continue;
@@ -1871,6 +1887,8 @@ void startEnkiLibrary() {
     MK_CONST(t,true_v);
     MK_CONST(nil,NIL);
 
+    MK_PRM(system_check);
+
     MK_FXD(if);
     MK_FXD(and);
     MK_FXD(or);
@@ -1912,7 +1930,7 @@ void startEnkiLibrary() {
 
 #undef _do
 
-    MK_OPR(=,eq);
+    MK_OPR(==,eq);
     MK_OPR(!=,neq);
     MK_PRM(iso);
     MK_PRM(assert);
