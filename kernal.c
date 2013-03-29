@@ -1435,6 +1435,10 @@ static SUBR(require) {
 
     long long id = stbuf.st_ino;
 
+    readFile(file);
+    fclose(file);
+
+#if 0
     switch (set_add(&loaded_inodes, id)) {
     case -1:
         fatal("loaded_inodes not init-ed for require");
@@ -1447,6 +1451,7 @@ static SUBR(require) {
     default: // found
         break;
     }
+#endif
 
     integer_Create(id, result.integer);
 }

@@ -725,6 +725,8 @@ extern void readFile(FILE *stream)
             fflush(stdout);
         }
 
+        check_SymbolTable__(__FILE__, __LINE__);
+
         if (!readExpr(stream, &obj)) break;
 
         VM_ON_DEBUG(1, {
