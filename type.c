@@ -45,6 +45,42 @@ struct _internal_Table {
 
 static struct _internal_Table *_global_typetable = 0;
 
+Sort void_s = 0;
+
+Type t_any = 0;
+Type t_delay = 0;
+Type t_fixed = 0;
+Type t_forced = 0;
+Type t_form = 0;
+Type t_infile = 0;
+Type t_integer = 0;
+Type t_lambda = 0;
+Type t_opaque = 0;
+Type t_outfile = 0;
+Type t_pair = 0;
+Type t_primitive = 0;
+Type t_text = 0;
+Type t_true = 0;
+Type t_tuple = 0;
+Type t_void = 0;
+
+static void make_sort(const char* value, Sort* target) {
+    Symbol symbol = 0;
+
+    if (!symbol_Convert(value, &symbol)) return;
+
+    sort_Create(symbol, target);
+}
+
+static void make_basetype(const char* value, Type* target) {
+    Symbol symbol = 0;
+    if (!symbol_Convert(value, &symbol)) return;
+
+    type_Create(symbol, void_s, target);
+}
+
+#define MK_BTYPE(x) make_basetype(#x, &t_ ##x)
+
 extern void init_global_typetable() {
     if (_global_typetable) return;
 
@@ -60,6 +96,25 @@ extern void init_global_typetable() {
     result->size = rows;
 
     _global_typetable = result;
+
+    make_sort("Void", &void_s);
+
+    MK_BTYPE(any);
+    MK_BTYPE(delay);
+    MK_BTYPE(fixed);
+    MK_BTYPE(forced);
+    MK_BTYPE(form);
+    MK_BTYPE(infile);
+    MK_BTYPE(integer);
+    MK_BTYPE(lambda);
+    MK_BTYPE(opaque);
+    MK_BTYPE(outfile);
+    MK_BTYPE(pair);
+    MK_BTYPE(primitive);
+    MK_BTYPE(text);
+    MK_BTYPE(true);
+    MK_BTYPE(tuple);
+    MK_BTYPE(void);
 }
 
 extern void final_global_typetable() {

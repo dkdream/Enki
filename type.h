@@ -28,6 +28,25 @@ struct type {
     };
 };
 
+extern Sort void_s;
+
+extern Type t_any;
+extern Type t_delay;
+extern Type t_fixed;
+extern Type t_forced;
+extern Type t_form;
+extern Type t_infile;
+extern Type t_integer;
+extern Type t_lambda;
+extern Type t_opaque;
+extern Type t_outfile;
+extern Type t_pair;
+extern Type t_primitive;
+extern Type t_text;
+extern Type t_true;
+extern Type t_tuple;
+extern Type t_void;
+
 extern bool sort_Create(Symbol,Sort*);                /* each sort has a unique name */
 extern bool type_Create(Symbol,Sort,Type*);           /* each basetype in a sort has a unique name */
 extern bool rule_Create(Symbol,Sort,Sort,Sort,Rule*); /* add a new rule for symbol (pi,sigma) */

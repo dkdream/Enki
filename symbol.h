@@ -57,7 +57,7 @@ extern Symbol s_axiom;
 extern Symbol s_rule;
 extern Symbol s_name;
 
-// raw struct names
+// raw struct type names
 extern Symbol s_pair;
 extern Symbol s_lambda;
 extern Symbol s_form;

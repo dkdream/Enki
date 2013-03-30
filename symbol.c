@@ -6,6 +6,7 @@
  **    <routine-list-end>
  **/
 #include "symbol.h"
+#include "type.h"
 #include "treadmill.h"
 #include "debug.h"
 
@@ -141,10 +142,21 @@ extern void init_global_symboltable() {
     MK_SYM(type);
     MK_SYM(unquote);
     MK_SYM(word);
+
+    int row = _global_symboltable->size;
+
+    for ( ; row-- ; ) {
+        Header group = _global_symboltable->row[row].first;
+        for ( ; group; group = group->after) {
+            group->kind.type = (Node)s_symbol;
+        }
+    }
 }
 
+
+
 extern void final_global_symboltable() {
-     if (0 == _global_symboltable) return;
+    if (0 == _global_symboltable) return;
 }
 
 extern void check_SymbolTable__(const char* filename, unsigned line) {
@@ -155,10 +167,9 @@ extern void check_SymbolTable__(const char* filename, unsigned line) {
     for ( ; row-- ; ) {
         Header group = _global_symboltable->row[row].first;
         for ( ; group; group = group->after) {
-            if (!isIdentical(group->kind.type, s_symbol)) {
-                fprintf(stderr, "%s:%u",filename, line);
-                fatal("found a non-symbol in row %d of the symbol-table", row);
-            }
+            if (isIdentical(group->kind.type, s_symbol)) continue;
+            fprintf(stderr, "%s:%u",filename, line);
+            fatal("found a non-symbol in row %d of the symbol-table", row);
         }
     }
 }
@@ -236,14 +247,8 @@ extern bool symbol_Create(TextBuffer value, Symbol *target) {
                  result);
     }
 
-    // assume s_symbol is constructed first
-    if (s_symbol) {
-        entry->kind.type = (Node)s_symbol;
-    } else {
-        entry->kind.type = (Node)result;
-    }
-
-    entry->after = _global_symboltable->row[row].first;
+    entry->kind.type = (Node)s_symbol;
+    entry->after     = _global_symboltable->row[row].first;
 
     result->size     = size;
     result->hashcode = hashcode;
