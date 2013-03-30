@@ -61,7 +61,7 @@ extern void defineValue(Node symbol, const Node value) {
     GC_End();
 }
 
-extern bool opaque_Create(Symbol type, long size, Reference* target) {
+extern bool opaque_Create(Node type, long size, Reference* target) {
     if (!node_Allocate(_zero_space,
                        true,
                        size,
@@ -372,9 +372,50 @@ extern SUBR(define)
     ASSIGN(result, value);
 }
 
+extern SUBR(encode_quote) {
+     ASSIGN(result,args);
+}
+
 extern SUBR(quote)
 { //Fixed
     pair_GetCar(args.pair, result);
+}
+
+extern SUBR(encode_type) {
+     ASSIGN(result,args);
+}
+
+extern SUBR(type)
+{ //Fixed
+    Node symbol;
+    pair_GetCar(args.pair, &symbol);
+    if (!isType(symbol, s_symbol)) {
+        ASSIGN(result, symbol);
+        return;
+    }
+    type_Create(symbol.symbol, void_s, result.type);
+}
+
+extern void environ_Let(Node local, Node env, Target result)
+{
+    Node symbol;
+    pair_GetCar(local.pair, &symbol);
+    pair_Create(symbol, NIL, result.pair);
+}
+
+extern SUBR(encode_let) {
+    Node locals; Node lenv;
+
+    pair_GetCar(args.pair, &locals);
+
+    if (!isType(locals, s_pair)) {
+        list_Map(encode, args.pair, env, result);
+        return;
+    }
+
+    list_Map(environ_Let, locals.pair, env, &lenv);
+    list_SetEnd(lenv.pair, env);
+    list_Map(encode, args.pair, lenv, result);
 }
 
 extern SUBR(let)
@@ -393,10 +434,34 @@ extern SUBR(let)
     eval_begin(body, env2, result);
 }
 
+extern void environ_Lambda(Node symbol, Node env, Target result)
+{
+    pair_Create(symbol, NIL, result.pair);
+}
+
+extern SUBR(encode_lambda) {
+    Node formals; Node body; Node lenv;
+
+    pair_GetCar(args.pair, &formals);
+    pair_GetCdr(args.pair, &body);
+
+    list_Map(environ_Lambda, formals.pair, env, &lenv);
+
+    list_SetEnd(lenv.pair, env);
+
+    list_Map(encode, body.pair, lenv, &(body.pair));
+
+    pair_Create(formals, body, result.pair);
+}
+
 extern SUBR(lambda)
 {
     pair_Create(args, env, result.pair);
     setType(*result.reference, s_lambda);
+}
+
+extern SUBR(encode_delay) {
+    list_Map(encode, args.pair, env, result);
 }
 
 extern SUBR(delay)
@@ -517,7 +582,7 @@ extern SUBR(eval_pair)
         head = tmp;
     }
 
-    if (isType(head, s_fixed)) {
+    if (isType(head, t_fixed)) {
         // apply Fixed to un-evaluated arguments
         Node func = NIL;
         tuple_GetItem(head.tuple, fxd_eval, &func);
@@ -1106,56 +1171,6 @@ extern SUBR(allocate) {
     setType(value, type.symbol);
 
     ASSIGN(result,value);
-}
-
-extern SUBR(encode_quote) {
-     ASSIGN(result,args);
-}
-
-extern void environ_Lambda(Node symbol, Node env, Target result)
-{
-    pair_Create(symbol, NIL, result.pair);
-}
-
-extern SUBR(encode_lambda) {
-    Node formals; Node body; Node lenv;
-
-    pair_GetCar(args.pair, &formals);
-    pair_GetCdr(args.pair, &body);
-
-    list_Map(environ_Lambda, formals.pair, env, &lenv);
-
-    list_SetEnd(lenv.pair, env);
-
-    list_Map(encode, body.pair, lenv, &(body.pair));
-
-    pair_Create(formals, body, result.pair);
-}
-
-extern void environ_Let(Node local, Node env, Target result)
-{
-    Node symbol;
-    pair_GetCar(local.pair, &symbol);
-    pair_Create(symbol, NIL, result.pair);
-}
-
-extern SUBR(encode_let) {
-    Node locals; Node lenv;
-
-    pair_GetCar(args.pair, &locals);
-
-    if (!isType(locals, s_pair)) {
-        list_Map(encode, args.pair, env, result);
-        return;
-    }
-
-    list_Map(environ_Let, locals.pair, env, &lenv);
-    list_SetEnd(lenv.pair, env);
-    list_Map(encode, args.pair, lenv, result);
-}
-
-extern SUBR(encode_delay) {
-    list_Map(encode, args.pair, env, result);
 }
 
 extern SUBR(force) {
@@ -1830,7 +1845,7 @@ static Node defineFixed(const char* name, Operator eval)
     primitive_Create(label, eval, &prim);
 
     tuple_Create(1, &fixed);
-    setType(fixed, s_fixed);
+    setType(fixed, t_fixed);
 
     tuple_SetItem(fixed, fxd_eval, prim);
 
@@ -1853,7 +1868,7 @@ static Node defineEFixed(const char* neval,  Operator oeval,
     GC_Protect(prim);
 
     tuple_Create(2, &fixed);
-    setType(fixed, s_fixed);
+    setType(fixed, t_fixed);
 
     if (nencode) {
         symbol_Convert(nencode, &label);
@@ -1917,20 +1932,6 @@ void startEnkiLibrary() {
     MK_CONST(nil,NIL);
 
     MK_CONST(Void,void_s);
-    MK_BTYPE(void);
-    MK_BTYPE(delay);
-    MK_BTYPE(fixed);
-    MK_BTYPE(forced);
-    MK_BTYPE(form);
-    MK_BTYPE(infile);
-    MK_BTYPE(integer);
-    MK_BTYPE(lambda);
-    MK_BTYPE(opaque);
-    MK_BTYPE(outfile);
-    MK_BTYPE(pair);
-    MK_BTYPE(primitive);
-    MK_BTYPE(text);
-    MK_BTYPE(tuple);
 
     MK_PRM(system_check);
 
@@ -1943,6 +1944,7 @@ void startEnkiLibrary() {
     MK_FXD(define);
 
     MK_EFXD(quote,encode_quote);
+    MK_EFXD(type,encode_type);
     MK_EFXD(let,encode_let);
     MK_EFXD(lambda,encode_lambda);
     MK_EFXD(delay,encode_delay);

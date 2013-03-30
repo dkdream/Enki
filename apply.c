@@ -83,6 +83,7 @@ extern void expand(const Node expr, const Node env, Target result)
 
         // deal with quoted values
         if (isIdentical(s_quote, head)) goto list_done;
+        if (isIdentical(s_type, head))  goto list_done;
 
         // check if the head is a reference
         if (!isType(head, s_symbol)) goto list_begin;
@@ -164,12 +165,12 @@ extern void encode(const Node expr, const Node env, Target result)
 
         if (isType(value, t_primitive)) {
             head = value;
-        } else if (isType(value, s_fixed)) {
+        } else if (isType(value, t_fixed)) {
             head = value;
         }
     }
 
-    if (!isType(head, s_fixed)) goto list_begin;
+    if (!isType(head, t_fixed)) goto list_begin;
 
     Node action = NIL;
 

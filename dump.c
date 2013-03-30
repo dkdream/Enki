@@ -10,6 +10,7 @@
 #include "treadmill.h"
 #include "text_buffer.h"
 #include "symbol.h"
+#include "type.h"
 
 /* */
 #include <string.h>
@@ -128,6 +129,18 @@ extern bool print(FILE* output, Node node) {
         return true;
     }
 
+    if (isIdentical(type, s_base)) {
+        Symbol name  = node.type->name;
+        Sort   sort  = node.type->sort;
+        Symbol sname = sort->name;
+        fprintf(output, "type(");
+        echo_string(output, (const char *)name->value);
+        fprintf(output, ", ");
+        echo_string(output, (const char *)sname->value);
+        fprintf(output, ")");
+        return true;
+    }
+
     if (isType(type, s_symbol)) {
         echo_string(output, (const char *)type.symbol->value);
     } else {
@@ -210,6 +223,18 @@ extern bool dump(FILE* output, Node node) {
         fprintf(output, "tuple(%p (size=%d))",
                 node.reference,
                 (unsigned) asKind(node)->count);
+        return true;
+    }
+
+    if (isIdentical(type, s_base)) {
+        Symbol name  = node.type->name;
+        Sort   sort  = node.type->sort;
+        Symbol sname = sort->name;
+        fprintf(output, "type(");
+        echo_string(output, (const char *)name->value);
+        fprintf(output, ", ");
+        echo_string(output, (const char *)sname->value);
+        fprintf(output, ")");
         return true;
     }
 
@@ -358,6 +383,19 @@ extern void prettyPrint(FILE* output, Node node) {
             return;
         }
 
+        if (isIdentical(type, s_base)) {
+            offset += 5;
+            Symbol name  = node.type->name;
+            Sort   sort  = node.type->sort;
+            Symbol sname = sort->name;
+            fprintf(output, "type(");
+            prettyPrint_intern(name, level+1);
+            fprintf(output, " ");
+            prettyPrint_intern(sname, level+1);
+            fprintf(output, ")");
+            return;
+        }
+
         if (isType(type, s_symbol)) {
             offset += type.symbol->size + 1;
             echo_string(output, (const char *)type.symbol->value);
@@ -365,6 +403,7 @@ extern void prettyPrint(FILE* output, Node node) {
             offset += 10;
             fprintf(output, "<type %p>", type.reference);
         }
+
         if (isAtomic(node)) {
             offset += 10;
             fprintf(output, "(%p)", node.reference);
