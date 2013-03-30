@@ -167,7 +167,7 @@ static unsigned short chartab[]= {
 ** '  -> quote
 ** (  -> list ')'
 ** ,  -> s_comma
-** :  -> s_colon
+** :  -> type
 ** ;  -> s_semi
 ** [  -> tuple ']'
 ** \  -> unquote
@@ -656,7 +656,7 @@ extern bool readExpr(FILE *fp, Target result)
             return true;
 
         case ':':
-            ASSIGN(result, s_colon);
+            return readQuote(fp, s_type, result);
             return true;
 
         case ';':

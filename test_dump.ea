@@ -10,7 +10,7 @@ dump
 (assert 'text    (type-of "1"))
 (assert 'symbol  (type-of 'val))
 (assert nil      (type-of nil))
-(assert 'primitive (type-of println))
+(assert primitive (type-of println))
 (assert 'fixed    (type-of let))
 
 (define fooness 'fooness)
