@@ -106,7 +106,7 @@ extern bool print(FILE* output, Node node) {
         return true;
     }
 
-    if (isIdentical(type, s_primitive)) {
+    if (isIdentical(type, t_primitive)) {
         fprintf(output, "%s(%p)",
                 (const char *) node.primitive->label->value,
                 node.reference);
@@ -191,7 +191,7 @@ extern bool dump(FILE* output, Node node) {
         return true;
     }
 
-    if (isIdentical(type, s_primitive)) {
+    if (isIdentical(type, t_primitive)) {
         fprintf(output, "primitive(%p %s)",
                 node.reference,
                 (const char*)(node.primitive->label->value));
@@ -319,7 +319,7 @@ extern void prettyPrint(FILE* output, Node node) {
             return;
         }
 
-        if (isIdentical(type, s_primitive)) {
+        if (isIdentical(type, t_primitive)) {
             offset += 20;
             fprintf(output, "primitive(%p %s)",
                     node.reference,

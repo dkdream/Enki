@@ -16,6 +16,7 @@
 #include "dump.h"
 #include "debug.h"
 #include "tuple.h"
+#include "type.h"
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -161,7 +162,7 @@ extern void encode(const Node expr, const Node env, Target result)
             alist_Get(enki_globals.pair, head, &value);
         }
 
-        if (isType(value, s_primitive)) {
+        if (isType(value, t_primitive)) {
             head = value;
         } else if (isType(value, s_fixed)) {
             head = value;
@@ -259,7 +260,7 @@ extern void apply(Node fun, Node args, const Node env, Target result)
         });
 
     // primitive -> Operator
-    if (isType(fun, s_primitive)) {
+    if (isType(fun, t_primitive)) {
       Operator function = fun.primitive->function;
       function(args, env, result);
       goto done;

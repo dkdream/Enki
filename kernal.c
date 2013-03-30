@@ -1873,6 +1873,7 @@ static Node defineEFixed(const char* neval,  Operator oeval,
 }
 
 #define MK_CONST(x,y) defineConstant(#x, y)
+#define MK_BTYPE(x)   defineConstant(#x, t_ ##x)
 #define MK_PRM(x)     definePrimitive(#x, opr_ ## x)
 #define MK_FXD(x)     defineFixed(#x, opr_ ## x)
 #define MK_FXD(x)     defineFixed(#x, opr_ ## x)
@@ -1904,6 +1905,7 @@ void startEnkiLibrary() {
     clink_Manage(&(enki_zero_space.start_clinks), &enki_globals);
 
     init_global_symboltable();
+    init_global_typetable();
 
     true_v = (Node)init_atom(&enki_true, 0);
 
@@ -1913,6 +1915,22 @@ void startEnkiLibrary() {
 
     MK_CONST(t,true_v);
     MK_CONST(nil,NIL);
+
+    MK_CONST(Void,void_s);
+    MK_BTYPE(void);
+    MK_BTYPE(delay);
+    MK_BTYPE(fixed);
+    MK_BTYPE(forced);
+    MK_BTYPE(form);
+    MK_BTYPE(infile);
+    MK_BTYPE(integer);
+    MK_BTYPE(lambda);
+    MK_BTYPE(opaque);
+    MK_BTYPE(outfile);
+    MK_BTYPE(pair);
+    MK_BTYPE(primitive);
+    MK_BTYPE(text);
+    MK_BTYPE(tuple);
 
     MK_PRM(system_check);
 
