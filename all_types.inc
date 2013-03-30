@@ -13,6 +13,7 @@
 #include "symbol.h"
 #include "text.h"
 #include "tuple.h"
+#include "type.h"
 /* */
 #include "apply.h"
 #include "reader.h"
