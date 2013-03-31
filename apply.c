@@ -104,7 +104,7 @@ extern void expand(const Node expr, const Node env, Target result)
             });
 
         // check if the reference is a form
-        if (!isType(value, s_form)) goto list_begin;
+        if (!isType(value, t_form)) goto list_begin;
 
         // apply the form function to the rest of the list
         apply(value, tail, env, &list);
@@ -276,7 +276,7 @@ extern void apply(Node fun, Node args, const Node env, Target result)
     }
 
     // Form -> p_apply_form
-    if (isType(fun, s_form)) {
+    if (isType(fun, t_form)) {
       if (!pair_Create(fun, args, &(args.pair))) goto error;
       Operator function = p_apply_form->function;
       function(args, env, result);

@@ -389,11 +389,13 @@ extern SUBR(type)
 { //Fixed
     Node symbol;
     pair_GetCar(args.pair, &symbol);
+
     if (!isType(symbol, s_symbol)) {
         ASSIGN(result, symbol);
         return;
     }
-    type_Create(symbol.symbol, void_s, result.type);
+
+    type_Create(symbol.symbol, zero_s, result.type);
 }
 
 extern void environ_Let(Node local, Node env, Target result)
@@ -803,7 +805,7 @@ extern SUBR(form)
 
   tuple_Create(1, &tuple);
   tuple_SetItem(tuple, 0, func);
-  setType(tuple, s_form);
+  setType(tuple, t_form);
 
   ASSIGN(result, (Node)tuple);
 }
@@ -829,7 +831,7 @@ extern SUBR(fixed)
       tuple_SetItem(tuple, 0, func);
   }
 
-  setType(tuple, s_fixed);
+  setType(tuple, t_fixed);
 
   ASSIGN(result, (Node)tuple);
 }
@@ -852,7 +854,7 @@ extern SUBR(type_of)
 
 extern SUBR(com) {
     Node val = NIL;
-    checkArgs(args, "~", 1, s_integer);
+    checkArgs(args, "~", 1, t_integer);
     forceArgs(args, &val, 0);
     integer_Create(~(val.integer->value), result.integer);
 }
@@ -873,7 +875,7 @@ extern SUBR(com) {
 extern SUBR(NAME) \
 { \
     Node left; Node right; \
-    checkArgs(args, #OP, 2, s_integer, s_integer); \
+    checkArgs(args, #OP, 2, t_integer, t_integer); \
     forceArgs(args, &left, &right, 0); \
     integer_Create((left.integer->value) OP (right.integer->value), result.integer); \
 }
@@ -889,7 +891,7 @@ _do_binary()
 extern SUBR(NAME) \
 { \
     Node left; Node right; \
-    checkArgs(args, #OP, 2, s_integer, s_integer); \
+    checkArgs(args, #OP, 2, t_integer, t_integer); \
     forceArgs(args, &left, &right, 0); \
     if ((left.integer->value) OP (right.integer->value)) { \
         ASSIGN(result, true_v);                            \
@@ -930,7 +932,7 @@ extern SUBR(neq)
 extern SUBR(iso)
 {
     Node depth; Node left; Node right;
-    checkArgs(args, "iso", 3, s_integer, NIL, NIL);
+    checkArgs(args, "iso", 3, t_integer, NIL, NIL);
     forceArgs(args, &depth, &left, &right, 0);
 
     if (node_Iso(depth.integer->value, left,right)) {
@@ -964,7 +966,7 @@ extern SUBR(exit)
     Node value = NIL;
     forceArgs(args, &value, 0);
 
-    if (isType(value, s_integer)) {
+    if (isType(value, t_integer)) {
         exit(value.integer->value);
     } else {
         exit(0);
@@ -1066,7 +1068,7 @@ extern SUBR(debug)
     long level = 1;
     if (isType(args, s_pair)) {
         pair_GetCar(args.pair, &value);
-        if (isType(value, s_integer)) {
+        if (isType(value, t_integer)) {
             level = value.integer->value;
             pair_GetCdr(args.pair, &args);
         }
@@ -1092,7 +1094,7 @@ extern SUBR(level)
     if (isType(args, s_pair)) {
         Node nvalue;
         pair_GetCar(args.pair, &nvalue);
-        if (isType(nvalue, s_integer)) {
+        if (isType(nvalue, t_integer)) {
             ea_global_debug = nvalue.integer->value;
         }
     }
@@ -1102,7 +1104,7 @@ extern SUBR(level)
 
 extern SUBR(element) {
     Node tuple, index, value;
-    int count = checkArgs(args, "element", 2, NIL, s_integer);
+    int count = checkArgs(args, "element", 2, NIL, t_integer);
 
     ASSIGN(result,NIL);
 
@@ -1154,7 +1156,7 @@ extern SUBR(tuple) {
 
 extern SUBR(allocate) {
     Node type; Node size;
-    checkArgs(args, "allocate", 2, s_symbol, s_integer);
+    checkArgs(args, "allocate", 2, s_symbol, t_integer);
 
     ASSIGN(result,NIL);
 
@@ -1185,7 +1187,7 @@ extern SUBR(concat_text) {
     static char data[20];
     buffer_reset(&buffer);
 
-    checkArgs(args, "concat-text", 2, s_text, s_text);
+    checkArgs(args, "concat-text", 2, t_text, t_text);
 
     while (isType(args, s_pair)) {
         Node text;
@@ -1193,7 +1195,7 @@ extern SUBR(concat_text) {
         pair_GetCar(args.pair, &text);
         pair_GetCdr(args.pair, &args);
 
-        if (isType(text, s_text)) {
+        if (isType(text, t_text)) {
             buffer_add(&buffer, text_Text(text.text));
             continue;
         }
@@ -1203,7 +1205,7 @@ extern SUBR(concat_text) {
             continue;
         }
 
-        if (isType(text, s_integer)) {
+        if (isType(text, t_integer)) {
             long value = text.integer->value;
             sprintf(data, "%ld", value);
             buffer_add(&buffer, data);
@@ -1229,7 +1231,7 @@ extern SUBR(concat_symbol) {
         pair_GetCar(args.pair, &text);
         pair_GetCdr(args.pair, &args);
 
-        if (isType(text, s_text)) {
+        if (isType(text, t_text)) {
             buffer_add(&buffer, text_Text(text.text));
             continue;
         }
@@ -1239,7 +1241,7 @@ extern SUBR(concat_symbol) {
             continue;
         }
 
-        if (isType(text, s_integer)) {
+        if (isType(text, t_integer)) {
             long value = text.integer->value;
             sprintf(data, "%ld", value);
             buffer_add(&buffer, data);
@@ -1274,12 +1276,12 @@ extern SUBR(mark_time) {
             prefix = true;
             continue;
         }
-        if (isType(value, s_text)) {
+        if (isType(value, t_text)) {
             print(stderr, value);
             prefix = true;
             continue;
         }
-        if (isType(value, s_integer)) {
+        if (isType(value, t_integer)) {
             print(stderr, value);
             prefix = true;
             continue;
@@ -1300,7 +1302,7 @@ extern SUBR(mark_time) {
 
 extern SUBR(system) {
     Node command = NIL;
-    checkArgs(args, "system", 1, s_text);
+    checkArgs(args, "system", 1, t_text);
     forceArgs(args, &command, 0);
 
     int state = system(text_Text(command.text));
@@ -1322,7 +1324,7 @@ extern SUBR(error) {
     Node kind    = NIL;
     Node message = NIL;
 
-    checkArgs(args, "error", 1, s_symbol, s_text);
+    checkArgs(args, "error", 1, s_symbol, t_text);
     forceArgs(args, &kind, &message, 0);
 
     print(stderr, kind);
@@ -1343,12 +1345,12 @@ extern void formatAppendTo(TextBuffer *buffer, Node value) {
         return;
     }
 
-    if (isIdentical(type, s_text)) {
+    if (isIdentical(type, t_text)) {
         buffer_add(buffer, text_Text(value.text));
         return;
     }
 
-    if (isIdentical(type, s_integer)) {
+    if (isIdentical(type, t_integer)) {
         sprintf(data, "%lld", value.integer->value);
         buffer_add(buffer, data);
         return;
@@ -1362,7 +1364,7 @@ extern SUBR(format) {
 
     const char* format;
 
-    checkArgs(args, "format", 1, s_text);
+    checkArgs(args, "format", 1, t_text);
 
     if (!isType(args, s_pair)) {
         fatal("missing first argument to format\n");
@@ -1370,7 +1372,7 @@ extern SUBR(format) {
         Node form = NIL;
         pair_GetCar(args.pair, &form);
         pair_GetCdr(args.pair, &args);
-        if (!isType(form, s_text)) {
+        if (!isType(form, t_text)) {
             fatal("first argument to formant is not text\n");
         }
         format = text_Text(form.text);
@@ -1430,7 +1432,7 @@ static ID_set loaded_inodes = SET_INITIALISER;
 extern SUBR(require) {
     Node path;
 
-    checkArgs(args, "require", 1, s_text);
+    checkArgs(args, "require", 1, t_text);
     forceArgs(args, &path, 0);
 
     FILE* file = fopen(text_Text(path.text), "r");
@@ -1483,7 +1485,7 @@ typedef struct os_file* OSFile;
 
 extern SUBR(open_in) {
     Node path;
-    checkArgs(args, "open-in", 1, s_text);
+    checkArgs(args, "open-in", 1, t_text);
     forceArgs(args, &path, 0);
 
     FILE* file = fopen(text_Text(path.text), "r");
@@ -1506,7 +1508,7 @@ extern SUBR(open_in) {
 
 extern SUBR(open_out) {
     Node path;
-    checkArgs(args, "open-out", 1, s_text);
+    checkArgs(args, "open-out", 1, t_text);
     forceArgs(args, &path, 0);
 
     FILE* file = fopen(text_Text(path.text), "w");
@@ -1592,7 +1594,7 @@ extern SUBR(fprint) {
         pair_GetCar(args.pair, &text);
         pair_GetCdr(args.pair, &args);
 
-        if (!isType(text, s_text)) {
+        if (!isType(text, t_text)) {
             fatal("invalid argument to fprint\n");
         }
 
@@ -1682,10 +1684,10 @@ extern SUBR(inode) {
     struct stat stbuf;
     Node fname;
 
-    checkArgs(args, "inode", 1, s_text);
+    checkArgs(args, "inode", 1, t_text);
     forceArgs(args, &fname, 0);
 
-    if (!isType(fname, s_text)) {
+    if (!isType(fname, t_text)) {
         fatal("inode: not text");
     }
 
@@ -1769,7 +1771,7 @@ extern SUBR(integer_q) {
     checkArgs(args, "integer?", 1, NIL);
     pair_GetCar(args.pair, &value);
 
-    if (isType(value, s_integer)) {
+    if (isType(value, t_integer)) {
         ASSIGN(result, true_v);
     } else {
         ASSIGN(result, NIL);
@@ -1779,7 +1781,7 @@ extern SUBR(integer_q) {
 extern SUBR(gc_scan) {
     Node value;
 
-    checkArgs(args, "gc-scan", 1, s_integer);
+    checkArgs(args, "gc-scan", 1, t_integer);
     forceArgs(args, &value, 0);
 
     unsigned int count = value.integer->value;
@@ -1931,7 +1933,7 @@ void startEnkiLibrary() {
     MK_CONST(t,true_v);
     MK_CONST(nil,NIL);
 
-    MK_CONST(Void,void_s);
+    MK_CONST(Zero,zero_s);
 
     MK_PRM(system_check);
 

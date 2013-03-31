@@ -7,7 +7,6 @@
  **/
 #include "primitive.h"
 #include "treadmill.h"
-#include "symbol.h"
 #include "type.h"
 
 extern bool primitive_Create(Symbol label, Operator function, Primitive *target) {

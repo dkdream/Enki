@@ -95,13 +95,13 @@ extern bool print(FILE* output, Node node) {
         return true;
     }
 
-    if (isIdentical(type, s_text)) {
+    if (isIdentical(type, t_text)) {
         fprintf(output, "%s",
                 (const char *) node.text->value);
         return true;
     }
 
-    if (isIdentical(type, s_integer)) {
+    if (isIdentical(type, t_integer)) {
         fprintf(output, "%lld",
                 node.integer->value);
         return true;
@@ -111,6 +111,21 @@ extern bool print(FILE* output, Node node) {
         fprintf(output, "%s(%p)",
                 (const char *) node.primitive->label->value,
                 node.reference);
+        return true;
+    }
+
+    if (isIdentical(type, s_sort)) {
+        fprintf(output, "sort(%p %s)",
+                node.reference,
+                (const char*)(node.sort->name->value));
+        return true;
+    }
+
+    if (isIdentical(type, s_base)) {
+        fprintf(output, "type(%p %s %s)",
+                node.reference,
+                (const char*)(node.type->name->value),
+                (const char*)(node.type->sort->name->value));
         return true;
     }
 
@@ -126,18 +141,6 @@ extern bool print(FILE* output, Node node) {
         fprintf(output, "tuple(%p (size=%d))",
                 node.reference,
                 (unsigned) asKind(node.reference)->count);
-        return true;
-    }
-
-    if (isIdentical(type, s_base)) {
-        Symbol name  = node.type->name;
-        Sort   sort  = node.type->sort;
-        Symbol sname = sort->name;
-        fprintf(output, "type(");
-        echo_string(output, (const char *)name->value);
-        fprintf(output, ", ");
-        echo_string(output, (const char *)sname->value);
-        fprintf(output, ")");
         return true;
     }
 
@@ -191,14 +194,14 @@ extern bool dump(FILE* output, Node node) {
         return true;
     }
 
-    if (isIdentical(type, s_text)) {
+    if (isIdentical(type, t_text)) {
         fprintf(output, "text(%llx,\"", node.text->hashcode);
         echo_string(output, (const char *) node.text->value);
         fprintf(output, "\")");
         return true;
     }
 
-    if (isIdentical(type, s_integer)) {
+    if (isIdentical(type, t_integer)) {
         fprintf(output, "integer(%lld)",
                 node.integer->value);
         return true;
@@ -208,6 +211,21 @@ extern bool dump(FILE* output, Node node) {
         fprintf(output, "primitive(%p %s)",
                 node.reference,
                 (const char*)(node.primitive->label->value));
+        return true;
+    }
+
+    if (isIdentical(type, s_sort)) {
+        fprintf(output, "sort(%p %s)",
+                node.reference,
+                (const char*)(node.sort->name->value));
+        return true;
+    }
+
+    if (isIdentical(type, s_base)) {
+        fprintf(output, "type(%p %s %s)",
+                node.reference,
+                (const char*)(node.type->name->value),
+                (const char*)(node.type->sort->name->value));
         return true;
     }
 
@@ -223,18 +241,6 @@ extern bool dump(FILE* output, Node node) {
         fprintf(output, "tuple(%p (size=%d))",
                 node.reference,
                 (unsigned) asKind(node)->count);
-        return true;
-    }
-
-    if (isIdentical(type, s_base)) {
-        Symbol name  = node.type->name;
-        Sort   sort  = node.type->sort;
-        Symbol sname = sort->name;
-        fprintf(output, "type(");
-        echo_string(output, (const char *)name->value);
-        fprintf(output, ", ");
-        echo_string(output, (const char *)sname->value);
-        fprintf(output, ")");
         return true;
     }
 
@@ -330,7 +336,7 @@ extern void prettyPrint(FILE* output, Node node) {
             return;
         }
 
-        if (isIdentical(type, s_text)) {
+        if (isIdentical(type, t_text)) {
             offset += node.text->size + 3;
             fprintf(output, "\"");
             echo_string(output, (const char *) node.text->value);
@@ -338,7 +344,7 @@ extern void prettyPrint(FILE* output, Node node) {
             return;
         }
 
-        if (isIdentical(type, s_integer)) {
+        if (isIdentical(type, t_integer)) {
             offset += 10;
             fprintf(output, "%lld", node.integer->value);
             return;
@@ -349,6 +355,23 @@ extern void prettyPrint(FILE* output, Node node) {
             fprintf(output, "primitive(%p %s)",
                     node.reference,
                     (const char*)(node.primitive->label->value));
+            return;
+        }
+
+        if (isIdentical(type, s_sort)) {
+            offset += 20;
+            fprintf(output, "sort(%p %s)",
+                    node.reference,
+                    (const char*)(node.sort->name->value));
+            return;
+        }
+
+        if (isIdentical(type, s_base)) {
+            offset += 20;
+            fprintf(output, "type(%p %s %s)",
+                    node.reference,
+                    (const char*)(node.type->name->value),
+                    (const char*)(node.type->sort->name->value));
             return;
         }
 
@@ -380,19 +403,6 @@ extern void prettyPrint(FILE* output, Node node) {
                 prettyPrint_intern(node.tuple->item[inx], level+1);
             }
             fprintf(output, "]");
-            return;
-        }
-
-        if (isIdentical(type, s_base)) {
-            offset += 5;
-            Symbol name  = node.type->name;
-            Sort   sort  = node.type->sort;
-            Symbol sname = sort->name;
-            fprintf(output, "type(");
-            prettyPrint_intern(name, level+1);
-            fprintf(output, " ");
-            prettyPrint_intern(sname, level+1);
-            fprintf(output, ")");
             return;
         }
 

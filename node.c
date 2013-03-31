@@ -28,11 +28,11 @@ extern HashCode node_HashCode(Node node)
         return node.symbol->hashcode;
     }
 
-    if (isIdentical(type, s_text)) {
+    if (isIdentical(type, t_text)) {
         return node.text->hashcode;
     }
 
-    if (isIdentical(type, s_integer)) {
+    if (isIdentical(type, t_integer)) {
         return node.integer->value;
     }
 
@@ -59,14 +59,14 @@ bool node_Match(Node left, Node right)
 
     if (!isIdentical(type, getType(right))) return false;
 
-    if (isIdentical(type, s_text)) {
+    if (isIdentical(type, t_text)) {
         if (left.text->size != right.text->size) return false;
         return 0 == memcmp(left.text->value,
                            right.text->value,
                            left.text->size);
     }
 
-    if (isIdentical(type, s_integer)) {
+    if (isIdentical(type, t_integer)) {
         return left.integer->value == right.integer->value;
     }
 
@@ -76,11 +76,12 @@ bool node_Match(Node left, Node right)
 bool node_Iso(long depth, Node left, Node right)
 {
 #if 0
-    printf("iso[%ld]: ", depth);
-    print(stdout, left);
-    printf(" to: ");
-    print(stdout, right);
-    printf("\n");
+    fprintf(stderr, "iso[%ld]: (%p,%p) ",
+            depth, left.reference, right.reference);
+    print(stderr, left);
+    fprintf(stderr, " to: ");
+    print(stderr, right);
+    fprintf(stderr, "\n");
 #endif
 
     if (left.reference == right.reference) return true;
@@ -93,14 +94,14 @@ bool node_Iso(long depth, Node left, Node right)
 
     if (1 > depth) return true;
 
-    if (isIdentical(type, s_text)) {
+    if (isIdentical(type, t_text)) {
         if (left.text->size != right.text->size) return false;
         return 0 == memcmp(left.text->value,
                            right.text->value,
                            left.text->size);
     }
 
-    if (isIdentical(type, s_integer)) {
+    if (isIdentical(type, t_integer)) {
         return left.integer->value == right.integer->value;
     }
 

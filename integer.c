@@ -8,7 +8,7 @@
  **/
 #include "integer.h"
 #include "treadmill.h"
-#include "symbol.h"
+#include "type.h"
 
 extern bool integer_Create(long long value, Integer *target) {
     if (!node_Allocate(_zero_space,
@@ -19,7 +19,7 @@ extern bool integer_Create(long long value, Integer *target) {
 
     Integer result = *target;
 
-    setType(result, s_integer);
+    setType(result, t_integer);
 
     result->value = value;
 

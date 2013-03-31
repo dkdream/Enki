@@ -9,6 +9,7 @@
 #include "symbol.h"
 #include "treadmill.h"
 #include "debug.h"
+#include "dump.h"
 
 /* */
 #include <stdlib.h>
@@ -45,7 +46,7 @@ struct _internal_Table {
 
 static struct _internal_Table *_global_typetable = 0;
 
-Sort void_s = 0;
+Sort zero_s = 0;
 
 Type t_any = 0;
 Type t_delay = 0;
@@ -62,7 +63,6 @@ Type t_primitive = 0;
 Type t_text = 0;
 Type t_true = 0;
 Type t_tuple = 0;
-Type t_void = 0;
 
 static void make_sort(const char* value, Sort* target) {
     Symbol symbol = 0;
@@ -76,7 +76,7 @@ static void make_basetype(const char* value, Type* target) {
     Symbol symbol = 0;
     if (!symbol_Convert(value, &symbol)) return;
 
-    type_Create(symbol, void_s, target);
+    type_Create(symbol, zero_s, target);
 }
 
 #define MK_BTYPE(x) make_basetype(#x, &t_ ##x)
@@ -97,7 +97,7 @@ extern void init_global_typetable() {
 
     _global_typetable = result;
 
-    make_sort("Void", &void_s);
+    make_sort("Zero", &zero_s);
 
     MK_BTYPE(any);
     MK_BTYPE(delay);
@@ -114,7 +114,6 @@ extern void init_global_typetable() {
     MK_BTYPE(text);
     MK_BTYPE(true);
     MK_BTYPE(tuple);
-    MK_BTYPE(void);
 }
 
 extern void final_global_typetable() {
@@ -164,7 +163,7 @@ extern bool sort_Create(Symbol symbol, Sort* target) {
     Header    group = _global_typetable->row[row].first;
 
     for ( ; group; group = group->after) {
-        if (isIdentical(group->kind.type, s_sort)) continue;
+        if (!isIdentical(group->kind.type, s_sort)) continue;
 
         Sort test = (Sort) asReference(group);
 
@@ -181,14 +180,13 @@ extern bool sort_Create(Symbol symbol, Sort* target) {
 
     entry->kind.type = (Node)s_sort;
 
-
     Sort result = (Sort) asReference(entry);
 
     result->hashcode = symbol->hashcode;
     result->name     = symbol;
 
     entry->after = _global_typetable->row[row].first;
-    _global_typetable->row[row].first = entry->after;
+    _global_typetable->row[row].first = entry;
 
     ASSIGN(target, result);
 
@@ -207,7 +205,7 @@ extern bool type_Create(Symbol symbol, Sort sort, Type* target) {
     Header    group = _global_typetable->row[row].first;
 
     for ( ; group; group = group->after) {
-        if (isIdentical(group->kind.type, s_base)) continue;
+        if (!isIdentical(group->kind.type, s_base)) continue;
 
         Type test = (Type) asReference(group);
 
@@ -223,7 +221,7 @@ extern bool type_Create(Symbol symbol, Sort sort, Type* target) {
 
     if (!entry) return false;
 
-    entry->kind.type = (Node)s_base;
+    entry->kind.type = (Node) s_base;
 
     Type result = (Type) asReference(entry);
 
@@ -232,7 +230,7 @@ extern bool type_Create(Symbol symbol, Sort sort, Type* target) {
     result->name     = symbol;
 
     entry->after = _global_typetable->row[row].first;
-    _global_typetable->row[row].first = entry->after;
+    _global_typetable->row[row].first = entry;
 
     ASSIGN(target, result);
 
@@ -262,7 +260,7 @@ extern bool rule_Create(Symbol symbol, Sort in, Sort out, Sort type, Rule* targe
     Header    group = _global_typetable->row[row].first;
 
     for ( ; group; group = group->after) {
-        if (isIdentical(group->kind.type, s_rule)) continue;
+        if (!isIdentical(group->kind.type, s_rule)) continue;
 
         Rule test = (Rule) asReference(group);
 
@@ -291,7 +289,7 @@ extern bool rule_Create(Symbol symbol, Sort in, Sort out, Sort type, Rule* targe
     result->type     = type;
 
     entry->after = _global_typetable->row[row].first;
-    _global_typetable->row[row].first = entry->after;
+    _global_typetable->row[row].first = entry;
 
     ASSIGN(target, result);
 
@@ -315,7 +313,7 @@ extern bool name_Create(Sort sort, Name* target) {
     result->sort = sort;
 
     entry->after = _global_typetable->row[row].first;
-    _global_typetable->row[row].first = entry->after;
+    _global_typetable->row[row].first = entry;
 
     return true;
 }

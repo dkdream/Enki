@@ -6,7 +6,7 @@
  **    <routine-list-end>
  **/
 #include "text.h"
-#include "symbol.h"
+#include "type.h"
 #include "treadmill.h"
 
 /* */
@@ -78,7 +78,7 @@ extern bool text_Create(TextBuffer value, Text *target) {
 
     Text result = *target;
 
-    setType(result, s_text);
+    setType(result, t_text);
 
     result->size     = size;
     result->hashcode = hashcode;
