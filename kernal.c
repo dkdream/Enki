@@ -97,18 +97,18 @@ extern void forceArg(Node arg, Target result) {
 
     GC_Protect(tmp);
 
-    if (isType(arg, s_delay)) {
+    if (isType(arg, t_delay)) {
         Node dexpr, denv;
         tuple_GetItem(arg.tuple, 1, &dexpr);
         tuple_GetItem(arg.tuple, 2, &denv);
         eval(dexpr, denv, &tmp);
         tuple_SetItem(arg.tuple, 0, tmp);
-        setType(arg.tuple, s_forced);
+        setType(arg.tuple, t_forced);
         ASSIGN(result, tmp);
         goto done;
     }
 
-    if (isType(arg, s_forced)) {
+    if (isType(arg, t_forced)) {
         tuple_GetItem(arg.tuple, 0, result);
         goto done;
     }
@@ -131,7 +131,7 @@ extern void forceArgs(Node args, ...)
 
     darken_Node(args);
 
-    while (isType(args, s_pair)) {
+    while (isType(args, t_pair)) {
         Node holding   = NIL;
         Node *location = va_arg(ap, Node*);
 
@@ -164,7 +164,7 @@ extern void fetchArgs(Node args, ...)
 
     darken_Node(args);
 
-    while (isType(args, s_pair)) {
+    while (isType(args, t_pair)) {
         Node *location = va_arg(ap, Node*);
 
         if (!location) goto done;
@@ -212,7 +212,7 @@ extern void eval_begin(Node body, Node env, Target last)
     GC_Protect(expr);
     GC_Protect(value);
 
-    while (isType(body, s_pair)) {
+    while (isType(body, t_pair)) {
         pair_GetCar(body.pair, &expr);
         pair_GetCdr(body.pair, &body);
         eval(expr, env, &value);
@@ -261,7 +261,7 @@ extern SUBR(and)
     expr = NIL;
     ans  = true_v;
 
-    for (; isType(body, s_pair) ;) {
+    for (; isType(body, t_pair) ;) {
         pair_GetCar(body.pair, &expr);
         pair_GetCdr(body.pair, &body);
         eval(expr, env, &ans);
@@ -283,7 +283,7 @@ extern SUBR(or)
     expr = NIL;
     ans  = NIL;
 
-    for (; isType(body, s_pair) ;) {
+    for (; isType(body, t_pair) ;) {
         pair_GetCar(body.pair, &expr);
         pair_GetCdr(body.pair, &body);
         eval(expr, env, &ans);
@@ -410,7 +410,7 @@ extern SUBR(encode_let) {
 
     pair_GetCar(args.pair, &locals);
 
-    if (!isType(locals, s_pair)) {
+    if (!isType(locals, t_pair)) {
         list_Map(encode, args.pair, env, result);
         return;
     }
@@ -459,7 +459,7 @@ extern SUBR(encode_lambda) {
 extern SUBR(lambda)
 {
     pair_Create(args, env, result.pair);
-    setType(*result.reference, s_lambda);
+    setType(*result.reference, t_lambda);
 }
 
 extern SUBR(encode_delay) {
@@ -476,7 +476,7 @@ extern SUBR(delay)
     tuple_SetItem(tuple, 0, NIL);
     tuple_SetItem(tuple, 1, expr);
     tuple_SetItem(tuple, 2, env);
-    setType(tuple, s_delay);
+    setType(tuple, t_delay);
     ASSIGN(result, tuple);
 }
 
@@ -500,7 +500,7 @@ extern SUBR(find)
 
     forceArgs(args, &tst, &lst, 0);
 
-    while (isType(lst, s_pair)) {
+    while (isType(lst, t_pair)) {
         Node elm   = NIL;
         Node check = NIL;
 
@@ -535,7 +535,7 @@ extern SUBR(eval_symbol)
 
     pair_GetCdr(entry, &tmp);
 
-    if (isType(tmp, s_forced)) {
+    if (isType(tmp, t_forced)) {
         tuple_GetItem(tmp.tuple, 0, &tmp);
         pair_SetCdr(entry, tmp);
     }
@@ -574,13 +574,13 @@ extern SUBR(eval_pair)
     // first eval the head
     eval(head, env, &head);
 
-    if (isType(head, s_delay)) {
+    if (isType(head, t_delay)) {
         Node dexpr, denv;
         tuple_GetItem(head.tuple, 1, &dexpr);
         tuple_GetItem(head.tuple, 2, &denv);
         eval(dexpr, denv, &tmp);
         tuple_SetItem(head.tuple, 0, tmp);
-        setType(head.tuple, s_forced);
+        setType(head.tuple, t_forced);
         head = tmp;
     }
 
@@ -632,11 +632,11 @@ extern SUBR(apply_lambda)
 
     // bind parameters to values
     // extending the closure enviroment
-    while (isType(formals, s_pair)) {
+    while (isType(formals, t_pair)) {
         Node var = NIL;
         Node val = NIL;
 
-        if (!isType(vlist, s_pair)) {
+        if (!isType(vlist, t_pair)) {
             fprintf(stderr, "\nerror: too few arguments params: ");
             prettyPrint(stderr, vars);
             fprintf(stderr, " args: ");
@@ -994,13 +994,13 @@ extern SUBR(dump)
 {
     Node value = NIL;
 
-    if (isType(args, s_pair)) {
+    if (isType(args, t_pair)) {
         pair_GetCar(args.pair, &value);
         pair_GetCdr(args.pair, &args);
         prettyPrint(stdout, value);
     }
 
-    while (isType(args, s_pair)) {
+    while (isType(args, t_pair)) {
         printf(" ");
         pair_GetCar(args.pair, &value);
         pair_GetCdr(args.pair, &args);
@@ -1015,13 +1015,13 @@ extern SUBR(dumpln)
 {
     Node value = NIL;
 
-    if (isType(args, s_pair)) {
+    if (isType(args, t_pair)) {
         pair_GetCar(args.pair, &value);
         pair_GetCdr(args.pair, &args);
         prettyPrint(stdout, value);
     }
 
-    while (isType(args, s_pair)) {
+    while (isType(args, t_pair)) {
         printf(" ");
         pair_GetCar(args.pair, &value);
         pair_GetCdr(args.pair, &args);
@@ -1037,7 +1037,7 @@ extern SUBR(print)
 {
     Node value = NIL;
 
-    while (isType(args, s_pair)) {
+    while (isType(args, t_pair)) {
         pair_GetCar(args.pair, &value);
         pair_GetCdr(args.pair, &args);
         print(stdout, value);
@@ -1051,7 +1051,7 @@ extern SUBR(println)
 {
     Node value = NIL;
 
-    while (isType(args, s_pair)) {
+    while (isType(args, t_pair)) {
         pair_GetCar(args.pair, &value);
         pair_GetCdr(args.pair, &args);
         print(stdout, value);
@@ -1066,7 +1066,7 @@ extern SUBR(debug)
 {
     Node value = NIL;
     long level = 1;
-    if (isType(args, s_pair)) {
+    if (isType(args, t_pair)) {
         pair_GetCar(args.pair, &value);
         if (isType(value, t_integer)) {
             level = value.integer->value;
@@ -1074,7 +1074,7 @@ extern SUBR(debug)
         }
     }
     if (ea_global_debug <= level) {
-        while (isType(args, s_pair)) {
+        while (isType(args, t_pair)) {
             pair_GetCar(args.pair, &value);
             pair_GetCdr(args.pair, &args);
             print(stderr, value);
@@ -1091,7 +1091,7 @@ extern SUBR(level)
 
     integer_Create(ea_global_debug, &value.integer);
 
-    if (isType(args, s_pair)) {
+    if (isType(args, t_pair)) {
         Node nvalue;
         pair_GetCar(args.pair, &nvalue);
         if (isType(nvalue, t_integer)) {
@@ -1189,7 +1189,7 @@ extern SUBR(concat_text) {
 
     checkArgs(args, "concat-text", 2, t_text, t_text);
 
-    while (isType(args, s_pair)) {
+    while (isType(args, t_pair)) {
         Node text;
 
         pair_GetCar(args.pair, &text);
@@ -1225,7 +1225,7 @@ extern SUBR(concat_symbol) {
 
     checkArgs(args, "concat-symbol", 2, NIL, NIL);
 
-    while (isType(args, s_pair)) {
+    while (isType(args, t_pair)) {
         Node text;
 
         pair_GetCar(args.pair, &text);
@@ -1268,7 +1268,7 @@ extern SUBR(mark_time) {
     Node value = NIL;
     bool prefix = false;
 
-    while (isType(args, s_pair)) {
+    while (isType(args, t_pair)) {
         pair_GetCar(args.pair, &value);
         pair_GetCdr(args.pair, &args);
         if (isType(value, s_symbol)) {
@@ -1366,7 +1366,7 @@ extern SUBR(format) {
 
     checkArgs(args, "format", 1, t_text);
 
-    if (!isType(args, s_pair)) {
+    if (!isType(args, t_pair)) {
         fatal("missing first argument to format\n");
     } else {
         Node form = NIL;
@@ -1390,7 +1390,7 @@ extern SUBR(format) {
 
                 ++count;
 
-                if (!isType(args, s_pair)) {
+                if (!isType(args, t_pair)) {
                     fatal("missing argument %d to format\n", count);
                 } else {
                     Node value = NIL;
@@ -1497,7 +1497,7 @@ extern SUBR(open_in) {
 
     Reference infile = 0;
 
-    if (!opaque_Create(s_infile, sizeof(struct os_file), &infile)) {
+    if (!opaque_Create(t_infile, sizeof(struct os_file), &infile)) {
         fatal("failed to allocate opaque object");
     }
 
@@ -1520,7 +1520,7 @@ extern SUBR(open_out) {
 
     Reference outfile = 0;
 
-    if (!opaque_Create(s_outfile, sizeof(struct os_file), &outfile)) {
+    if (!opaque_Create(t_outfile, sizeof(struct os_file), &outfile)) {
         fatal("failed to allocate opaque object");
     }
 
@@ -1531,10 +1531,10 @@ extern SUBR(open_out) {
 
 extern SUBR(close_in) {
     Node file;
-    checkArgs(args, "close-in", 1, s_infile);
+    checkArgs(args, "close-in", 1, t_infile);
     forceArgs(args, &file, 0);
 
-    if (!isType(file, s_infile)) {
+    if (!isType(file, t_infile)) {
         fatal("close-in: not an infile");
     }
 
@@ -1551,10 +1551,10 @@ extern SUBR(close_in) {
 
 extern SUBR(close_out) {
     Node file;
-    checkArgs(args, "close-out", 1, s_outfile);
+    checkArgs(args, "close-out", 1, t_outfile);
     forceArgs(args, &file, 0);
 
-    if (!isType(file, s_outfile)) {
+    if (!isType(file, t_outfile)) {
         fatal("close-out: not an outfile");
     }
 
@@ -1572,9 +1572,9 @@ extern SUBR(close_out) {
 extern SUBR(fprint) {
     FILE* out = 0;
 
-    checkArgs(args, "fprint", 1, s_outfile);
+    checkArgs(args, "fprint", 1, t_outfile);
 
-    if (!isType(args, s_pair)) {
+    if (!isType(args, t_pair)) {
          fatal("missing first argument to fprint\n");
     } else {
         Node outfile = NIL;
@@ -1582,14 +1582,14 @@ extern SUBR(fprint) {
         pair_GetCar(args.pair, &outfile);
         pair_GetCdr(args.pair, &args);
 
-        if (!isType(outfile, s_outfile)) {
+        if (!isType(outfile, t_outfile)) {
             fatal("first argument to formant is not an outfile\n");
         }
 
         out = ((OSFile)(outfile.reference))->file;
     }
 
-    while (isType(args, s_pair)) {
+    while (isType(args, t_pair)) {
         Node text;
         pair_GetCar(args.pair, &text);
         pair_GetCdr(args.pair, &args);
@@ -1607,10 +1607,10 @@ extern SUBR(read_line) {
 
     Node file;
 
-    checkArgs(args, "read-line", 1, s_infile);
+    checkArgs(args, "read-line", 1, t_infile);
     forceArgs(args, &file, 0);
 
-    if (!isType(file, s_infile)) {
+    if (!isType(file, t_infile)) {
         fatal("read-line: not an infile");
     }
 
@@ -1641,10 +1641,10 @@ extern SUBR(read_line) {
 extern SUBR(eof_in) {
     Node file;
 
-    checkArgs(args, "eof_in", 1, s_infile);
+    checkArgs(args, "eof_in", 1, t_infile);
     forceArgs(args, &file, 0);
 
-    if (!isType(file, s_infile)) {
+    if (!isType(file, t_infile)) {
         fatal("read-line: not an infile");
     }
 
@@ -1663,10 +1663,10 @@ extern SUBR(read_sexpr) {
 
     Node file;
 
-    checkArgs(args, "read-sexpr", 1, s_infile);
+    checkArgs(args, "read-sexpr", 1, t_infile);
     forceArgs(args, &file, 0);
 
-    if (!isType(file, s_infile)) {
+    if (!isType(file, t_infile)) {
         fatal("read-line: not an infile");
     }
 
@@ -1739,7 +1739,7 @@ extern SUBR(sizeof) {
 
 extern SUBR(car) {
     Pair pair;
-    checkArgs(args, "car", 1, s_pair);
+    checkArgs(args, "car", 1, t_pair);
     forceArgs(args, &pair, 0);
 
     pair_GetCar(pair, result);
@@ -1748,7 +1748,7 @@ extern SUBR(car) {
 extern SUBR(cdr) {
     Pair pair;
 
-    checkArgs(args, "car", 1, s_pair);
+    checkArgs(args, "car", 1, t_pair);
     forceArgs(args, &pair, 0);
 
     pair_GetCdr(pair, result);
@@ -1759,7 +1759,7 @@ extern SUBR(pair_q) {
     checkArgs(args, "pair?", 1, NIL);
     pair_GetCar(args.pair, &value);
 
-    if (isType(value, s_pair)) {
+    if (isType(value, t_pair)) {
         ASSIGN(result, true_v);
     } else {
         ASSIGN(result, NIL);

@@ -129,7 +129,7 @@ extern bool print(FILE* output, Node node) {
         return true;
     }
 
-    if (isIdentical(type, s_pair)) {
+    if (isIdentical(type, t_pair)) {
         fprintf(output, "pair(%p (%p, %p))",
                 node.reference,
                 node.pair->car.reference,
@@ -229,7 +229,7 @@ extern bool dump(FILE* output, Node node) {
         return true;
     }
 
-    if (isIdentical(type, s_pair)) {
+    if (isIdentical(type, t_pair)) {
         fprintf(output, "pair(%p (%p, %p))",
                 node.reference,
                 node.pair->car.reference,
@@ -282,7 +282,7 @@ extern bool dumpTree(FILE* output, unsigned level, Node node) {
         dumpTree(output, level+1, value);
     }
 
-    if (isType(node, s_pair)) {
+    if (isType(node, t_pair)) {
         if (!dump(output,node)) return false;
         sub_tree(node.pair->car);
         sub_tree(node.pair->cdr);
@@ -375,12 +375,12 @@ extern void prettyPrint(FILE* output, Node node) {
             return;
         }
 
-        if (isIdentical(type, s_pair)) {
+        if (isIdentical(type, t_pair)) {
             Node tail = node.pair->cdr;
             fprintf(output, "(");
             prettyPrint_intern(node.pair->car, level+1);
             while (tail.reference) {
-                if (isType(tail, s_pair)) {
+                if (isType(tail, t_pair)) {
                     fprintf(output, " ");
                     prettyPrint_intern(tail.pair->car, level+1);
                     tail = tail.pair->cdr;

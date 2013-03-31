@@ -26,7 +26,6 @@ extern Symbol _empty_symbol;
 extern Symbol s_dot;
 extern Symbol s_global;
 extern Symbol s_current;
-extern Symbol s_lambda;
 extern Symbol s_nil;
 extern Symbol s_quasiquote;
 extern Symbol s_quote;
@@ -43,11 +42,7 @@ extern Symbol s_semi;
 extern Symbol s_block;
 
 // raw type names
-extern Symbol s_integer;
-extern Symbol s_primitive;
 extern Symbol s_symbol;
-extern Symbol s_text;
-extern Symbol s_tuple;
 
 // the type system
 extern Symbol s_base;
@@ -57,17 +52,7 @@ extern Symbol s_axiom;
 extern Symbol s_rule;
 extern Symbol s_name;
 
-// raw struct type names
-extern Symbol s_pair;
-extern Symbol s_lambda;
-extern Symbol s_form;
-extern Symbol s_fixed;
-extern Symbol s_delay;
-extern Symbol s_forced;
-
 // c-library type names
-extern Symbol s_infile;
-extern Symbol s_outfile;
 extern Symbol s_opaque;
 
 //

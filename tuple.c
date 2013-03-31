@@ -8,7 +8,6 @@
 #include "tuple.h"
 #include "pair.h"
 #include "treadmill.h"
-#include "symbol.h"
 #include "type.h"
 
 #include <stdarg.h>
@@ -85,7 +84,7 @@ extern bool tuple_Fill(Tuple tuple, Pair list) {
 
     for (; inx < max ;++inx) {
         if (!list) return true;
-        if (!isType(list, s_pair)) return true;
+        if (!isType(list, t_pair)) return true;
 
         Node value = list->car;
 

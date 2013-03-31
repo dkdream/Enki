@@ -70,7 +70,7 @@ extern void expand(const Node expr, const Node env, Target result)
         });
 
     for (;;) {
-        if (!isType(list, s_pair)) {
+        if (!isType(list, t_pair)) {
             ASSIGN(result, list);
             goto done;
         }
@@ -146,7 +146,7 @@ extern void encode(const Node expr, const Node env, Target result)
             fprintf(stderr, "\n");
         });
 
-    if (!isType(list, s_pair)) {
+    if (!isType(list, t_pair)) {
         ASSIGN(result, list);
         goto done;
     }
@@ -214,7 +214,7 @@ extern void eval(const Node expr, const Node env, Target result)
             fprintf(stderr, "\n");
         });
 
-    if (isType(expr, s_pair)) {
+    if (isType(expr, t_pair)) {
         evaluator = p_eval_pair;
     }
 
@@ -222,7 +222,7 @@ extern void eval(const Node expr, const Node env, Target result)
         evaluator = p_eval_symbol;
     }
 
-    if (isType(expr, s_forced)) {
+    if (isType(expr, t_forced)) {
         tuple_GetItem(expr.tuple, 0, result);
         goto done;
     }
@@ -268,7 +268,7 @@ extern void apply(Node fun, Node args, const Node env, Target result)
     }
 
     // lambda -> p_apply_lambda
-    if (isType(fun, s_lambda)) {
+    if (isType(fun, t_lambda)) {
       if (!pair_Create(fun, args, &(args.pair))) goto error;
       Operator function = p_apply_lambda->function;
       function(args, env, result);

@@ -695,7 +695,7 @@ extern bool readExpr(FILE *fp, Target result)
               if (isBlank(chr))  continue;
               if (!isPrint(chr)) continue;
               bool rtn = readSymbol(fp, chr, result);
-              if (isType(*(result.reference), s_pair)) {
+              if (isType(*(result.reference), t_pair)) {
                 if (!list_UnDot(*(result.pair))) return false;
               }
               return rtn;
