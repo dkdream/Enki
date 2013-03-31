@@ -6,6 +6,7 @@ dump
 (dumpln (type-of 1))
 (dumpln (type-of 'one))
 (dumpln nil)
+(dumpln (type-of [1 2 3 4]))
 
 (assert :integer (type-of 1))
 (assert :text    (type-of "1"))

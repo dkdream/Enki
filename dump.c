@@ -137,7 +137,7 @@ extern bool print(FILE* output, Node node) {
         return true;
     }
 
-    if (isIdentical(type, s_tuple)) {
+    if (isIdentical(type, t_tuple)) {
         fprintf(output, "tuple(%p (size=%d))",
                 node.reference,
                 (unsigned) asKind(node.reference)->count);
@@ -237,7 +237,7 @@ extern bool dump(FILE* output, Node node) {
         return true;
     }
 
-    if (isIdentical(type, s_tuple)) {
+    if (isIdentical(type, t_tuple)) {
         fprintf(output, "tuple(%p (size=%d))",
                 node.reference,
                 (unsigned) asKind(node)->count);
@@ -394,7 +394,7 @@ extern void prettyPrint(FILE* output, Node node) {
             return;
         }
 
-        if (isIdentical(type, s_tuple)) {
+        if (isIdentical(type, t_tuple)) {
             const unsigned max = asKind(node)->count;
             unsigned inx = 0;
             fprintf(output, "[");

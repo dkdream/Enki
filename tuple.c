@@ -9,6 +9,7 @@
 #include "pair.h"
 #include "treadmill.h"
 #include "symbol.h"
+#include "type.h"
 
 #include <stdarg.h>
 
@@ -23,7 +24,7 @@ extern bool tuple_Create(unsigned size, Tuple* target) {
 
     Tuple result = (*target);
 
-    setType(result, s_tuple);
+    setType(result, t_tuple);
 
     unsigned inx = 0;
     for (; inx < size ;++inx) {

@@ -412,7 +412,7 @@ static bool readList(FILE *fp, int delim, Target result)
 
 // [...] - tuple
 // {...} - block
-static bool readTuple(FILE *fp, Symbol type, int delim, Target result)
+static bool readTuple(FILE *fp, Node type, int delim, Target result)
 {
     const char *error = 0;
     unsigned size;
@@ -646,7 +646,7 @@ extern bool readExpr(FILE *fp, Target result)
             return readList(fp, ')', result);
 
         case '[':
-            return readTuple(fp, s_tuple, ']', result);
+            return readTuple(fp, t_tuple, ']', result);
 
         case '{':
             return readTuple(fp, s_block, '}', result);
