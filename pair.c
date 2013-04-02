@@ -370,7 +370,6 @@ extern bool list_Map(Operator func, Pair pair, const Node env, Target target) {
     darken_Node(output);
 
     if (!pair_Create(output,NIL, &first.pair)) return false;
-    if (!pair_SetCar(first.pair, output)) return false;
 
     last = first.pair;
 

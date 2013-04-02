@@ -372,17 +372,9 @@ extern SUBR(define)
     ASSIGN(result, value);
 }
 
-extern SUBR(encode_quote) {
-     ASSIGN(result,args);
-}
-
 extern SUBR(quote)
 { //Fixed
     pair_GetCar(args.pair, result);
-}
-
-extern SUBR(encode_type) {
-     ASSIGN(result,args);
 }
 
 extern SUBR(type)
@@ -415,9 +407,21 @@ extern SUBR(encode_let) {
         return;
     }
 
+    /*
+    ** given args=(locals . body)
+    **
+    ** (set locals (car body))
+    ** (set lenv (map (lambda (binding) (box (car binding))) locals))
+    ** (set-end lenv env)
+    **
+    ** result=(encode args lenv)
+    */
     list_Map(environ_Let, locals.pair, env, &lenv);
     list_SetEnd(lenv.pair, env);
-    list_Map(encode, args.pair, lenv, result);
+
+    //list_Map(encode, args.pair, lenv, result);
+
+    encode(args, lenv, result);
 }
 
 extern SUBR(let)
@@ -447,11 +451,20 @@ extern SUBR(encode_lambda) {
     pair_GetCar(args.pair, &formals);
     pair_GetCdr(args.pair, &body);
 
+    /*
+    ** given args=(formal . body)
+    **
+    ** (set lenv (map box formal))
+    ** (set-end lenv env)
+    **
+    ** result=(cons formals (encode body lenv))
+    */
+
     list_Map(environ_Lambda, formals.pair, env, &lenv);
-
     list_SetEnd(lenv.pair, env);
+    encode(body, lenv, &(body.pair));
 
-    list_Map(encode, body.pair, lenv, &(body.pair));
+    //list_Map(encode, body.pair, lenv, &(body.pair));
 
     pair_Create(formals, body, result.pair);
 }
@@ -460,10 +473,6 @@ extern SUBR(lambda)
 {
     pair_Create(args, env, result.pair);
     setType(*result.reference, t_lambda);
-}
-
-extern SUBR(encode_delay) {
-    list_Map(encode, args.pair, env, result);
 }
 
 extern SUBR(delay)
@@ -1803,6 +1812,86 @@ extern SUBR(box) {
     pair_Create(value, NIL, result.pair);
 }
 
+extern void call_with(const Node function, const Node value, const Node env, Target target) {
+    Pair args;
+    pair_Create(value, NIL, &args);
+    apply(function, args, env, target);
+}
+
+extern SUBR(map) {
+    Node function;
+    Node list;
+
+    checkArgs(args, "map", 1, NIL, t_pair);
+    forceArgs(args, &function, &list, 0);
+
+    if (isNil(function)) {
+        ASSIGN(result, list);
+        return;
+    }
+
+    if (!isType(list, t_pair)) {
+        call_with(function, list, env, result);
+        return;
+    }
+
+    Pair pair = list.pair;
+
+    GC_Begin(4);
+
+    Node input;
+    Node output;
+    Node first;
+
+    GC_Protect(input);
+    GC_Protect(output);
+    GC_Protect(first);
+
+    call_with(function, pair->car, env, &output);
+
+    pair_Create(output,NIL, &first.pair);
+
+    Pair last = first.pair;
+
+    for (; isType(pair->cdr.pair, t_pair) ;) {
+        pair   = pair->cdr.pair;
+        input  = pair->car;
+        output = NIL;
+
+        call_with(function, input, env, &output);
+
+        pair_Create(output,NIL, &(last->cdr.pair));
+
+        last = last->cdr.pair;
+    }
+
+    if (!isNil(pair->cdr.pair)) {
+        input  = pair->cdr;
+        output = NIL;
+
+        call_with(function, input, env, &output);
+        pair_SetCdr(last, output);
+    }
+
+    ASSIGN(result, first);
+
+    GC_End();
+}
+
+extern SUBR(set_end) {
+    Node head;
+    Node tail;
+    checkArgs(args, "set-end", 1, t_pair, NIL);
+    forceArgs(args, &head, &tail, 0);
+
+    if (!isType(head, t_pair)) {
+        ASSIGN(result, NIL);
+    }
+
+    list_SetEnd(head.pair, tail);
+    ASSIGN(result, true_v);
+}
+
 /***************************************************************
  ***************************************************************
  ***************************************************************
@@ -1945,20 +2034,18 @@ void startEnkiLibrary() {
     MK_PRM(system_check);
 
     MK_FXD(define);
-    MK_EFXD(quote,encode_quote);
-    MK_EFXD(type,encode_type);
+    MK_EFXD(quote,list);
+    MK_EFXD(type,list);
 
-#if 0
     MK_FXD(if);
     MK_FXD(and);
     MK_FXD(or);
-
     MK_FXD(set);
+    MK_FXD(delay);
 
     MK_EFXD(let,encode_let);
     MK_EFXD(lambda,encode_lambda);
-    MK_EFXD(delay,encode_delay);
-#else
+
     MK_OPR(%if,if);
     MK_OPR(%and,and);
     MK_OPR(%or,or);
@@ -1970,8 +2057,6 @@ void startEnkiLibrary() {
 
     MK_OPR(%encode-let,encode_let);
     MK_OPR(%encode-lambda,encode_lambda);
-    MK_OPR(%encode-delay,encode_delay);
-#endif
 
     MK_PRM(gensym);
     MK_PRM(find);
@@ -2020,11 +2105,6 @@ void startEnkiLibrary() {
     MK_PRM(tuple);
     MK_PRM(allocate);
 
-    MK_OPR(encode-quote,encode_quote);
-    MK_OPR(encode-lambda,encode_lambda);
-    MK_OPR(encode-let,encode_let);
-    MK_OPR(encode-delay,encode_delay);
-
     MK_PRM(force);
     MK_OPR(concat-text,concat_text);
     MK_OPR(concat-symbol,concat_symbol);
@@ -2055,6 +2135,8 @@ void startEnkiLibrary() {
     MK_OPR(integer?,integer_q);
     MK_OPR(gc-scan,gc_scan);
     MK_PRM(box);
+    MK_PRM(map);
+    MK_OPR(set-end,set_end);
 
     clock_t cend = clock();
 
