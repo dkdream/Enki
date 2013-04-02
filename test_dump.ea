@@ -1,3 +1,5 @@
+(require "boot.ea")
+
 dump
 
 (dumpln (~ 1))

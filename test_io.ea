@@ -1,3 +1,11 @@
+(define lambda (fixed %lambda %encode-lambda))
+(define let    (fixed %let    %encode-let))
+(define if     (fixed %if))
+(define and    (fixed %and))
+(define or     (fixed %or))
+(define set    (fixed %set))
+(define delay  (fixed %delay))
+
 (require "blank.ea")
 
 (let ((out (open-out "io.out")))

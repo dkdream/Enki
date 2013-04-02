@@ -1796,6 +1796,13 @@ extern SUBR(gc_scan) {
     }
 }
 
+extern SUBR(box) {
+    Node value;
+    checkArgs(args, "box", 1, NIL);
+    fetchArgs(args, &value, 0);
+    pair_Create(value, NIL, result.pair);
+}
+
 /***************************************************************
  ***************************************************************
  ***************************************************************
@@ -1937,19 +1944,34 @@ void startEnkiLibrary() {
 
     MK_PRM(system_check);
 
+    MK_FXD(define);
+    MK_EFXD(quote,encode_quote);
+    MK_EFXD(type,encode_type);
+
+#if 0
     MK_FXD(if);
     MK_FXD(and);
     MK_FXD(or);
-//    MK_FXD(while);
 
     MK_FXD(set);
-    MK_FXD(define);
 
-    MK_EFXD(quote,encode_quote);
-    MK_EFXD(type,encode_type);
     MK_EFXD(let,encode_let);
     MK_EFXD(lambda,encode_lambda);
     MK_EFXD(delay,encode_delay);
+#else
+    MK_OPR(%if,if);
+    MK_OPR(%and,and);
+    MK_OPR(%or,or);
+    MK_OPR(%set,set);
+
+    MK_OPR(%let,let);
+    MK_OPR(%lambda,lambda);
+    MK_OPR(%delay,delay);
+
+    MK_OPR(%encode-let,encode_let);
+    MK_OPR(%encode-lambda,encode_lambda);
+    MK_OPR(%encode-delay,encode_delay);
+#endif
 
     MK_PRM(gensym);
     MK_PRM(find);
@@ -2032,6 +2054,7 @@ void startEnkiLibrary() {
     MK_OPR(pair?,pair_q);
     MK_OPR(integer?,integer_q);
     MK_OPR(gc-scan,gc_scan);
+    MK_PRM(box);
 
     clock_t cend = clock();
 

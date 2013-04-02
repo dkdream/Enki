@@ -1,3 +1,4 @@
+(require "boot.ea")
 
 (define foo (delay (let () (println "forced") 3)))
 (println (type-of foo))
