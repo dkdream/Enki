@@ -147,7 +147,18 @@ extern bool print(FILE* output, Node node) {
     if (isType(type, s_symbol)) {
         echo_string(output, (const char *)type.symbol->value);
     } else {
-        fprintf(output, "<type %p>", type.reference);
+        if (!isType(type, s_base)) {
+            fprintf(output, "<type %p>", type.reference);
+        } else if (isIdentical(type.type->sort, zero_s)) {
+            fprintf(output, "<%s %s>",
+                    (const char*)(type.type->name->value),
+                    (const char*)(type.type->sort->name->value));
+        } else {
+            fprintf(output, "<type %p %s %s>",
+                    type.reference,
+                    (const char*)(type.type->name->value),
+                    (const char*)(type.type->sort->name->value));
+        }
     }
 
     if (isAtomic(node)) {
@@ -247,8 +258,20 @@ extern bool dump(FILE* output, Node node) {
     if (isType(type, s_symbol)) {
         echo_string(output, (const char *)type.symbol->value);
     } else {
-        fprintf(output, "<type %p>", type.reference);
+        if (!isType(type, s_base)) {
+            fprintf(output, "<type %p>", type.reference);
+        } else if (isIdentical(type.type->sort, zero_s)) {
+            fprintf(output, "<%s %s>",
+                    (const char*)(type.type->name->value),
+                    (const char*)(type.type->sort->name->value));
+        } else {
+            fprintf(output, "<type %p %s %s>",
+                    type.reference,
+                    (const char*)(type.type->name->value),
+                    (const char*)(type.type->sort->name->value));
+        }
     }
+
     if (isAtomic(node)) {
         fprintf(output, "(%p)",
                 node.reference);
@@ -410,8 +433,21 @@ extern void prettyPrint(FILE* output, Node node) {
             offset += type.symbol->size + 1;
             echo_string(output, (const char *)type.symbol->value);
         } else {
-            offset += 10;
-            fprintf(output, "<type %p>", type.reference);
+            if (!isType(type, s_base)) {
+                offset += 10;
+                fprintf(output, "<type %p>", type.reference);
+            } else if (isIdentical(type.type->sort, zero_s)) {
+                offset += 20;
+                fprintf(output, "<%s %s>",
+                        (const char*)(type.type->name->value),
+                        (const char*)(type.type->sort->name->value));
+            } else {
+                offset += 20;
+                fprintf(output, "<type %p %s %s>",
+                        type.reference,
+                        (const char*)(type.type->name->value),
+                        (const char*)(type.type->sort->name->value));
+            }
         }
 
         if (isAtomic(node)) {

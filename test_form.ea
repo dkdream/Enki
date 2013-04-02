@@ -1,10 +1,3 @@
-(define lambda (fixed %lambda %encode-lambda))
-(define let    (fixed %let    %encode-let))
-(define if     (fixed %if))
-(define and    (fixed %and))
-(define or     (fixed %or))
-(define set    (fixed %set))
-(define delay  (fixed %delay))
 
 (define cadr (lambda (x) (car (cdr x))))
 (define cddr (lambda (x) (cdr (cdr x))))
@@ -15,7 +8,7 @@
             (cons (car x) (concat-list (cdr x) y))
          y)))
 
-(mark-time 17)
+(mark-time 1)
 
 (define expand-quote
    (let ((qq-list) (qq-element) (qq-object))
@@ -42,7 +35,7 @@
                            (list 'quote object))))
       qq-object))
 
-(mark-time 45)
+(mark-time 2)
 
 (define quasiquote (form expand-quote))
 
@@ -53,7 +46,7 @@
            `(\%define \name (lambda \args \@body))))
 
 
-(mark-time 56)
+(mark-time 3)
 
 (define %define-with (lambda (%define)
                         (lambda (pattern . body)
@@ -64,7 +57,7 @@
                               `(\%define \pattern \@body)))))
 
 
-(mark-time 67)
+(mark-time 4)
 
 (define %define-kind (lambda (%define %kind)
                         (lambda (pattern . body)
@@ -75,16 +68,15 @@
                               `(\%define \pattern (\%kind \@body))))))
 
 
-(mark-time 78)
-
+(mark-time 5)
 
 (define expand-define (%define-with define))
 
-(mark-time)
+(mark-time 7)
 
 (define expand-macro  (%define-kind define form))
 
-(mark-time 86)
+(mark-time 8)
 
 (define define (form expand-define))
 (define macro  (form expand-macro))
@@ -95,6 +87,8 @@
                        (+ 1 (list-length (cdr list)))
                     0))))
 
+(mark-time 9)
+
 (define (list-length-cooked list)
    (if (pair? list)
          (+ 1 (list-length-cooked (cdr list)))
@@ -102,7 +96,11 @@
 
 (dumpln "cooked list-length" (list-length-cooked '(1 2 3 4)))
 
+(mark-time 10)
+
 (dumpln (apply expand-define '(x y z)))
+
+(mark-time 11)
 
 (dumpln (apply expand-macro
                '((begin . body)
@@ -117,7 +115,6 @@
    (print 1)
    (print 2)
    (println 3))
-
 
 (define expand-let* (lambda (bindings body)
                        (if (pair? (cdr bindings))
