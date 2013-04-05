@@ -15,14 +15,19 @@
             | (<variable>+)
             | (<variable>+ . <variable>)
 
---------- references ------
+-------- references ----------
   http://lib.store.yahoo.net/lib/paulgraham/jmc.lisp
+  http://www.ccs.neu.edu/home/dorai/mbe/mbe-lsp.html
 
--------- combinator -----
+-------- scheme type system --
+
+  http://wiki.call-cc.org/man/4/Types
+
+-------- combinator ----------
 
 (define Y (lambda (f) ((lambda (a) (a a)) (lambda (b) (f (lambda (c) ((b b) c)))))))
 
--------- macros ---------
+-------- macros --------------
 
 (begin exp1) -> exp1
 (begin exp1 exp2 ... ) -> ((lambda (x) (begin exp2 ... )) exp1)
