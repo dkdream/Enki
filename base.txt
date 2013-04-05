@@ -4,7 +4,7 @@
        | (quote <object>)
        | (lambda <arguments> <core>)
        | (if <core> <core> <core>)
-       | (set! <variable> <core>)
+       | (set <variable> <core>)
        | (define <variable> <core>)
        | (call/cc <core>)
        | (form <core>)
@@ -14,6 +14,13 @@
             | <variable>
             | (<variable>+)
             | (<variable>+ . <variable>)
+
+--------- references ------
+  http://lib.store.yahoo.net/lib/paulgraham/jmc.lisp
+
+-------- combinator -----
+
+(define Y (lambda (f) ((lambda (a) (a a)) (lambda (b) (f (lambda (c) ((b b) c)))))))
 
 -------- macros ---------
 
