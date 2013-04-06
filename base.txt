@@ -18,6 +18,14 @@
 -------- references ----------
   http://lib.store.yahoo.net/lib/paulgraham/jmc.lisp
   http://www.ccs.neu.edu/home/dorai/mbe/mbe-lsp.html
+  http://www.iro.umontreal.ca/~boucherd/mslug/meetings/20041020/minutes-en.html
+  https://github.com/kragen/stoneknifeforth
+  http://www.andreadrian.de/tbng/
+  http://web.archive.org/web/20060924123915/http://www.rano.org/bcompiler.html
+  http://homepage.ntlworld.com/edmund.grimley-evans/cc500/
+  http://www.bayfronttechnologies.com/mc_tutorial.html 
+  http://www.ibm-1401.info/Meta-II-schorre.pdf
+  http://arclanguage.org/
 
 -------- scheme type system --
 
