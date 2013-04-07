@@ -1,0 +1,198 @@
+
+;;; Parsing: file handling
+
+;; "ungettable" wraps an input stream with a thunk s that you can read
+;; a character from (with (s)) or back up by a character (with (s
+;; 'unget)).  You pass in a thunk that returns a character when it's
+;; called.
+
+;; XXX come up with a better name.  back-up-able?
+
+;; It would be nice if we could map eof objects into 'eof or something
+;; to simplify the parsing transition rules, but then we have to have
+;; a way to return them so that (read) can return them, but that took
+;; this definition from 5 lines to 16.
+(define (ungettable thunk)
+  (let ((ungot nil) (last nil))
+    (lambda cmd (cond ((not (null? cmd)) (set! ungot last))
+                      (ungot (let ((result ungot)) (set! ungot nil) result))
+                      (else (set! last (thunk)) last)))))
+
+;; read-from-string returns a thunk that returns successive characters
+;; of a string, and then 'eof-indicator after the end of the string.
+
+;; SRFI 6 defines a way to use file operations on strings (in this
+;; case, using open-input-string), but at least my version of SCM
+;; doesn't support it.  But we need something like it for testing.
+(define (read-from-string string)
+  (let ((pos 0))
+    (lambda () (if (= pos (string-length string)) 'eof-indicator
+                   (begin (set! pos (1+ pos)) (string-ref string (1- pos)))))))
+;; unit tests:
+(define sample-sr (read-from-string "foo"))
+(assert-equal (sample-sr) ?f)
+(assert-equal (sample-sr) ?o)
+(assert-equal (sample-sr) ?o)
+(assert-equal (sample-sr) 'eof-indicator)
+(assert-equal (sample-sr) 'eof-indicator)
+
+(define sample-unget (ungettable (read-from-string "foo")))
+(assert-equal (sample-unget) ?f)
+(sample-unget 'unget)
+(assert-equal (sample-unget) ?f)
+(assert-equal (sample-unget) ?o)
+(assert-equal (sample-unget) ?o)
+(assert-equal (sample-unget) 'eof-indicator)
+
+;; Actual Parsing.
+
+(define (parse s)
+  (let ((c (after-wsp s)))
+    (if (parse-eof? c) c
+        (case c
+          (( ?\( ) (parse-list s (after-wsp s)))
+          (( ?\' ) (list 'quote (parse s)))
+          (( ?\" ) (parse-string-literal s))
+          (( ?\# ) (parse-hashy-thing s (s)))
+          (else (s 'unget) (parse-atom s))))))
+
+(define (parse-list s c)
+  (if (parse-eof? c) (error "missing right paren")
+      (case c
+        (( ?\) ) '())
+        (( ?\. ) (read-dotted-tail s))
+        (else (let ((hd (begin (s 'unget) (parse s))))
+                (cons hd (parse-list s (after-wsp s))))))))
+
+(define (read-dotted-tail s)
+  (let ((rv (parse s)))
+    (if (eqv? ?\) (after-wsp s)) rv (error "funky dotted list"))))
+
+(define whitespace-chars "\n ")
+
+(define (after-wsp s) (after-wsp-2 s (s)))
+
+(define (after-wsp-2 s c)
+  (case c
+    ((?\s ?\n ?\t) (after-wsp s))
+    (( ?\; ) (discard-comment s) (after-wsp s))
+    (else c)))
+
+(define (discard-comment s)
+   (if (not (eqv? (s) ?\n))
+         (discard-comment s)))
+
+(define (parse-atom s) 
+  (let ((atom (parse-atom-2 s (s))))
+    (if (parsed-number? atom)
+          (string->number (list->string atom))
+       (string->symbol (list->string atom)))))
+
+(define (parsed-number? lst)
+  (cond ((null? lst) nil)
+        ((char-numeric? (car lst)) (all-numeric? (cdr lst)))
+        ((eqv? ?\+ (car lst)) (nonempty-and-all-numeric? (cdr lst)))
+        ((eqv? ?\- (car lst)) (nonempty-and-all-numeric? (cdr lst)))
+        (else nil)))
+
+(define (nonempty-and-all-numeric? lst)
+  (and (not (null? lst))
+       (all-numeric? lst)))
+
+(define (all-numeric? lst)
+  (or (null? lst)
+      (and (char-numeric? (car lst))
+           (all-numeric? (cdr lst)))))
+
+(define (parse-atom-2 s c)
+  (if (parse-eof? c) '()
+      (case c
+        (( ?\s ?\n ?\t ?\; ?\( ?\) ?\' ?\" ) (s 'unget) '())
+        (else (cons c (parse-atom-2 s (s)))))))
+
+(define (parse-string-literal s)
+   (list->string (parse-string-literal-2 s (s))))
+
+(define (parse-string-literal-2 s c)
+  (if (parse-eof? c) (error "eof in string")
+      (case c 
+        (( ?\\ ) 
+         (let ((next (s)))
+           (let ((decoded
+                  (case next ((?\n) ?\n) ((?\t) ?\t) (else next))))
+             (cons decoded (parse-string-literal-2 s (s))))))
+        (( ?\" ) 
+         '())
+        (else
+         (cons c (parse-string-literal-2 s (s)))))))
+
+(define (parse-hashy-thing s c)
+  (if (parse-eof? c) 
+        (error "eof after #")
+     (case c
+           (( ?\\ ) (parse-char-literal s (s)))
+           (else (error "Unimplemented #" c)))))
+
+(define (parse-char-literal s c)
+  (cond ((parse-eof? c) (error "eof in char literal"))
+        ((char-alphabetic? c) (s 'unget) (parse-named-char s))
+        (else c)))
+
+(define (parse-named-char s)
+  (let ((name (parse-atom-2 s (s))))
+    (if (= 1 (length name)) (car name)
+        (case (string->symbol (list->string name))
+          ((space) ?\s)
+          ((newline) ?\n)
+          ((tab) ?\t)
+          (else (error "Unrecognized character name"
+                       (string->symbol (list->string name))))))))
+                    
+
+(define (parse-string string)
+   (parse (ungettable (read-from-string string))))
+
+(define (read-expr file) (parse (ungettable (lambda () (read-char file)))))
+
+;; Because we can't make a real eof-object portably, we fake it with this:
+(define (parse-eof? x)
+   (or (eof-object? x)
+       (eq? x 'eof-indicator)))
+
+;; Unit tests for parsing.  Unfortunately, there's no portable
+;; exception system in Scheme, so this doesn't include any tests of
+;; error handling!  (Even (error ...) isn't in R5RS.)
+(assert-equal (parse-string "()") '())
+(assert-equal (parse-string " ()") '())
+(assert-equal (parse-string "\n()") '())
+(assert-equal (parse-string " ( )") '())
+(assert-equal (parse-string ";hi\n(;hi\n)") '())
+(assert-equal (parse-string "x ") 'x)
+(assert-equal (parse-string "x") 'x)    ; terminated by eof
+(assert-equal (parse-string "xyz") 'xyz)
+(assert-equal (parse-string "(xyz)") '(xyz))
+(assert-equal (parse-string "(x y z)") '(x y z))
+(assert-equal (parse-string "(x y . z)") '(x y . z))
+(assert-equal (parse-string "(define (1+ x) (+ x 1))")
+              '(define (1+ x) (+ x 1)))
+(assert-equal 
+ (parse-string "(define (filter fn lst)  ; foo\n  (if (null? lst) '()))")
+ '(define (filter fn lst) (if (null? lst) (quote ()))))
+
+(parse-string "(char->string (string-ref \"0123456789\"))")
+
+(assert-equal (parse-string "(char->string (string-ref \"0123456789\" digit)))")
+              '(char->string (string-ref "0123456789" digit)))
+
+(assert-equal (parse-string "(foo\"3\"()\"5\")") '(foo "3" () "5"))
+(assert-equal (parse-string "(b a true nil)") '(b a true nil))
+(assert-equal (parse-string "(mov (offset ebp -8) esp)") 
+              '(mov (offset ebp -8) esp))
+
+(assert (parse-eof? (parse-string "")) "parsing at end of file")
+
+(assert-equal 
+ (parse-string "(#\\a #\\newline #\\tab #\\space #\\( #\\) #\\# #\\\\)")
+ '(#\a ?\n ?\t ?\s #\( #\) #\# #\\))
+
+(assert-equal (parse-string "\"hello\\n\\tthere\"") "hello\n\tthere")

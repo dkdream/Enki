@@ -18,8 +18,7 @@
 ;; error routine if the type test fails, which will exit the program.
 ;; I'll add more graceful exits later.
 
-  o. 
-
+  o. use c-coded treadmill for allocation/memory-management
 
 
 --- Type/Sorts -----------------------------------------------

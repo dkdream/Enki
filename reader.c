@@ -233,8 +233,10 @@ static int readChar(int chr, FILE *fp)
     case 'f':   return '\f';
     case 'n':   return '\n';
     case 'r':   return '\r';
+    case 's':   return ' ';
     case 't':   return '\t';
     case 'v':   return '\v';
+
     case '\'':  return '\'';
     case '\"':  return '\"';
     case '\\':  return '\\';

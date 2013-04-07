@@ -38,7 +38,7 @@ struct gc_header    enki_true;
 Space _zero_space;
 
 Node        enki_globals = NIL; // nt_pair(nil, alist)
-Node             true_v  = NIL;
+Node              true_v = NIL;
 Primitive  p_eval_symbol = 0;
 Primitive    p_eval_pair = 0;
 Primitive p_apply_lambda = 0;
@@ -953,21 +953,26 @@ extern SUBR(iso)
 
 extern SUBR(assert)
 {
-    Node left; Node right;
-    checkArgs(args, "assert", 2, NIL, NIL);
-    forceArgs(args, &left, &right, 0);
+    Node test; Node message;
 
-    if (node_Iso(20, left,right)) {
+    unsigned count = checkArgs(args, "assert", 1, NIL);
+
+    fetchArgs(args, &test, &message, 0);
+
+    if (!isNil(test)) {
         ASSIGN(result, true_v);
-    } else {
-        fprintf(stderr, "assert: ");
-        print(stderr, left);
-        fprintf(stderr, " :not iso to: ");
-        print(stderr, right);
-        fprintf(stderr, "\n");
-        fflush(stderr);
-        fatal(0);
+        return;
     }
+
+    if (1 < count) {
+        fprintf(stderr, "assert: ");
+        print(stderr, message);
+    } else {
+        fprintf(stderr, "assert falure");
+    }
+    fprintf(stderr, "\n");
+    fflush(stderr);
+    fatal(0);
 }
 
 extern SUBR(exit)
@@ -1382,7 +1387,7 @@ extern SUBR(format) {
         pair_GetCar(args.pair, &form);
         pair_GetCdr(args.pair, &args);
         if (!isType(form, t_text)) {
-            fatal("first argument to formant is not text\n");
+            fatal("first argument to format is not text\n");
         }
         format = text_Text(form.text);
     }
@@ -1400,7 +1405,7 @@ extern SUBR(format) {
                 ++count;
 
                 if (!isType(args, t_pair)) {
-                    fatal("missing argument %d to format\n", count);
+                    fatal("missing argument %d to format code \'%c\' \n", count, code);
                 } else {
                     Node value = NIL;
 
@@ -1422,6 +1427,18 @@ extern SUBR(format) {
                     if ('p' == code) {
                         char data[20];
                         sprintf(data, "%p", value.reference);
+                        buffer_add(&buffer, data);
+                        continue;
+                    }
+
+                    if ('c' == code) {
+                        char data[20];
+                        char chr;
+                        if (!isType(value, t_integer)) {
+                            fatal("argument to format code \'c\' is not integer\n");
+                        }
+                        chr = (char)(0xff & value.integer->value);
+                        sprintf(data, "%c", chr);
                         buffer_add(&buffer, data);
                         continue;
                     }
@@ -1897,7 +1914,7 @@ extern SUBR(the) {
     Node value;
 
     checkArgs(args, "the", 2, NIL, NIL);
-    forceArgs(args, &type, &value, 0);
+    fetchArgs(args, &type, &value, 0);
 
     if (!isType(value, type)) {
         fprintf(stderr, "the : ");
@@ -1910,6 +1927,32 @@ extern SUBR(the) {
     }
 
     ASSIGN(result, value);
+}
+
+extern SUBR(nil_q) {
+    Node value;
+
+    checkArgs(args, "nil?", 1, NIL);
+    pair_GetCar(args.pair, &value);
+
+    if (isNil(value)) {
+        ASSIGN(result, true_v);
+    } else {
+        ASSIGN(result, NIL);
+    }
+}
+
+extern SUBR(not) {
+    Node value;
+
+    checkArgs(args, "not", 1, NIL);
+    pair_GetCar(args.pair, &value);
+
+    if (isNil(value)) {
+        ASSIGN(result, true_v);
+    } else {
+        ASSIGN(result, NIL);
+    }
 }
 
 /***************************************************************
@@ -2046,7 +2089,7 @@ void startEnkiLibrary() {
 
     pair_Create(NIL,NIL, &enki_globals.pair);
 
-    MK_CONST(t,true_v);
+    MK_CONST(true,true_v);
     MK_CONST(nil,NIL);
 
     MK_CONST(Zero,zero_s);
@@ -2158,6 +2201,8 @@ void startEnkiLibrary() {
     MK_PRM(map);
     MK_OPR(set-end,set_end);
     MK_PRM(the);
+    MK_OPR(nil?,nil_q);
+    MK_PRM(not);
 
     clock_t cend = clock();
 
