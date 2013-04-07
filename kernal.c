@@ -2022,7 +2022,7 @@ void startEnkiLibrary() {
 
     true_v = (Node)init_atom(&enki_true, 0);
 
-    setType(true_v, s_true);
+    setType(true_v, t_true);
 
     pair_Create(NIL,NIL, &enki_globals.pair);
 

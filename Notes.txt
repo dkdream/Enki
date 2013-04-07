@@ -20,4 +20,92 @@
 
   o. 
 
- 
+
+
+--- Type/Sorts -----------------------------------------------
+
+  o. 'void' the type of a value that can not be used
+
+  o. 'nil' the type of the nil value
+
+  o. 'symbol' the type of symbol values
+
+  o. 'integer' the type of a integer value (in sort Zero)
+
+  o. 'text' the type of a text string value (in sort Zero)
+
+  o. 'true' the type of the true value (in sort Zero)
+
+  o. 'infile' the type of an input stream value (in sort Zero)
+
+  o. 'outfile' the type of an output stream value (in sort Zero)
+
+  o. 'opaque' the type of an os resource value that is un-useable (in sort Zero)
+
+  o. 'base' the type of any base object (or (any Zero) nil symbol)
+     base is the default type 
+
+  o. 'any' the any type operator
+    (any s1) allow any type that is a member sort s1
+
+  o. 'or' the union type operator
+    (or t1 .. tN) allow any type in the set t1..tn
+
+  o. 'cons' the pair type operator
+     (cons t1 t2) allow only a cons with t1 in car and t2 in cdr
+
+  o. 'list-of' the uniform list type operator
+     (list-of ti) allow list of value of type ti (of any length) including nil
+
+  o. 'list' the non-uniform list type operator
+     (list t1 .. tn) allow list with a value of type t1 in the first slot,
+                     t2 in the second, ..., tn in the nth slot
+
+  o. 'tuple-of' the uniform tuple type operator
+     (tuple-of ti) allow tuples of values of type ti (of any length) including nil
+
+  o. 'tuple' the non-uniform tuple type operator
+     (tuple t1 .. tn)
+
+  o. 'lambda' the lambda type operator
+     (lambda input)        a procedure type that takes input and dose not return
+     (lambda input output) a procedure type that takes input and return output
+     input  = void | ti | ( . tr) | (t1 .. tn) | | (t1 .. tn . tr)
+     output = void | ti | ( . tr) | (t1 .. tn) | | (t1 .. tn . tr)
+
+
+  o. 'sigma' the sigma type operator
+     (sigma (v1..vn) predicate1..predicatem (tuple ...))
+     (sigma (v1..vn) predicate1..predicatem (list  ...))
+
+  o. 'pi' the pi type operator
+     (pi (v1..vn)  predicate1..predicatem (lambda ...))
+
+  o. 'mu' the mu type operator
+     (mu var tx)
+
+  o. 'forall' the forall type operator
+     (forall var predicate1..predicatem)
+
+
+--- Type Predicates -----------------------------------------------
+  
+  o. 'is' type predicate
+    (is var val) the type variable var has the type value val
+
+  o. 'in' type predicate
+    (in var val) the type variable var has a type value in the sort val
+
+-------------
+(type (pi (e s c)
+          (in e Zero)
+          (is s (or (tuple-of e) (list-of e)))  
+          (is c (lambda (e e) (any Zero)))
+          (lambda (s c) s)))
+
+(type (forall x
+         (is x integer)
+         (assert (< 0 x))
+         (assert (< x 100))))
+
+(type (mu x (or nil (tuple integer integer x))))
