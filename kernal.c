@@ -960,9 +960,9 @@ extern SUBR(assert)
     if (node_Iso(20, left,right)) {
         ASSIGN(result, true_v);
     } else {
-        fprintf(stderr, "not iso: ");
+        fprintf(stderr, "assert: ");
         print(stderr, left);
-        fprintf(stderr, " to: ");
+        fprintf(stderr, " :not iso to: ");
         print(stderr, right);
         fprintf(stderr, "\n");
         fflush(stderr);
@@ -1892,6 +1892,26 @@ extern SUBR(set_end) {
     ASSIGN(result, true_v);
 }
 
+extern SUBR(the) {
+    Node type;
+    Node value;
+
+    checkArgs(args, "the", 2, NIL, NIL);
+    forceArgs(args, &type, &value, 0);
+
+    if (!isType(value, type)) {
+        fprintf(stderr, "the : ");
+        print(stderr, value);
+        fprintf(stderr, " :is not a: ");
+        print(stderr, type);
+        fprintf(stderr, "\n");
+        fflush(stderr);
+        fatal(0);
+    }
+
+    ASSIGN(result, value);
+}
+
 /***************************************************************
  ***************************************************************
  ***************************************************************
@@ -2137,6 +2157,7 @@ void startEnkiLibrary() {
     MK_PRM(box);
     MK_PRM(map);
     MK_OPR(set-end,set_end);
+    MK_PRM(the);
 
     clock_t cend = clock();
 
