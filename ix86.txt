@@ -1,0 +1,96 @@
+Purpose
+
+Although the main registers (with the exception of the instruction pointer) are "general-purpose" and can be used for anything, it was originally envisioned that they be used for the following purposes:
+
+    AX/EAX/RAX: Accumulator
+    BX/EBX/RBX: Base index (for use with arrays)
+    CX/ECX/RCX: Counter
+    DX/EDX/RDX: Data/general
+    SI/ESI/RSI: Source index for string operations.
+    DI/EDI/RDI: Destination index for string operations.
+    SP/ESP/RSP: Stack pointer for top address of the stack.
+    BP/EBP/RBP: Stack base pointer for holding the address of the current stack frame.
+    IP/EIP/RIP: Instruction pointer. Holds the program counter, the current instruction address.
+
+Segment registers:
+
+    CS: Code
+    DS: Data
+    SS: Stack
+    ES: Extra
+    FS
+    GS
+
+--------------------------
+pushl %eax = subl $4,%esp
+             movl %eax, (%esp)
+popl  %eax = movl (%esp),%eax
+             addl $4,%esp
+leave = movl %ebp,%esp
+        popl %ebp
+call $0x12345 = pushl %eip
+                movl $0x12345,%eip
+ret = popl %eip
+
+-------------------------- 
+(gcc) caller-saved : %eax, %ecx, %edx, 
+(gcc) callee-saved : %ebx, %esi, %edi, %esp, %ebp
+(gcc) caller-result: %eax
+
+--------------------------
+(gcc) standard callee sequence
+
+   pushl %ebp # 
+   movl  %esp, %ebp
+   subl  $qq, %esp  #(alloca local and scratch)
+
+(gcc) extended callee sequence
+
+   pushl %ebp # 
+   movl  %esp, %ebp
+   pushl %ebx
+   pushl %esi
+   pushl %edi
+   subl  $qq, %esp #(alloca local and scratch)
+
+now the stack looks like
+
+ebp+xx arg(n)
+       arg(n-1)
+       ..
+       arg(2)
+ebp+8  arg(1)
+ebp+4  return-pointer
+ebp -> old-frame
+       saved(r1)
+       ...
+       saved(rn)
+       local(1)
+       local(2)
+       ...
+       local(n-1)
+ebp-yy local(n)
+esp+zz scratch(n)
+       scratch(n-1)
+       ...
+       scratch(2)
+esp->  scratch(1)
+
+-------------
+(gcc) standard return sequence
+
+  movl <result>, %eax
+  leave
+  ret
+
+(gcc) extended return sequence
+  
+  movl <result>, %eax
+  subl $qq,%esp
+  popl %edi
+  popl %esi
+  popl %ebx
+  popl %ebp
+  ret
+
+-------------
