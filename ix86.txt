@@ -35,16 +35,16 @@ ret = popl %eip
 -------------------------- 
 (gcc) caller-saved : %eax, %ecx, %edx, 
 (gcc) callee-saved : %ebx, %esi, %edi, %esp, %ebp
-(gcc) caller-result: %eax
+(gcc) return-value : %eax
 
 --------------------------
-(gcc) standard callee sequence
+(gcc) standard enter sequence
 
    pushl %ebp # 
    movl  %esp, %ebp
    subl  $qq, %esp  #(alloca local and scratch)
 
-(gcc) extended callee sequence
+(gcc) extended enter sequence
 
    pushl %ebp # 
    movl  %esp, %ebp
@@ -94,3 +94,60 @@ esp->  scratch(1)
   ret
 
 -------------
+(enki) registier assignment
+
+  %eax - arg count/ret value
+  %esp - stack pointer
+  %ebp - frame pointer
+
+-------------
+(enki) caller-saved : %eax, %ebx, %ecx, %edx, %esi, %edi, %ebp, 
+(enki) callee-saved : %esp
+(enki) frame-size   : %eax
+(enki) return-value : %eax
+
+------------
+(enki) stack layout after call
+
+eax = (n * pointer-size)
+
+       frame-pointer (ebp)
+       return-pointer
+esp -> arg(1)
+       arg(2)
+       ...
+       arg(n-1)
+       arg(n)
+
+(enki) standard enter sequence
+
+   movl  %esp, %ebp
+   subl  %eax, %esp
+   pushl %ebp
+
+
+(enki) stack layout after enter sequence
+
+       return-pointer
+ebp -> arg(1)
+       arg(2)
+       ...
+       arg(n-1)
+       arg(n)
+       frame-pointer (ebp)
+esp -> scratch(1)
+       scratch(2)
+       ...
+       scratch(n-1)
+       scratch(n)
+
+(enki) standard return sequence
+ 
+   movl <result>, %eax
+   popl %ebp
+   movl %ebp, %esp
+   ret
+
+----------
+
+ 
