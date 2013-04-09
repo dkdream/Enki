@@ -38,7 +38,7 @@ TAILFLAGS += -Wformat-security
 RUNFLAGS := 
 
 INCFLAGS := -I. $(COPPER_INC)
-DBFLAGS  := -ggdb -Wall -mtune=i686 -rdynamic
+DBFLAGS  := -ggdb -Wall -mtune=i686 -rdynamic -fPIC
 CFLAGS   := $(DBFLAGS) $(INCFLAG) $(TAILFLAGS)
 SFLAGS   := -mtune=i686 -rdynamic -fdelete-null-pointer-checks -fverbose-asm
 LIBFLAGS := $(COPPER_LIB)
@@ -46,10 +46,11 @@ ARFLAGS  := rcu
 
 
 MAINS     := enki_main.c $(notdir $(wildcard link_*.c))
-C_SOURCES := $(filter-out $(MAINS),$(notdir $(wildcard *.c)))
+FOOS      := $(notdir $(wildcard foo_*.c))
+C_SOURCES := $(filter-out $(MAINS) $(FOOS),$(notdir $(wildcard *.c)))
 H_SOURCES := $(filter-out enki.h, $(notdir $(wildcard *.h)))
 
-ASMS    := $(C_SOURCES:%.c=.assembly/%.s)
+ASMS    := $(C_SOURCES:%.c=.assembly/%.s) $(FOOS:%.c=.assembly/%.s)
 OBJS    := $(C_SOURCES:%.c=%.o)
 TSTS    := $(notdir $(wildcard test_*.ea))
 RUNS    := $(TSTS:test_%.ea=test_%.run)
