@@ -49,16 +49,18 @@ MAINS     := enki_main.c $(notdir $(wildcard link_*.c))
 FOOS      := $(notdir $(wildcard foo_*.c))
 C_SOURCES := $(filter-out $(MAINS) $(FOOS),$(notdir $(wildcard *.c)))
 H_SOURCES := $(filter-out enki.h, $(notdir $(wildcard *.h)))
+GCC_SRCS  := $(notdir $(wildcard *.gcc))
 
 ASMS    := $(C_SOURCES:%.c=.assembly/%.s) $(FOOS:%.c=.assembly/%.s)
-OBJS    := $(C_SOURCES:%.c=%.o)
+OBJS    := $(C_SOURCES:%.c=.objects/%.o)
 TSTS    := $(notdir $(wildcard test_*.ea))
-RUNS    := $(TSTS:test_%.ea=test_%.run)
+RUNS    := $(TSTS:test_%.ea=.run/test_%.log)
 DEPENDS := $(C_SOURCES:%.c=.depends/%.d) $(MAINS:%.c=.depends/%.d)
 
 UNIT_TESTS := test_reader.gcc test_sizes.gcc
 
 all :: enki asm
+	@make --touch --quiet --no-print-directory $@
 
 enki :: $(RUNS)
 asm  :: $(ASMS)
@@ -81,26 +83,25 @@ depends : $(DEPENDS)
 $(RUNS) : enki.vm
 
 clean ::
-	rm -f $(OBJS) $(ASMS) $(RUNS) $(MAINS:%.c=%.o) $(UNIT_TESTS:%.gcc=%.x)
-	rm -f enki.x test.x enki.vm libEnki.a
-	rm -f *~ ./#*
-	rm -f *.s test.*.out test.out
+	rm -fr .depends .objects .assembly .run
+	rm -f enki.vm libEnki.a
+	rm -f *~ ./#* *.x *.s
+	rm -f test.*.out test.out
 
 scrub :: 
 	@make clean
 	@rm -rf .depends .assembly
 
-enki.vm : enki_main.o libEnki.a 
+enki.vm : .objects/enki_main.o libEnki.a 
 	$(GCC) $(CFLAGS) -o $@ $^ $(LIBFLAGS)
 
 enki_main.o : enki_main.c
 
 $(UNIT_TESTS:%.gcc=%.x) : libEnki.a
 
-libEnki.a : $(H_SOURCES)
-libEnki.a : $(C_SOURCES:%.c=%.o)
+libEnki.a : $(OBJS)
 	-$(RM) $@
-	$(AR) $(ARFLAGS) $@ $(C_SOURCES:%.c=%.o)
+	$(AR) $(ARFLAGS) $@ $(OBJS)
 	$(RANLIB) $@
 
 $(BINDIR) : ; [ -d $@ ] || mkdir -p $@
@@ -141,29 +142,25 @@ enki_ver.h : FORCE
 ## rules
 ##
 
-%.s : %.c
-	@echo $(GCC) $(DBFLAGS) -S -o $@ $<
-	@$(GCC) $(CFLAGS) -S -fverbose-asm -o $@ $<
+.depends  : ; @mkdir .depends
+.assembly : ; @mkdir .assembly
+.objects  : ; @mkdir .objects
+.run      : ; @mkdir .run
 
-%.o : %.c
+.objects/%.o : %.c .objects
 	@echo $(GCC) $(DBFLAGS) -c -o $@ $<
 	@$(GCC) $(CFLAGS) -c -o $@ $<
 
-%.run : %.ea
+.run/%.log : %.ea .run
 	@./run.it $(ENKI.test) "$(RUNFLAGS)" $< $@
 
-%.o : %.gcc
+.objects/%.o : %.gcc .objects
 	@echo $(GCC) $(DBFLAGS) -c -o $@ $<
 	@$(GCC) $(CFLAGS) -x c -c -o $@ $<
 
-%.x : %.o
-	$(GCC) $(CFLAGS) -o $@ $+ libEnki.a
-
-.depends : ; @mkdir .depends
-.depends/%.d : %.c .depends ; @$(GCC) $(CFLAGS) -MM -MP -MG -MF $@ $<
-
-.assembly : ; @mkdir .assembly
-.assembly/%.s : %.c .assembly ; @$(GCC) $(SFLAGS) -S -fverbose-asm -o $@ $<
+%.x             : .objects/%.o    ; $(GCC) $(CFLAGS) -o $@ $+ libEnki.a
+.depends/%.d    : %.c .depends    ; @$(GCC) $(CFLAGS) -MM -MP -MG -MF $@ $<
+.assembly/%.s   : %.c .assembly   ; @$(GCC) $(SFLAGS) -S -fverbose-asm -o $@ $<
 
 -include $(DEPENDS)
 
