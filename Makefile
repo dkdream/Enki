@@ -19,17 +19,14 @@ RANLIB := ranlib
 TAILFLAGS := -O
 TAILFLAGS += -fexpensive-optimizations
 TAILFLAGS += -finline-functions
-#TAILFLAGS += -fconserve-stack
+TAILFLAGS += -fconserve-stack
 TAILFLAGS += -foptimize-sibling-calls
 TAILFLAGS += -ftracer
-#TAILFLAGS += -findirect-inlining
 TAILFLAGS += -finline-functions-called-once
 TAILFLAGS += -fearly-inlining
 TAILFLAGS += -fmerge-constants
 TAILFLAGS += -fthread-jumps
 TAILFLAGS += -fcrossjumping
-#TAILFLAGS += -fdce
-#TAILFLAGS += -fdse
 TAILFLAGS += -fif-conversion
 TAILFLAGS += -fif-conversion2
 TAILFLAGS += -fdelete-null-pointer-checks
@@ -44,31 +41,29 @@ SFLAGS   := -mtune=i686 -rdynamic -fdelete-null-pointer-checks -fverbose-asm
 LIBFLAGS := $(COPPER_LIB)
 ARFLAGS  := rcu
 
-
 MAINS     := enki_main.c $(notdir $(wildcard link_*.c))
 FOOS      := $(notdir $(wildcard foo_*.c))
 C_SOURCES := $(filter-out $(MAINS) $(FOOS),$(notdir $(wildcard *.c)))
 H_SOURCES := $(filter-out enki.h, $(notdir $(wildcard *.h)))
 GCC_SRCS  := $(notdir $(wildcard *.gcc))
 
-ASMS    := $(C_SOURCES:%.c=.assembly/%.s) $(FOOS:%.c=.assembly/%.s)
 OBJS    := $(C_SOURCES:%.c=.objects/%.o)
 TSTS    := $(notdir $(wildcard test_*.ea))
 RUNS    := $(TSTS:test_%.ea=.run/test_%.log)
-DEPENDS := $(C_SOURCES:%.c=.depends/%.d) $(MAINS:%.c=.depends/%.d)
+
+ASMS    := $(C_SOURCES:%.c=.assembly/%.s)
+ASMS    += $(FOOS:%.c=.assembly/%.s)
+
+DEPENDS := $(C_SOURCES:%.c=.depends/%.d)
+DEPENDS += $(MAINS:%.c=.depends/%.d)
 
 UNIT_TESTS := test_reader.gcc test_sizes.gcc
 
-all :: enki asm
-	@make --touch --quiet --no-print-directory $@
-
-enki :: $(RUNS)
-asm  :: $(ASMS)
-test :: $(RUNS)
-	@echo all test runs
-
-units :: $(UNIT_TESTS:%.gcc=%.x)
-	ls -l $(UNIT_TESTS:%.gcc=%.x)
+all   :: enki asm
+enki  :: $(RUNS) ; @make --touch --quiet --no-print-directory $@
+asm   :: $(ASMS)
+test  :: $(RUNS) ; @echo all test runs
+units :: $(UNIT_TESTS:%.gcc=%.x) ; ls -l $(UNIT_TESTS:%.gcc=%.x)
 
 install : install.bin install.inc install.lib
 
@@ -124,18 +119,19 @@ enki_ver.h : FORCE
 # --
 
 .PHONY :: all
+.PHONY :: enki
 .PHONY :: asm
 .PHONY :: test
+.PHONY :: units
 .PHONY :: install
 .PHONY :: install.bin
 .PHONY :: install.inc
 .PHONY :: install.lib
 .PHONY :: checkpoint
+.PHONE :: depends
 .PHONY :: clear
 .PHONY :: clean
 .PHONY :: scrub
-.PHONY :: scrub
-.PHONY :: tail.check
 .PHONY :: FORCE
 
 ##
