@@ -8,20 +8,20 @@
 
 (require "blank.ea")
 
-(let ((out (open-out "io.out")))
+(let ((out (open-out "test.io.out")))
    (fprint out "one" "two" "three")
    (close-out out)
-   (let ((in (open-in "io.out"))) 
+   (let ((in (open-in "test.io.out"))) 
       (let ((line (read-line in)))
          (assert (iso 10 true (eof-in in)))
          (close-in in)
          (assert (iso 10 "onetwothree" line)))))
 
 
-(let ((out (open-out "io.out")))
+(let ((out (open-out "test.io.out")))
    (fprint out "one" "two" "three" "\n")
    (close-out out)
-   (let ((in (open-in "io.out"))) 
+   (let ((in (open-in "test.io.out"))) 
       (let ((line (read-line in)))
          (assert (iso 10 "onetwothree\n" line))
          (assert (iso 10 nil (eof-in in)))
@@ -31,10 +31,10 @@
          (close-in in)
          )))
 
-(let ((out (open-out "io.out")))
+(let ((out (open-out "test.io.out")))
    (fprint out "(one two three)")
    (close-out out)
-   (let ((in (open-in "io.out"))) 
+   (let ((in (open-in "test.io.out"))) 
       (let ((data (read-sexpr in)))
          (assert (iso 10 '(one two three) data))
          (assert (iso 10 nil (eof-in in)))
