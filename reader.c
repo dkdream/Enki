@@ -67,7 +67,7 @@ static unsigned short chartab[]= {
     /*  21  !  */   CHAR_LETTER,
     /*  22  "  */   0,
     /*  23  #  */   0,
-    /*  24  $  */   CHAR_LETTER,
+    /*  24  $  */   0,
     /*  25  %  */   CHAR_LETTER,
     /*  26  &  */   CHAR_LETTER,
     /*  27  '  */   0,
@@ -161,7 +161,7 @@ static unsigned short chartab[]= {
     /*  7f del */   0,
 };
 
-/* syntax: " # ' ( ) , : ; [ \ ] ` { } */
+/* syntax: " # $ ' ( ) , : ; [ \ ] ` { } */
 /* "  -> string
 ** #  -> line-comment
 ** '  -> quote

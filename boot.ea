@@ -97,7 +97,7 @@
 (macro (ilet label binding . body)
    (let ((vars (map car binding))
          (vals (map cdr binding)))
-      `((Y (lambda (\label \@vars) \@body)) \@vals)
+      `((Y (lambda (\label \@vars) \@body)) \@vals)))
 
 ## (rec var exp) -> (let ([var '()]) (set! var exp))
 (macro (rec var exp)
@@ -119,58 +119,36 @@
 
 ## (record (var ... ) val exp ... ) -> (apply (lambda (var ... ) (begin exp ... )) val)
 
-#{
-## (cond [else exp ... ]) -> (begin exp ... )
-## (cond [test exp ... ] clause ... ) -> (if test (begin exp ... ) (cond clause ... ))
+(define (expand-cond clauses)
+   (if (pair? clauses)
+         (let ((head (car clauses))
+               (tail (cdr clauses)))
+            (if (pair? head)
+                  (let ((test (car head))
+                        (seq  (cdr head)))
+                     (if (== test 'else)
+                           `(begin \@seq)
+                        (if (pair? seq)
+                              `(if \test 
+                                     (begin \@seq)
+                                  (cond \@tail))
+                           `(or \test (cond \@tail)))))))))
 
-(cond (<test> <sequence>)
-      <clause 2> ...)
-  ==  (if <test>
-          (begin <sequence>)
-          (cond <clause 2> ...))
+(macro (cond . clauses)
+   (expand-cond clauses))
 
-(cond (<test>)
-      <clause 2> ...)
-  ==  (or <test> (cond <clause 2> ...))
+(define (expand-case key clauses)
+   (let ((name (gensym)))
+      (let ((convert (lambda (pair)
+                        (if (pair? pair)
+                              (let ((list (car pair))
+                                    (body (cdr pair)))
+                                 (if (== member 'else)
+                                       `(else (begin \@body))
+                                    `((member \name '\list) (begin \@body))))))))
+         `(let ((\name \key))
+             (cond \@(map convert clauses))))))
 
-(cond (<test> => <recipient>)
-      <clause 2> ...)
-  ==  (let ((test-result <test>)
-            (thunk2 (lambda () <recipient>))
-            (thunk3 (lambda () (cond <clause 2> ...))))
-        (if test-result
-            ((thunk2) test-result)
-            (thunk3)))
-
-(cond (else <sequence>))
-  ==  (begin <sequence>)
-
-(cond)
-  ==  <some expression returning an unspecified value>
-}#
-
-(define (expand-cond* clauses))
-
-#{
-(case <key>
-  ((d1 ...) <sequence>)
-  ...)
-  ==  (let ((key <key>)
-            (thunk1 (lambda () <sequence>))
-            ...)
-        (cond ((<memv> key '(d1 ...)) (thunk1))
-               ...))
-
-(case <key>
-  ((d1 ...) <sequence>)
-  ...
-  (else f1 f2 ...))
-  ==  (let ((key <key>)
-            (thunk1 (lambda () <sequence>))
-            ...
-            (elsethunk (lambda () f1 f2 ...)))
-        (cond ((<memv> key '(d1 ...)) (thunk1))
-               ...
-              (else (elsethunk))))
-}#
+(macro (case key . clauses)
+   (expand-case key clauses))
 

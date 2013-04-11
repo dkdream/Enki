@@ -464,8 +464,6 @@ extern SUBR(encode_lambda) {
     list_SetEnd(lenv.pair, env);
     encode(body, lenv, &(body.pair));
 
-    //list_Map(encode, body.pair, lenv, &(body.pair));
-
     pair_Create(formals, body, result.pair);
 }
 
@@ -502,6 +500,27 @@ extern SUBR(gensym)
     symbol_Convert(data, result.symbol);
 }
 
+extern SUBR(member)
+{
+    Node tst = NIL;
+    Node lst = NIL;
+
+    forceArgs(args, &tst, &lst, 0);
+
+    while (isType(lst, t_pair)) {
+        Node elm = NIL;
+
+        pair_GetCar(lst.pair, &elm);
+
+        if (node_Match(tst, elm)) {
+            ASSIGN(result, true_v);
+            break;
+        }
+
+        pair_GetCdr(lst.pair, &lst);
+    }
+}
+
 extern SUBR(find)
 {
     Node tst = NIL;
@@ -525,6 +544,72 @@ extern SUBR(find)
 
         pair_GetCdr(lst.pair, &lst);
     }
+}
+
+extern void call_with(const Node function, const Node value, const Node env, Target target) {
+    Pair args;
+    pair_Create(value, NIL, &args);
+    apply(function, args, env, target);
+}
+
+extern SUBR(map) {
+    Node function;
+    Node list;
+
+    checkArgs(args, "map", 1, NIL, t_pair);
+    forceArgs(args, &function, &list, 0);
+
+    if (isNil(function)) {
+        ASSIGN(result, list);
+        return;
+    }
+
+    if (!isType(list, t_pair)) {
+        call_with(function, list, env, result);
+        return;
+    }
+
+    Pair pair = list.pair;
+
+    GC_Begin(4);
+
+    Node input;
+    Node output;
+    Node first;
+
+    GC_Protect(input);
+    GC_Protect(output);
+    GC_Protect(first);
+
+    call_with(function, pair->car, env, &output);
+
+    pair_Create(output,NIL, &first.pair);
+
+    Pair last = first.pair;
+
+    for (; isType(pair->cdr.pair, t_pair) ;) {
+        pair   = pair->cdr.pair;
+        input  = pair->car;
+        output = NIL;
+
+        call_with(function, input, env, &output);
+
+        pair_Create(output,NIL, &(last->cdr.pair));
+
+        last = last->cdr.pair;
+    }
+
+    if (!isNil(pair->cdr.pair)) {
+        input  = pair->cdr;
+        output = NIL;
+
+        call_with(function, input, env, &output);
+        pair_SetCdr(last, output);
+    }
+
+    ASSIGN(result, first);
+
+    GC_End();
 }
 
 extern SUBR(eval_symbol)
@@ -916,7 +1001,7 @@ _do_relation()
 extern SUBR(eq)
 {
     Node left; Node right;
-    checkArgs(args, "=", 2, NIL, NIL);
+    checkArgs(args, "==", 2, NIL, NIL);
     forceArgs(args, &left, &right, 0);
 
     if (node_Match(left,right)) {
@@ -1829,72 +1914,6 @@ extern SUBR(box) {
     pair_Create(value, NIL, result.pair);
 }
 
-extern void call_with(const Node function, const Node value, const Node env, Target target) {
-    Pair args;
-    pair_Create(value, NIL, &args);
-    apply(function, args, env, target);
-}
-
-extern SUBR(map) {
-    Node function;
-    Node list;
-
-    checkArgs(args, "map", 1, NIL, t_pair);
-    forceArgs(args, &function, &list, 0);
-
-    if (isNil(function)) {
-        ASSIGN(result, list);
-        return;
-    }
-
-    if (!isType(list, t_pair)) {
-        call_with(function, list, env, result);
-        return;
-    }
-
-    Pair pair = list.pair;
-
-    GC_Begin(4);
-
-    Node input;
-    Node output;
-    Node first;
-
-    GC_Protect(input);
-    GC_Protect(output);
-    GC_Protect(first);
-
-    call_with(function, pair->car, env, &output);
-
-    pair_Create(output,NIL, &first.pair);
-
-    Pair last = first.pair;
-
-    for (; isType(pair->cdr.pair, t_pair) ;) {
-        pair   = pair->cdr.pair;
-        input  = pair->car;
-        output = NIL;
-
-        call_with(function, input, env, &output);
-
-        pair_Create(output,NIL, &(last->cdr.pair));
-
-        last = last->cdr.pair;
-    }
-
-    if (!isNil(pair->cdr.pair)) {
-        input  = pair->cdr;
-        output = NIL;
-
-        call_with(function, input, env, &output);
-        pair_SetCdr(last, output);
-    }
-
-    ASSIGN(result, first);
-
-    GC_End();
-}
-
 extern SUBR(set_end) {
     Node head;
     Node tail;
@@ -2209,7 +2228,9 @@ void startEnkiLibrary() {
     MK_OPR(%encode-lambda,encode_lambda);
 
     MK_PRM(gensym);
+    MK_PRM(member);
     MK_PRM(find);
+    MK_PRM(map);
 
     p_eval_symbol  = MK_OPR(%eval-symbol,eval_symbol);
     p_eval_pair    = MK_OPR(%eval-pair,eval_pair);
@@ -2285,7 +2306,6 @@ void startEnkiLibrary() {
     MK_OPR(integer?,integer_q);
     MK_OPR(gc-scan,gc_scan);
     MK_PRM(box);
-    MK_PRM(map);
     MK_OPR(set-end,set_end);
     MK_PRM(the);
     MK_OPR(nil?,nil_q);
