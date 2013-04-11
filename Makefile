@@ -56,8 +56,8 @@ OBJS    := $(C_SOURCES:%.c=.objects/%.o)
 TSTS    := $(notdir $(wildcard test_*.ea))
 RUNS    := $(TSTS:test_%.ea=.run/test_%.log)
 
-ASMS    := $(C_SOURCES:%.c=.assembly/%.s)
-ASMS    += $(FOOS:%.c=.assembly/%.s)
+ASMS    := $(C_SOURCES:%.c=.assembly/%_32.s) $(C_SOURCES:%.c=.assembly/%_64.s)
+ASMS    += $(FOOS:%.c=.assembly/%_32.s) $(FOOS:%.c=.assembly/%_64.s)
 
 DEPENDS := $(C_SOURCES:%.c=.depends/%.d)
 DEPENDS += $(MAINS:%.c=.depends/%.d)
@@ -99,10 +99,11 @@ enki_main.o : enki_main.c
 
 $(UNIT_TESTS:%.gcc=%.x) : libEnki.a
 
-libEnki.a : $(OBJS)
+libEnki.a : $(OBJS) $(ASMS)
 	-$(RM) $@
 	$(AR) $(ARFLAGS) $@ $(OBJS)
 	$(RANLIB) $@
+	@touch $@
 
 $(BINDIR) : ; [ -d $@ ] || mkdir -p $@
 $(INCDIR) : ; [ -d $@ ] || mkdir -p $@
@@ -159,9 +160,10 @@ enki_ver.h : FORCE
 	@echo $(GCC) $(DBFLAGS) -c -o $@ $<
 	@$(GCC) $(CFLAGS) -x c -c -o $@ $<
 
-%.x             : .objects/%.o    ; $(GCC) $(CFLAGS) -o $@ $+ libEnki.a
-.depends/%.d    : %.c .depends    ; @$(GCC) $(CFLAGS) -MM -MP -MG -MF $@ $<
-.assembly/%.s   : %.c .assembly   ; @$(GCC) $(SFLAGS) -S -fverbose-asm -o $@ $<
+%.x              : .objects/%.o  ; $(GCC) $(CFLAGS) -o $@ $+ libEnki.a
+.depends/%.d     : %.c .depends  ; @$(GCC) $(CFLAGS) -MM -MP -MG -MF $@ $<
+.assembly/%_32.s : %.c .assembly ; @$(GCC) $(SFLAGS) -S -m32 -fverbose-asm -o $@ $<
+.assembly/%_64.s : %.c .assembly ; @$(GCC) $(SFLAGS) -S -m64 -fverbose-asm -o $@ $<
 
 -include $(DEPENDS)
 
