@@ -20,6 +20,13 @@ typedef struct text_buffer TextBuffer;
 
 #define BUFFER_INITIALISER { 0, 0, 0 }
 
+extern inline void buffer_init(TextBuffer *tbuf) __attribute__((always_inline nonnull(1)));
+extern inline void buffer_init(TextBuffer *tbuf) {
+    tbuf->buffer   = 0;
+    tbuf->size     = 0;
+    tbuf->position = 0;
+}
+
 extern inline void buffer_reset(TextBuffer *tbuf) __attribute__((always_inline nonnull(1)));
 extern inline void buffer_reset(TextBuffer *tbuf) {
     tbuf->position = 0;
@@ -92,6 +99,15 @@ extern inline const char *buffer_contents(TextBuffer *tbuf)
     buffer_append(tbuf, 0);
     tbuf->position--;
     return tbuf->buffer;
+}
+
+extern inline void buffer_free(TextBuffer *tbuf) __attribute__((always_inline nonnull(1)));
+extern inline void buffer_free(TextBuffer *tbuf)
+{
+    if (tbuf->buffer) {
+        free(tbuf->buffer);
+    }
+    buffer_init(tbuf);
 }
 
 /***************************

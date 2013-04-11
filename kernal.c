@@ -1609,7 +1609,7 @@ extern SUBR(fprint) {
         pair_GetCdr(args.pair, &args);
 
         if (!isType(outfile, t_outfile)) {
-            fatal("first argument to formant is not an outfile\n");
+            fatal("first argument to fprint is not an outfile\n");
         }
 
         out = ((OSFile)(outfile.reference))->file;
@@ -1955,6 +1955,93 @@ extern SUBR(not) {
     }
 }
 
+extern SUBR(open_buffer) {
+    Reference buffer = 0;
+
+    if (!opaque_Create(t_buffer, sizeof(struct text_buffer), &buffer)) {
+        fatal("failed to allocate opaque object");
+    }
+
+    buffer_init((TextBuffer *)buffer);
+
+    ASSIGN(result, buffer);
+}
+
+extern SUBR(bprint) {
+    TextBuffer *out = 0;
+
+    checkArgs(args, "bprint", 1, t_buffer);
+
+    if (!isType(args, t_pair)) {
+        fatal("missing first argument to bprint\n");
+    } else {
+        Node buffer = NIL;
+
+        pair_GetCar(args.pair, &buffer);
+        pair_GetCdr(args.pair, &args);
+
+        if (!isType(buffer, t_buffer)) {
+            fatal("first argument to bprint is not an buffer\n");
+        }
+
+        out = ((TextBuffer *)(buffer.reference));
+    }
+
+    while (isType(args, t_pair)) {
+        Node text;
+        pair_GetCar(args.pair, &text);
+        pair_GetCdr(args.pair, &args);
+
+        if (!isType(text, t_text)) {
+            fatal("invalid argument to bprint\n");
+        }
+
+        buffer_add(out, text_Text(text.text));
+    }
+}
+
+extern SUBR(close_buffer) {
+    Node buffer;
+    checkArgs(args, "close-buffer", 1, t_buffer);
+    forceArgs(args, &buffer, 0);
+
+    if (!isType(buffer, t_buffer)) {
+        fatal("close-buffer: not an buffer");
+    }
+
+    TextBuffer *buff = ((TextBuffer *)(buffer.reference));
+
+    text_Create(*(buff), result.text);
+
+    buffer_free(buff);
+
+    setType(buffer, s_opaque);
+}
+
+extern SUBR(text_q) {
+    Node value;
+    checkArgs(args, "text?", 1, NIL);
+    pair_GetCar(args.pair, &value);
+
+    if (isType(value, t_text)) {
+        ASSIGN(result, true_v);
+    } else {
+        ASSIGN(result, NIL);
+    }
+}
+
+extern SUBR(symbol_q) {
+    Node value;
+    checkArgs(args, "symbol?", 1, NIL);
+    pair_GetCar(args.pair, &value);
+
+    if (isType(value, s_symbol)) {
+        ASSIGN(result, true_v);
+    } else {
+        ASSIGN(result, NIL);
+    }
+}
+
 /***************************************************************
  ***************************************************************
  ***************************************************************
@@ -2203,6 +2290,11 @@ void startEnkiLibrary() {
     MK_PRM(the);
     MK_OPR(nil?,nil_q);
     MK_PRM(not);
+    MK_OPR(open-buffer,open_buffer);
+    MK_PRM(bprint);
+    MK_OPR(close-buffer,close_buffer);
+    MK_OPR(text?,text_q);
+    MK_OPR(symbol?,symbol_q);
 
     clock_t cend = clock();
 

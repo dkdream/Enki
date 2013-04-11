@@ -11,6 +11,8 @@ ENKI.ext  := ea
 
 PATH := .:$(PATH)
 
+MACHINE := $(shell uname --machine)
+
 GCC    := gcc
 DIFF   := diff
 AR     := ar
@@ -19,7 +21,6 @@ RANLIB := ranlib
 TAILFLAGS := -O
 TAILFLAGS += -fexpensive-optimizations
 TAILFLAGS += -finline-functions
-TAILFLAGS += -fconserve-stack
 TAILFLAGS += -foptimize-sibling-calls
 TAILFLAGS += -ftracer
 TAILFLAGS += -finline-functions-called-once
@@ -31,6 +32,10 @@ TAILFLAGS += -fif-conversion
 TAILFLAGS += -fif-conversion2
 TAILFLAGS += -fdelete-null-pointer-checks
 TAILFLAGS += -Wformat-security
+
+ifneq ($(MACHINE),x86_64)
+TAILFLAGS += -fconserve-stack
+endif
 
 RUNFLAGS := 
 

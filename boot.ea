@@ -117,8 +117,60 @@
 (macro (unless test . body)
    `(if \test '() \@body))
 
+## (record (var ... ) val exp ... ) -> (apply (lambda (var ... ) (begin exp ... )) val)
 
-#(record (var ... ) val exp ... ) -> (apply (lambda (var ... ) (begin exp ... )) val)
+#{
+## (cond [else exp ... ]) -> (begin exp ... )
+## (cond [test exp ... ] clause ... ) -> (if test (begin exp ... ) (cond clause ... ))
 
-#(cond [else exp ... ]) -> (begin exp ... )
-#(cond [test exp ... ] clause ... ) -> (if test (begin exp ... ) (cond clause ... ))
+(cond (<test> <sequence>)
+      <clause 2> ...)
+  ==  (if <test>
+          (begin <sequence>)
+          (cond <clause 2> ...))
+
+(cond (<test>)
+      <clause 2> ...)
+  ==  (or <test> (cond <clause 2> ...))
+
+(cond (<test> => <recipient>)
+      <clause 2> ...)
+  ==  (let ((test-result <test>)
+            (thunk2 (lambda () <recipient>))
+            (thunk3 (lambda () (cond <clause 2> ...))))
+        (if test-result
+            ((thunk2) test-result)
+            (thunk3)))
+
+(cond (else <sequence>))
+  ==  (begin <sequence>)
+
+(cond)
+  ==  <some expression returning an unspecified value>
+}#
+
+(define (expand-cond* clauses))
+
+#{
+(case <key>
+  ((d1 ...) <sequence>)
+  ...)
+  ==  (let ((key <key>)
+            (thunk1 (lambda () <sequence>))
+            ...)
+        (cond ((<memv> key '(d1 ...)) (thunk1))
+               ...))
+
+(case <key>
+  ((d1 ...) <sequence>)
+  ...
+  (else f1 f2 ...))
+  ==  (let ((key <key>)
+            (thunk1 (lambda () <sequence>))
+            ...
+            (elsethunk (lambda () f1 f2 ...)))
+        (cond ((<memv> key '(d1 ...)) (thunk1))
+               ...
+              (else (elsethunk))))
+}#
+

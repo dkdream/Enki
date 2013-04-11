@@ -63,6 +63,7 @@ Type t_primitive = 0;
 Type t_text = 0;
 Type t_true = 0;
 Type t_tuple = 0;
+Type t_buffer = 0;
 
 static void make_sort(const char* value, Sort* target) {
     Symbol symbol = 0;
@@ -114,6 +115,7 @@ extern void init_global_typetable() {
     MK_BTYPE(text);
     MK_BTYPE(true);
     MK_BTYPE(tuple);
+    MK_BTYPE(buffer);
 }
 
 extern void final_global_typetable() {

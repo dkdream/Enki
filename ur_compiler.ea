@@ -14,7 +14,7 @@
 
 (define (filter fn lst)
    (if (nil? lst)
-         '()
+         nil
       (let ((first (car lst))
             (rest (filter fn (cdr lst))))
          (if (fn first)
@@ -32,11 +32,10 @@
 ## starting at "destidx"
 ## XXX needs a !
 
-(define (string-blit! src srcidx len dest destidx)
-   (if (not (= len 0))
-         (begin (string-set! dest destidx (string-ref src srcidx))
-                (string-blit! src (1+ srcidx) (1- len) dest (1+ destidx)))))
-
+# (define (string-blit! src srcidx len dest destidx)
+#    (if (not (= len 0))
+#          (begin (string-set! dest destidx (string-ref src srcidx))
+#                 (string-blit! src (1+ srcidx) (1- len) dest (1+ destidx)))))
 
 ###  Basic Assembly Language Emission
 
@@ -44,7 +43,7 @@
 ## arbitrarily nested list structure
 (define assembly-diversions nil)
 
-(define diverted-assembly '())
+(define diverted-assembly nil)
 
 (define (asm-display stuff)
    (if assembly-diversions
@@ -58,40 +57,36 @@
 (define (pop-diverted-assembly)
    (let ((result (asm-flatten (reverse diverted-assembly))))
       (set assembly-diversions nil)
-      (set diverted-assembly '())
+      (set diverted-assembly nil)
       result))
 
 (define (emit . stuff)
    (asm-display (asm-flatten (cons stuff "\n"))))
 
 (define (asm-flatten stuff)
-   (let ((buf (make-string (asm-flatten-size stuff))))
-      (asm-flatten-inner buf 0 stuff)
-      buf))
+   (let ((buf (open-buffer)))
+      (asm-flatten-inner buf stuff)
+      (close-buffer buf)))
 
-(define (asm-flatten-size stuff)
-   (cond ((null? stuff) 0) 
-         ((pair? stuff) (+ (asm-flatten-size (car stuff))
-                           (asm-flatten-size (cdr stuff))))
-         ((string? stuff) (string-length stuff))
-         (else (error "flatten-size" stuff))))
-
-(define (asm-flatten-inner buf idx stuff)
-   (cond ((null? stuff)   idx)
-         ((pair? stuff)   (asm-flatten-inner buf 
-                                             (asm-flatten-inner buf idx (car stuff))
-                                             (cdr stuff)))
-         ((string? stuff) (string-blit! stuff 0 (string-length stuff) buf idx)
-          (+ idx (string-length stuff)))
-         (else 
-          (error "flattening" stuff))))
+(define (asm-flatten-inner buf stuff)
+   (if (nil? stuff)
+         nil
+      (if (pair? stuff)
+            (begin
+               (asm-flatten-inner buf (car stuff))
+               (asm-flatten-inner buf (cdr stuff)))
+         (if (text? stuff)
+               (asm-flatten-inner buf stuff)
+            (error 'flattening stuff)))))
 
 ## Memoize a one-argument assembly-generating routine.
 (define (memo1-asm proc)
-   (let ((results '()))
+   (let ((results nil))
       (lambda (arg)
          (let ((cached (assq arg results)))
-            (if cached (begin (asm-display (cadr cached)) (caddr cached))
+            (if cached
+                  (begin (asm-display (cadr cached))
+                         (caddr cached))
                (begin
                   (push-assembly-diversion)
                   (let ((result (proc arg)))
@@ -101,16 +96,31 @@
                         result))))))))
 
 ## Memoize a zero-argument assembly-generating routine.
+# (define (memo0-asm proc)
+#    (lambda ()
+#       (let ((output nil) (result nil))
+#          (cond (output (asm-display output) result)
+#                (else   (push-assembly-diversion) 
+#                        (let ((nresult (proc)))
+#                           (set output (pop-diverted-assembly))
+#                           (set result nresult)
+#                           (asm-display output)
+#                           result))))))
+
 (define (memo0-asm proc)
    (lambda ()
       (let ((output nil) (result nil))
-         (cond (output (asm-display output) result)
-               (else   (push-assembly-diversion) 
-                       (let ((nresult (proc)))
-                          (set output (pop-diverted-assembly))
-                          (set result nresult)
-                          (asm-display output)
-                          result))))))
+         (if output 
+               (begin
+                  (asm-display output)
+                  result)
+            (begin
+               (push-assembly-diversion) 
+               (let ((nresult (proc)))
+                  (set output (pop-diverted-assembly))
+                  (set result nresult)
+                  (asm-display output)
+                  result))))))
 
 ## Emit an indented instruction
 (define (insn . insn)
@@ -175,7 +185,7 @@
 (define esp "%esp")
 (define esi "%esi")
 (define edi "%edi")
-(define al "%al")
+(define al  "%al")
 
 ## x86 addressing modes:
 (define (const x)         (list "$" x))
@@ -202,7 +212,7 @@
    (label lbl))
 
 ## new-label: Allocate a new label (e.g. for a constant) and return it.
-(define old-label-prefixes '())
+(define old-label-prefixes nil)
 (define constcounter 0)
 (define label-prefix "k")
 
@@ -249,7 +259,7 @@
           (car escapes))
          (else (escape-char char (cdr dangerous) (cdr escapes)))))
 (define (escape string idx dangerous escapes) #  duplicated in stdlib
-   (if (= idx (string-length string)) '()
+   (if (= idx (string-length string)) nil
       (cons (escape-char (string-ref string idx) dangerous escapes)
             (escape string (1+ idx) dangerous escapes))))
 ## Escape the three necessary characters.  duplicated in stdlib
@@ -554,23 +564,23 @@
 (define (add-if-not-present obj set) (if (memq obj set) set (cons obj set)))
 (define (set-union a b) (reduce add-if-not-present a b))
 (define (set-intersect a b) (filter (lambda (x) (memq x b)) a))
-(define (set-union-all sets) (reduce set-union sets '()))
+(define (set-union-all sets) (reduce set-union sets nil))
 
-(assert (set-equal '() '()) "empty set equality")
+(assert (set-equal nil nil) "empty set equality")
 (assert (set-equal '(a) '(a)) "set equality with one item")
 (assert (not (set-equal '(a) '(b))) "set inequality with one item")
-(assert (not (set-equal '() '(a))) "set inequality () (a)")
-(assert (not (set-equal '(a) '())) "set inequality (a) ()")
+(assert (not (set-equal nil '(a))) "set inequality () (a)")
+(assert (not (set-equal '(a) nil)) "set inequality (a) ()")
 (assert (set-equal '(a a) '(a)) "set equality (a a) (a)")
 (assert (set-equal '(a b) '(b a)) "set equality sequence varies")
-(assert (= (length (add-if-not-present 'a '())) 1) "add to empty set")
+(assert (= (length (add-if-not-present 'a nil)) 1) "add to empty set")
 (assert (= (length (add-if-not-present 'a '(a))) 1) "redundant add")
 (assert (= (length (add-if-not-present 'a '(b))) 2) "nonredundant add")
 (define sample-abcd (set-union '(a b c) '(b c d)))
 (assert (= (length sample-abcd) 4) "set union")
 (assert (memq 'a sample-abcd) "member from set 1")
 (assert (memq 'd sample-abcd) "member from set 2")
-(assert (not (memq '() sample-abcd)) "nil not in set")
+(assert (not (memq nil sample-abcd)) "nil not in set")
 
 (define (assert-set-equal a b) (assert (set-equal a b) (list 'set-equal a b)))
 (assert-set-equal (set-intersect '(a b c) '(b c d)) '(b c))
@@ -580,11 +590,11 @@
 ## occurs free inside a lambda inside expr.
 (define (captured-vars expr) (set-union-all (map free-vars (lambdas expr))))
 (define (lambdas expr)
-   (cond ((not (pair? expr)) '())       #  non-lists and empty lists
+   (cond ((not (pair? expr)) nil)       #  non-lists and empty lists
          ## We don't want the deeper-nested lambdas, just the top-level
          ## ones.
          ((eq? (car expr) 'lambda) (list expr))
-         (else (reduce append (map lambdas expr) '()))))
+         (else (reduce append (map lambdas expr) nil))))
 (define (all-captured-vars expr) (set-union-all (map captured-vars expr)))
 
 ## Returns a list of the vars that are bound by a particular lambda arg list.
@@ -598,12 +608,12 @@
 ## Returns vars that occur free inside of expr.
 (define (free-vars expr)
    (cond ((symbol? expr) (list expr))
-         ((not (pair? expr)) '())
+         ((not (pair? expr)) nil)
          (else (case (car expr)
                      ((lambda)     (free-vars-lambda (cadr expr) (cddr expr)))
                      ((%begin %ifeq)
                       (all-free-vars (cdr expr)))
-                     ((quote)      '())
+                     ((quote)      nil)
                      ((set)       (add-if-not-present (cadr expr) 
                                                       (free-vars (caddr expr))))
                      (else         (all-free-vars expr))))))
@@ -641,7 +651,7 @@
 
 (define (push-artifacts artifacts) (push-artifacts-2 artifacts 0))
 (define (push-artifacts-2 artifacts slotnum)
-   (if (null? artifacts) '()
+   (if (null? artifacts) nil
       (let ((var (car artifacts)))
          (comment "fetch artifact from closure: " (number->string slotnum) 
                   " " (symbol->string var))
@@ -699,15 +709,15 @@
 ## Some tests for the other cases.
 (define sample-quoted-expr '(foo bar '(a b c)))
 (assert-set-equal (free-vars sample-quoted-expr) '(foo bar))
-(assert-set-equal (captured-vars sample-quoted-expr) '())
+(assert-set-equal (captured-vars sample-quoted-expr) nil)
 
 (define sample-if-expr '(%ifeq a b c d))
 (assert-set-equal (free-vars sample-if-expr) '(a b c d))
-(assert-set-equal (captured-vars sample-if-expr) '())
+(assert-set-equal (captured-vars sample-if-expr) nil)
 
 (define sample-begin-expr '(%begin a b c))
 (assert-set-equal (free-vars sample-begin-expr) '(a b c))
-(assert-set-equal (captured-vars sample-begin-expr) '())
+(assert-set-equal (captured-vars sample-begin-expr) nil)
 
 ## In particular, multiple expressions in a lambda body here.
 (assert-set-equal (captured-vars 
@@ -723,7 +733,7 @@
                                   (cddr sample-closure-expression)))
 (assert-set-equal '(c) (heap-args (cadr sample-inner-lambda-1)
                                   (cddr sample-inner-lambda-1)))
-(assert-set-equal '() (heap-args (cadr sample-inner-lambda-2)
+(assert-set-equal nil (heap-args (cadr sample-inner-lambda-2)
                                  (cddr sample-inner-lambda-2)))
 (assert-set-equal '(message)
                   (heap-args '(message) 
@@ -733,7 +743,7 @@
                                   (newline)))))
 
 (assert-set-equal '(a b) (free-vars '(set a b)))
-(assert-set-equal '() (captured-vars '(set a b)))
+(assert-set-equal nil (captured-vars '(set a b)))
 
 
 ###  Memory management.
@@ -957,7 +967,7 @@
 (define ensure-symbol
    (call-ensure-magic-routine symbol-magic "ensure_symbol" "not a symbol"))
 
-(define interned-symbol-list '())
+(define interned-symbol-list nil)
 (define (intern symbol)
    (interning symbol interned-symbol-list))
 (define (interning symbol symlist)
@@ -1060,7 +1070,7 @@
       (push-const nil-value)))
 
 ## Buffered byte input from standard input.
-(define-global-procedure 'read-char '()
+(define-global-procedure 'read-char nil
    (lambda () (comment "We don't care about our args.")
       (comment "(maybe somebody passed us (current-input-port))")
       (section ".bss")
@@ -1301,8 +1311,8 @@
 
 ###  Global variable handling.
 
-(define global-variable-labels '())
-(define global-variables-defined '())
+(define global-variable-labels nil)
+(define global-variables-defined nil)
 
 (define (allocate-new-global-variable-label! name)
    (let ((label (new-label)))
@@ -1452,14 +1462,14 @@
 ## Construct an environment binding the local variables of the lambda
 ## to bits of code to fetch them.
 (define (lambda-environment env vars idx)
-   (if (null? vars) '()
+   (if (null? vars) nil
       (cons (list (car vars) 'stack idx)
             (lambda-environment env (cdr vars) (1+ idx)))))
 
 (define (compile-lambda rands env tail?) 
    (let ((vars (car rands)) (body (cdr rands)))
       (let ((varlist (if (symbol? vars) (list vars) vars))
-            (nargs (if (symbol? vars) '() (length vars))))
+            (nargs (if (symbol? vars) nil (length vars))))
          (let ((artifacts (artifacts varlist body env))
                (jumplabel (new-label))
                (stack-env (lambda-environment env varlist 0))
@@ -1593,12 +1603,12 @@
    (mov tos (indirect (global-variable-label name)))
    (pop))
 
-(define global-env '())
+(define global-env nil)
 
 
 ###  Macros.
 
-(define macros '())
+(define macros nil)
 (define (define-ur-macro name fun)
    (set macros (cons (list name fun) macros)))
 
@@ -1669,7 +1679,7 @@
                    ((eq? eqv? =)
                     (list '%ifeq (cadar args) (caddar args) (cadr args) (caddr args)))
                    ((null?)
-                    (list '%ifeq (cadar args) (list 'quote '()) 
+                    (list '%ifeq (cadar args) (list 'quote nil) 
                           (cadr args) (caddr args)))
                    ((not)
                     (list 'if (cadar args) (caddr args) (cadr args)))
@@ -1703,7 +1713,7 @@
 (assert-equal (totally-macroexpand '(if (a) b c)) '(%ifeq (a) nil c b))
 (assert-equal (totally-macroexpand '(if (a) b)) '(%ifeq (a) nil nil b))
 (assert-equal (totally-macroexpand '(if (not a) b c)) '(%ifeq a nil b c))
-(assert-equal (totally-macroexpand '(if (null? a) b c)) '(%ifeq a '() b c))
+(assert-equal (totally-macroexpand '(if (null? a) b c)) '(%ifeq a nil b c))
 (assert-equal (totally-macroexpand '(cond ((eq? x 3) 4 '(cond 3)) 
                                           ((eq? x 4) 8)
                                           (else 6 7)))
@@ -1791,7 +1801,7 @@
      (define (append2 a b) (reduce cons a b))
 
      ## XXX add (concatenate list-of-lists) SRFI-1
-     (define (append . args) (reduce append2 args '())) #  standard
+     (define (append . args) (reduce append2 args nil)) #  standard
 
      ## identical to standard caar, cdar, etc.
      (define (caar val) (car (car val)))
@@ -1817,17 +1827,14 @@
      ## XXX we could get rid of this if we weren't using it for creating error msgs
      ## (and now, again, number->string)
      (define (string-append s1 s2)       #  standard
-        (let ((buf (make-string (+ (string-length s1) (string-length s2)))))
-           (string-blit! s1 0 (string-length s1) buf 0)
-           (string-blit! s2 0 (string-length s2) buf (string-length s1))
-           buf))
+        (format "@{s}@{s}" s1 s2))
 
      ## copies "len" chars from "src" starting at "srcidx" to "dest"
      ## starting at "destidx"
-     (define (string-blit! src srcidx len dest destidx)
-        (if (not (= len 0))
-              (begin (string-set! dest destidx (string-ref src srcidx))
-                     (string-blit! src (1+ srcidx) (1- len) dest (1+ destidx)))))
+     # (define (string-blit! src srcidx len dest destidx)
+     #    (if (not (= len 0))
+     #         (begin (string-set! dest destidx (string-ref src srcidx))
+     #                (string-blit! src (1+ srcidx) (1- len) dest (1+ destidx)))))
 
 
      ## chars
@@ -1886,9 +1893,9 @@
                  (proc (car list))
                  (for-each proc (cdr list)))))
      (define (map proc list)      #  subset of standard: one list only
-        (if (null? list) '() (cons (proc (car list)) (map proc (cdr list)))))
+        (if (null? list) nil (cons (proc (car list)) (map proc (cdr list)))))
 
-     (define (reverse lst) (reverse-plus '() lst))
+     (define (reverse lst) (reverse-plus nil lst))
      ## XXX rename and exchange arguments: append-reverse, SRFI-1
      (define (reverse-plus tail lst) 
         (if (null? lst) tail (reverse-plus (cons (car lst) tail) (cdr lst))))
@@ -1896,7 +1903,7 @@
 
      ## conversions
      (define (string->list string)      #  standard
-        (string->list-2 string (string-length string) '()))
+        (string->list-2 string (string-length string) nil))
      (define (string->list-2 string n rest)
         (if (= n 0) rest
            (string->list-2 string (- n 1)
@@ -1961,7 +1968,7 @@
                (car escapes))
               (else (escape-char char (cdr dangerous) (cdr escapes)))))
      (define (escape string idx dangerous escapes) #  duplicated in stdlib
-        (if (= idx (string-length string)) '()
+        (if (= idx (string-length string)) nil
            (cons (escape-char (string-ref string idx) dangerous escapes)
                  (escape string (1+ idx) dangerous escapes))))
      ## Escape the three necessary characters.  duplicated in stdlib

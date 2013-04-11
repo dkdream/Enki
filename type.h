@@ -45,6 +45,7 @@ extern Type t_primitive;
 extern Type t_text;
 extern Type t_true;
 extern Type t_tuple;
+extern Type t_buffer;
 
 extern bool sort_Create(Symbol,Sort*);                /* each sort has a unique name */
 extern bool type_Create(Symbol,Sort,Type*);           /* each basetype in a sort has a unique name */
