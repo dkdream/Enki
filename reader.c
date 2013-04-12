@@ -163,7 +163,8 @@ static unsigned short chartab[]= {
 
 /* syntax: " # $ ' ( ) , : ; [ \ ] ` { } */
 /* "  -> string
-** #  -> line-comment
+** #  -> comment
+** $  -> ......
 ** '  -> quote
 ** (  -> list ')'
 ** ,  -> s_comma
@@ -495,10 +496,11 @@ static bool readString(FILE *fp, int end, Target result)
 }
 
 // -?[0-9]+
+// +?[0-9]+
 // 0x[0-9a-fA-F]+
 static bool readInteger(FILE *fp, int first, Target result)
 {
-    int chr = first;
+    int  chr = first;
 
     static TextBuffer buf= BUFFER_INITIALISER;
     buffer_reset(&buf);
@@ -686,6 +688,13 @@ extern bool readExpr(FILE *fp, Target result)
             }
 
         case '-':
+            {
+              int dhr = getc(fp); ungetc(dhr, fp);
+              if (isDigit10(dhr)) return readInteger(fp, chr, result);
+              else return readSymbol(fp, chr, result);
+            }
+
+        case '+':
             {
               int dhr = getc(fp); ungetc(dhr, fp);
               if (isDigit10(dhr)) return readInteger(fp, chr, result);

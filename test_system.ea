@@ -1,4 +1,4 @@
-##(require "compiler.ea")
+(require "compiler.ea")
 
 (assert 1 (system "false"))
 (assert 0 (system "true"))

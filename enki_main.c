@@ -10,6 +10,7 @@
 #include "dump.h"
 #include "apply.h"
 #include "treadmill.h"
+#include "debug.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,9 +32,6 @@ static void usage(char *name)
 
 int main(int argc, char **argv)
 {
-    unsigned do_debug = 0;
-    unsigned do_trace = 0;
-
     int chr;
     while (-1 != (chr = getopt(argc, argv, "hvro:t")))
         {
@@ -44,11 +42,11 @@ int main(int argc, char **argv)
                     break;
 
                 case 'v':
-                    ++do_debug;
+                    ++ea_global_debug ;
                     break;
 
                 case 't':
-                    ++do_trace;
+                    ++ea_global_trace;
                     break;
 
 #if 0

@@ -30,6 +30,7 @@
 static bool __initialized = false;
 //
 unsigned int ea_global_debug = 0;
+unsigned int ea_global_trace = 0;
 
 //
 struct gc_treadmill enki_zero_space;

@@ -3,8 +3,8 @@
 (define (double val)    (+ val val))
 (define (quadruple val) (double (double val)))
 
-(define (1+ x) (+ x 1))
-(define (1- x) (- x 1))
+(define (++ x) (+ x 1))
+(define (-- x) (- x 1))
 
 (define (reverse list)
    (reverse-inner list nil))
@@ -150,7 +150,7 @@
 (define label-index-counter 0)
 (define label-prefix        "K")
 (define (new-label)
-   (set label-index-counter (1+ label-index-counter))
+   (set label-index-counter (++ label-index-counter))
    (list label-prefix "_" (format "@{s}" label-index-counter)))
 
 #thom# string need to be converted to a c-string
