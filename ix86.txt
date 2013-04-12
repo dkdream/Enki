@@ -1,16 +1,19 @@
 Purpose
 
-Although the main registers (with the exception of the instruction pointer) are "general-purpose" and can be used for anything, it was originally envisioned that they be used for the following purposes:
+Although the main registers (with the exception of the instruction pointer) are "general-purpose" and can be used for anything,
+it was originally envisioned that they be used for the following purposes:
 
-    AX/EAX/RAX: Accumulator
-    BX/EBX/RBX: Base index (for use with arrays)
-    CX/ECX/RCX: Counter
-    DX/EDX/RDX: Data/general
-    SI/ESI/RSI: Source index for string operations.
-    DI/EDI/RDI: Destination index for string operations.
-    SP/ESP/RSP: Stack pointer for top address of the stack.
-    BP/EBP/RBP: Stack base pointer for holding the address of the current stack frame.
-    IP/EIP/RIP: Instruction pointer. Holds the program counter, the current instruction address.
+    AX /EAX /RAX: Accumulator
+    BX /EBX /RBX: Base index (for use with arrays)
+    CX /ECX /RCX: Counter
+    DX /EDX /RDX: Data/general
+--------------------------------------------------------------
+    SI /ESI /RSI: Source index for string operations.
+    DI /EDI /RDI: Destination index for string operations.
+--------------------------------------------------------------
+    SP /ESP /RSP: Stack pointer for top address of the stack.
+    BP /EBP /RBP: Stack base pointer for holding the address of the current stack frame.
+    IP /EIP /RIP: Instruction pointer. Holds the program counter, the current instruction address.
 
 Segment registers:
 
@@ -101,20 +104,24 @@ esp->  scratch(1)
   %ebp - frame pointer
 
 -------------
-(enki) caller-saved : %eax, %ebx, %ecx, %edx, %esi, %edi, %ebp, 
-(enki) callee-saved : %esp
+(enki) caller-saved : %eax, %ebx, %ecx, %edx, %esi, %edi, 
+(enki) callee-saved : %esp, %ebp (like gcc)
 (enki) frame-size   : %eax
+(enki) argument_1   : %ebx
+(enki) argument_2   : %ecx
+(enki) argument_3   : %edx
+(enki) closure      : %esi
 (enki) return-value : %eax
 
 ------------
 (enki) stack layout after call
 
-eax = (n * pointer-size)
+eax = (size-of argument-frame) or (zero if register-only) 
+ebp = prev-frame-pointer
 
-       frame-pointer (ebp)
        return-pointer
-esp -> arg(1)
-       arg(2)
+esp -> arg(4)
+       arg(5)
        ...
        arg(n-1)
        arg(n)
@@ -129,8 +136,8 @@ esp -> arg(1)
 (enki) stack layout after enter sequence
 
        return-pointer
-ebp -> arg(1)
-       arg(2)
+ebp -> arg(4)
+       arg(5)
        ...
        arg(n-1)
        arg(n)
