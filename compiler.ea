@@ -1,19 +1,206 @@
 (require "boot.ea")
 
-(let ((target nil)) 
-   (define (compile-open name) (set target (open-out name)))
-   (define (compile-close)     (close-out target))
-   (define (compile-target)    target))
+(define (double val)    (+ val val))
+(define (quadruple val) (double (double val)))
 
-(define (emit . args)
-   (fprint (compile-target) (apply format args))
-   (fprint (compile-target) "\n"))
+(define (1+ x) (+ x 1))
+(define (1- x) (- x 1))
 
-(define (emit-function-header name)
-   (emit "  .text")
-   (emit "  .globl @{s}" name)
-   (emit "  .type @{s}, @function" name)
-   (emit "@{s}:" name))
+(define (reverse list)
+   (reverse-inner list nil))
 
-(define (emit-constant value)
-   (emit "  movl $@{s}, %eax" value))
+(define (reverse-inner input output)
+   (if (pair? input)
+         (reverse-inner (cdr input) (cons (car input) output))
+      output))
+
+###  Basic Assembly Language Emission
+
+## emit: output a line of assembly by concatenating the strings in an
+## arbitrarily nested list structure
+
+(define assembly-diversions nil)
+(define diverted-assembly   nil)
+
+(define (asm-display stuff)
+   (if assembly-diversions
+         (set diverted-assembly (cons stuff diverted-assembly))
+      (display stuff)))
+
+(define (push-assembly-diversion)
+   (assert (not assembly-diversions) "already diverted")
+   (set assembly-diversions true))
+
+(define (pop-diverted-assembly)
+   (let ((result (asm-flatten (reverse diverted-assembly))))
+      (set assembly-diversions nil)
+      (set diverted-assembly nil)
+      result))
+
+(define (emit . stuff)
+   (asm-display (asm-flatten (cons stuff "\n"))))
+
+(define (asm-flatten stuff)
+   (let ((buf (open-buffer)))
+      (asm-flatten-inner buf stuff)
+      (close-buffer buf)))
+
+(define (asm-flatten-inner buf stuff)
+   (if (nil? stuff)
+         nil
+      (if (pair? stuff)
+            (begin
+               (asm-flatten-inner buf (car stuff))
+               (asm-flatten-inner buf (cdr stuff)))
+         (if (text? stuff)
+               (asm-flatten-inner buf stuff)
+            (error 'flattening stuff)))))
+
+
+## Emit an indented instruction
+(define (insn . insn)
+   (emit (cons "        " insn)))
+
+(define (comment . comment)
+   (insn "# " comment))
+
+## Emit a two-argument instruction
+(define (twoarg mnemonic)
+   (lambda (src dest)
+      (insn mnemonic " " src ", " dest)))
+
+## For example:
+(define mov     (twoarg "movl"))
+(define movb    (twoarg "movb"))
+(define movzbl  (twoarg "movzbl"))
+(define test    (twoarg "test"))
+(define cmp     (twoarg "cmpl"))
+(define lea     (twoarg "lea"))
+(define add     (twoarg "add"))
+(define sub     (twoarg "sub"))
+(define xchg    (twoarg "xchg"))
+(define asm-and (twoarg "and"))
+
+## Emit a one-argument instruction
+(define (onearg mnemonic)
+   (lambda (rand)
+      (insn mnemonic " " rand)))
+
+(define asm-push  (onearg "push"))
+(define asm-pop   (onearg "pop"))
+(define jmp       (onearg "jmp"))
+(define jnz       (onearg "jnz"))
+(define je        (onearg "je"))
+(define jz je)
+(define jnb       (onearg "jnb"))
+(define jl        (onearg "jl"))
+(define js        (onearg "js"))
+(define ja        (onearg "ja"))
+(define call      (onearg "call"))
+(define int       (onearg "int"))
+(define inc       (onearg "inc"))
+(define dec       (onearg "dec"))
+(define idiv      (onearg "idiv"))
+
+## These have two-arg forms too, but I'm not using them.
+(define sal (onearg "sal"))
+(define sar (onearg "sar"))
+
+## Currently only using three zero-argument instructions:
+(define (ret)        (insn "ret"))
+(define (rep-stosb)  (insn "rep stosb"))
+(define (repe-cmpsb) (insn "repe cmpsb"))
+
+## Registers:
+(define eax "%eax")
+(define ebx "%ebx")  
+(define ecx "%ecx")
+(define edx "%edx")
+(define ebp "%ebp")
+(define esp "%esp")
+(define esi "%esi")
+(define edi "%edi")
+(define al  "%al")
+
+## x86 addressing modes:
+(define (const x)         (list "$" x))
+(define (indirect x)      (list "(" x ")"))
+(define (offset x offset) (list (number->string offset) (indirect x)))
+(define (absolute x)      (list "*" x))
+
+## Use this one inside of "indirect" or "offset".
+(define (index-register base index size)
+   (list base "," index "," (number->string size)))
+
+(define (syscall) (int (const "0x80")))
+
+
+## Other stuff for basic asm emission.
+(define (section name) (insn ".section " name))
+(define (rodata)       (section ".rodata"))
+(define (text)         (insn ".text"))
+(define (label label)  (emit label ":"))
+
+## define a .globl label
+(define (global-label lbl)
+   (insn ".globl " lbl)
+   (label lbl))
+
+
+(define label-index-counter 0)
+(define label-prefix        "K")
+(define (new-label)
+   (set label-index-counter (1+ label-index-counter))
+   (list label-prefix "_" (format "@{s}" label-index-counter)))
+
+#thom# string need to be converted to a c-string
+(define (asm-represent-string string) (list "\"" string "\""))
+
+(define (ascii string) (insn ".ascii " (asm-represent-string string)))
+
+## emit a prologue for a datum to be assembled into .rodata
+(define (rodatum labelname)
+   (rodata)
+   (comment "align pointers so they end in binary 00")
+   (insn ".align 4")
+   (label labelname))
+
+(define (compile-word contents) (insn ".long " contents))
+
+###  Stack Machine Primitives 
+## As explained earlier, there's an "abstract stack" that includes
+## %eax as well as the x86 stack.
+
+(define tos eax)            #  top-of-stack register
+(define nos (indirect esp)) #  "next on stack", what's underneath TOS
+
+## push-const: Emit code to push a constant onto the abstract stack
+(define (push-const val) (asm-push tos) (mov (const val) tos))
+
+## pop: Emit code to discard top of stack.
+(define (pop) (asm-pop tos))
+
+## dup: Emit code to copy top of stack.
+(define (dup) (asm-push tos))
+
+## swap: Emit code to exchange top of stack with what's under it.
+(define (swap) (xchg tos nos))
+
+(define (compile-apply      nargs)) ## stack = [func arg1 arg2 ... argn]
+(define (compile-tail-apply nargs)) ## stack = [func arg1 arg2 ... argn]
+
+(define (compile-function-prologue nargs))
+(define (compile-function-epilogue))
+
+(define (compile-function bodylabel nargs body)
+   (text)
+   (insn ".type " bodylabel ", @function")  ## may not be needed
+   (label bodylabel)
+   (compile-procedure-prologue nargs)
+   (body)
+   (compile-procedure-epilogue)
+   (insn ".size " bodylabel ", .-" bodylabel)) ## may not be needed
+
+
+
+

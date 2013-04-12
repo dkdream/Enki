@@ -24,6 +24,9 @@
 (define (char->string char)
    (format "@{c}" char))
 
+(define (number->string num)
+   (format "@{s}" char))
+
 
 ## Boy, it sure causes a lot of hassle that Scheme has different types
 ## for strings and chars.
@@ -258,13 +261,16 @@
          ((char=? char (string-ref (car dangerous) 0))
           (car escapes))
          (else (escape-char char (cdr dangerous) (cdr escapes)))))
+
 (define (escape string idx dangerous escapes) #  duplicated in stdlib
    (if (= idx (string-length string)) nil
       (cons (escape-char (string-ref string idx) dangerous escapes)
             (escape string (1+ idx) dangerous escapes))))
+
 ## Escape the three necessary characters.  duplicated in stdlib
-(define (backslash string) (escape string 0 '("\\"   "\n"  "\"") 
-                                   '("\\\\" "\\n" "\\\"")))
+(define (backslash string) (escape string 0 '("\\"   "\n"  "\"") '("\\\\" "\\n" "\\\"")))
+
+
 ## Represent a string appropriately for the output assembly language file.
 (define (asm-represent-string string) (list "\"" (backslash string) "\""))
 
@@ -1972,8 +1978,7 @@
            (cons (escape-char (string-ref string idx) dangerous escapes)
                  (escape string (1+ idx) dangerous escapes))))
      ## Escape the three necessary characters.  duplicated in stdlib
-     (define (backslash string) (escape string 0 '("\\"   "\n"  "\"") 
-                                        '("\\\\" "\\n" "\\\"")))
+     (define (backslash string) (escape string 0 '("\\"   "\n"  "\"") '("\\\\" "\\n" "\\\"")))
      (define (write x) (wthunk x display))
      (define (wthunk x display)
         (cond ((string? x) (wstring x display))
