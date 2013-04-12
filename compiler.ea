@@ -86,8 +86,8 @@
    (lambda (rand)
       (insn mnemonic " " rand)))
 
-(define asm-push  (onearg "push"))
-(define asm-pop   (onearg "pop"))
+(define push      (onearg "push"))
+(define pop       (onearg "pop"))
 (define jmp       (onearg "jmp"))
 (define jnz       (onearg "jnz"))
 (define je        (onearg "je"))
@@ -122,6 +122,10 @@
 (define edi "%edi")
 (define al  "%al")
 
+(define tof ebp)
+(define bof edi)
+(define tos esp)
+
 ## x86 addressing modes:
 (define (const x)         (list "$" x))
 (define (indirect x)      (list "(" x ")"))
@@ -154,9 +158,11 @@
    (list label-prefix "_" (format "@{s}" label-index-counter)))
 
 #thom# string need to be converted to a c-string
-(define (asm-represent-string string) (list "\"" string "\""))
+(define (asm-represent-string string) 
+   (list "\"" string "\""))
 
-(define (ascii string) (insn ".ascii " (asm-represent-string string)))
+(define (ascii string) 
+   (insn ".ascii " (asm-represent-string string)))
 
 ## emit a prologue for a datum to be assembled into .rodata
 (define (rodatum labelname)
@@ -165,32 +171,22 @@
    (insn ".align 4")
    (label labelname))
 
-(define (compile-word contents) (insn ".long " contents))
+(define (compile-word contents) 
+   (insn ".long " contents))
 
-###  Stack Machine Primitives 
-## As explained earlier, there's an "abstract stack" that includes
-## %eax as well as the x86 stack.
+(define (compile-apply      nargs)) 
+(define (compile-tail-apply nargs))
 
-(define tos eax)            #  top-of-stack register
-(define nos (indirect esp)) #  "next on stack", what's underneath TOS
+(define (compile-function-prologue)
+   (xchg bof tos)
+   (push tof)
+   (xchg bof tof))
 
-## push-const: Emit code to push a constant onto the abstract stack
-(define (push-const val) (asm-push tos) (mov (const val) tos))
-
-## pop: Emit code to discard top of stack.
-(define (pop) (asm-pop tos))
-
-## dup: Emit code to copy top of stack.
-(define (dup) (asm-push tos))
-
-## swap: Emit code to exchange top of stack with what's under it.
-(define (swap) (xchg tos nos))
-
-(define (compile-apply      nargs)) ## stack = [func arg1 arg2 ... argn]
-(define (compile-tail-apply nargs)) ## stack = [func arg1 arg2 ... argn]
-
-(define (compile-function-prologue nargs))
-(define (compile-function-epilogue))
+(define (compile-function-epilogue)
+   (mov tof bof)
+   (pop tof)
+   (mov bof tos)
+   (ret))
 
 (define (compile-function bodylabel nargs body)
    (text)
@@ -200,6 +196,8 @@
    (body)
    (compile-procedure-epilogue)
    (insn ".size " bodylabel ", .-" bodylabel)) ## may not be needed
+
+(define (compile-c-call function nargs))
 
 
 

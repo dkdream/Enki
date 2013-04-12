@@ -99,7 +99,8 @@ esp->  scratch(1)
 (gcc) standard return sequence
 
   movl <result>, %eax
-  leave
+  movl %ebp,%esp
+  popl %ebp
   ret
 
 (gcc) extended return sequence
@@ -138,8 +139,8 @@ esp->  scratch(1)
 eax = (size-of argument-frame) or (zero if register-only) 
 ebp = prev-frame-pointer
 
-       return-pointer
-esp -> arg(4)
+esp -> return-pointer
+       arg(4)
        arg(5)
        ...
        arg(n-1)
@@ -154,15 +155,15 @@ edi -> arg(n)
 
 (enki) stack layout after enter sequence
 
-       return-pointer
-ebp -> arg(4)
-       arg(5)
+ebp -> return-pointer
+ -4    arg(4)
+ -8    arg(5)
        ...
        arg(n-1)
        arg(n)
 esp -> old-frame-pointer
-       scratch(1)
-       scratch(2)
+ -4    scratch(1)
+ -8    scratch(2)
        ...
        scratch(n-1)
        scratch(n)
@@ -170,8 +171,9 @@ esp -> old-frame-pointer
 (enki) standard return sequence
  
    movl <result>, %eax
+   movl %ebp, %edi
    popl %ebp
-   movl %ebp, %esp
+   movl %edi, %esp
    ret
 
 ----------
