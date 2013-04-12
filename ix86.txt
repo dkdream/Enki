@@ -23,7 +23,23 @@ Segment registers:
     ES: Extra
     FS
     GS
+--------------------------
+http://en.wikibooks.org/wiki/X86_Assembly/GAS_Syntax
+http://en.wikibooks.org/wiki/X86_Assembly
+--------------------------
+address operand syntax : 
+   <disp>(<r1>, <r2>, <scale>)
+=
+   (<r1> + <disp>) + (<r2> * <scale>)
 
+example:
+   movl -4(%ebp, %edx, 4), %eax -> eax = mem[(ebp - 4) + (edx * 4)]
+   movl -4(%ebp), %eax          -> eax = mem[(ebp - 4) + (0   * 0)]
+   movl  8(,%eax,4), %eax       -> eax = mem[(0   + 8) + (edx * 4)]
+   movl   (%eax,%eax,2), %eax   -> eax = mem[(eax + 0) + (eax * 2)]
+--
+   leal  8(,%eax,4), %eax       -> eax = (0   + 8) + (edx * 4)
+   leal   (%eax,%eax,2), %eax   -> eax = (eax + 0) + (%eax * 2)
 --------------------------
 pushl %eax = subl $4,%esp
              movl %eax, (%esp)
@@ -104,14 +120,17 @@ esp->  scratch(1)
   %ebp - frame pointer
 
 -------------
-(enki) caller-saved : %eax, %ebx, %ecx, %edx, %esi, %edi, 
-(enki) callee-saved : %esp, %ebp (like gcc)
-(enki) frame-size   : %eax
-(enki) argument_1   : %ebx
-(enki) argument_2   : %ecx
-(enki) argument_3   : %edx
-(enki) closure      : %esi
-(enki) return-value : %eax
+(enki) caller-saved   : %eax, %ebx, %ecx, %edx, %esi, %edi, 
+(enki) callee-saved   : %esp, %ebp 
+----------------------------
+(enki) argument-count : %eax
+(enki) argument_1     : %ebx
+(enki) argument_2     : %ecx
+(enki) argument_3     : %edx
+(enki) closure        : %esi
+(enki) frame-bottom   : %edi
+----------------------------
+(enki) return-value   : %eax
 
 ------------
 (enki) stack layout after call
@@ -124,14 +143,14 @@ esp -> arg(4)
        arg(5)
        ...
        arg(n-1)
-       arg(n)
+edi -> arg(n)
+
 
 (enki) standard enter sequence
 
-   movl  %esp, %ebp
-   subl  %eax, %esp
+   xchgl %edi,%esp   
    pushl %ebp
-
+   xchgl %edi,%ebp 
 
 (enki) stack layout after enter sequence
 
@@ -141,8 +160,8 @@ ebp -> arg(4)
        ...
        arg(n-1)
        arg(n)
-       frame-pointer (ebp)
-esp -> scratch(1)
+esp -> old-frame-pointer
+       scratch(1)
        scratch(2)
        ...
        scratch(n-1)
