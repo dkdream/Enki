@@ -1,4 +1,4 @@
-(require "compiler.ea")
+##(require "compiler.ea")
 
 (assert 1 (system "false"))
 (assert 0 (system "true"))
@@ -24,6 +24,7 @@
    (assert "-500\n" (read-line test))
    (close-in test))
 
+#{
 (let ((test nil))
    (compile-open "test1.s")
    (emit-function-header "enki_entry")
@@ -35,3 +36,4 @@
    (set test (open-in "test.out"))
    (assert "-500\n" (read-line test))
    (close-in test))
+}#
