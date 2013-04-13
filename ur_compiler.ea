@@ -1064,7 +1064,8 @@
    (syscall))                            #  return value is in %eax
 
 (define-global-procedure 'display 1
-   (lambda () (get-procedure-arg 0)
+   (lambda ()
+      (get-procedure-arg 0)
       (extract-string)
       (comment "fd 1: stdout")
       (mov (const "1") ebx)
@@ -1131,14 +1132,16 @@
 ## We don't have ports, but we do have a special procedure to print
 ## strings on stderr!
 (define-global-procedure 'display-stderr 1
-   (lambda () (get-procedure-arg 0)
+   (lambda ()
+      (get-procedure-arg 0)
       (extract-string)
       (comment "fd 2: stderr")
       (mov (const "2") ebx)
       (write_2)))
 ## System call to exit the program.
 (define-global-procedure 'exit 1
-   (lambda () (get-procedure-arg 0)
+   (lambda ()
+      (get-procedure-arg 0)
       (ensure-integer)
       (scheme-to-native-integer tos)
       (mov tos ebx)
@@ -1436,6 +1439,7 @@
          ((stack) (get-procedure-arg (cadr vardefn)))
          ((heap-pointer) (fetch-heap-var (cadr vardefn)))
          (else (error "unexpected var type" (car vardefn)))))
+
 (define (set-variable vardefn)
    (case (car vardefn)
          ((stack) (set-procedure-arg (cadr vardefn)))

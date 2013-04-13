@@ -121,43 +121,45 @@ esp->  scratch(1)
   %ebp - frame pointer
 
 -------------
-(enki) caller-saved   : %eax, %ebx, %ecx, %edx, %esi, %edi, 
-(enki) callee-saved   : %esp, %ebp 
+(enki) caller-saved   : %eax, %ebx, %ecx, %edx, %edi, 
+(enki) callee-saved   : %esp, %ebp, %esi
 ----------------------------
-(enki) argument-count : %eax
-(enki) argument_1     : %ebx
-(enki) argument_2     : %ecx
-(enki) argument_3     : %edx
-(enki) closure        : %esi
-(enki) frame-bottom   : %edi
+(enki) frame           : %ebp
+(enki) top-of-stack    : %esp
+(enki) bottom-of-stack : %esi
 ----------------------------
-(enki) return-value   : %eax
+(enki) bottom-of-frame : %eax (on-entry)
+----------------------------
+(enki) return-value    : %eax (on-exit)
 
 ------------
 (enki) stack layout after call
 
-eax = (size-of argument-frame) or (zero if register-only) 
+eax = bottom-of-frame
 ebp = prev-frame-pointer
 
 esp -> return-pointer
+       arg(1)
+       arg(2)
+       arg(3)
        arg(4)
-       arg(5)
        ...
        arg(n-1)
-edi -> arg(n)
+eax -> arg(n)
 
+(enki) standard prologue sequence
 
-(enki) standard enter sequence
-
-   xchgl %edi,%esp   
+   xchgl %eax,%esp
    pushl %ebp
-   xchgl %edi,%ebp 
+   pushl %esi
+   movl  %eax,%ebp
+   movl  %esp,%esi
 
 (enki) stack layout after enter sequence
 
 ebp -> return-pointer
- -4    arg(4)
- -8    arg(5)
+ -4    arg(1)
+ -8    arg(2)
        ...
        arg(n-1)
        arg(n)
@@ -168,12 +170,13 @@ esp -> old-frame-pointer
        scratch(n-1)
        scratch(n)
 
-(enki) standard return sequence
- 
-   movl <result>, %eax
-   movl %ebp, %edi
+(enki) standard epilogue sequence
+   
+   movl %ebp,%edi
+   movl %esi,%esp
+   popl %esi
    popl %ebp
-   movl %edi, %esp
+   movl %edi,%esp
    ret
 
 ----------

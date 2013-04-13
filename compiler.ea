@@ -112,19 +112,20 @@
 (define (repe-cmpsb) (insn "repe cmpsb"))
 
 ## Registers:
-(define eax "%eax")
-(define ebx "%ebx")  
-(define ecx "%ecx")
-(define edx "%edx")
-(define ebp "%ebp")
-(define esp "%esp")
-(define esi "%esi")
-(define edi "%edi")
+(define eax "%eax") ## bottom of frame/return-value/scratch
+(define ebx "%ebx") ## scratch                             (gcc-callee-saved)
+(define ecx "%ecx") ## scratch
+(define edx "%edx") ## scratch
+(define ebp "%ebp") ## frame-pointer   (enki-callee-saved) (gcc-callee-saved)
+(define esp "%esp") ## top of stack    (enki-callee-saved) (gcc-callee-saved)
+(define esi "%esi") ## bottom of stack (enki-callee-saved) (gcc-callee-saved)
+(define edi "%edi") ## scratch                             (gcc-callee-saved)
 (define al  "%al")
 
-(define tof ebp)
-(define bof edi)
-(define tos esp)
+(define frame ebp)
+(define bos   esi)
+(define tos   esp)
+(define scr   edi)
 
 ## x86 addressing modes:
 (define (const x)         (list "$" x))
@@ -138,7 +139,6 @@
 
 (define (syscall) (int (const "0x80")))
 
-
 ## Other stuff for basic asm emission.
 (define (section name) (insn ".section " name))
 (define (rodata)       (section ".rodata"))
@@ -149,7 +149,6 @@
 (define (global-label lbl)
    (insn ".globl " lbl)
    (label lbl))
-
 
 (define label-index-counter 0)
 (define label-prefix        "K")
@@ -171,6 +170,14 @@
    (insn ".align 4")
    (label labelname))
 
+## index is zero-based
+(define (get-function-arg index reg)
+   (mov (offset frame (quadruple (++index))) reg))
+
+## index is zero-based
+(define (set-function-arg index reg)
+   (mov reg (offset frame (quadruple (++index)))))
+
 (define (compile-word contents) 
    (insn ".long " contents))
 
@@ -178,14 +185,18 @@
 (define (compile-tail-apply nargs))
 
 (define (compile-function-prologue)
-   (xchg bof tos)
-   (push tof)
-   (xchg bof tof))
+   (xchg eax tos)  ## exchange top-of-stack and bottom-of-frame
+   (push frame)    ## push old frame
+   (push bos)      ## push old bottom-of-stack
+   (mov eax frame) ## set new frame
+   (mov tos bos))  ## set new  bottom-of-stack
 
 (define (compile-function-epilogue)
-   (mov tof bof)
-   (pop tof)
-   (mov bof tos)
+   (mov frame scr)  ## mov the frame(old-tos) to scr
+   (mov bos tos)    ## clear stack/locals
+   (pop bos)        ## pop the old bottom-of-stack
+   (pop frame)      ## pop the old frame
+   (mov scr tos)    ## set old top-of-stack
    (ret))
 
 (define (compile-function bodylabel nargs body)
