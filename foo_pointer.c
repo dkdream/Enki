@@ -346,3 +346,137 @@ opr_sub:
         ret
 
 */
+
+Reference alloc_gc(Size size, bool atom, Reference type)
+{
+    Reference result;
+
+    if (!node_Allocate(_zero_space,
+                       atom,
+                       size,
+                       &result)) return 0;
+
+    return result;
+}
+
+/* m32
+alloc_gc:
+        pushl   %ebp               #
+        movl    %esp, %ebp         #,
+        subl    $56, %esp          #,
+
+        movl    12(%ebp), %eax     # atom, tmp65
+        movb    %al, -28(%ebp)     # tmp65, atom
+
+        movl    $0, %eax           #, D.3303
+        leal    -12(%ebp), %eax    #, tmp66
+
+        movzbl  -28(%ebp), %ecx    # atom, D.3304
+
+        movl    %eax, 12(%esp)     # D.3303,
+        movl    8(%ebp), %eax      # size, tmp67
+        movl    %eax, 8(%esp)      # tmp67,
+        movl    %ecx, 4(%esp)      # D.3304,
+        movl    _zero_space, %edx  # _zero_space, _zero_space.13
+        movl    %edx, (%esp)       # _zero_space.13,
+        call    node_Allocate      #
+
+        xorl    $1, %eax           # D.3307 (??)
+        testb   %al, %al           # D.3307 (??)
+        je      .L38               #
+        movl    $0, %eax           #, D.3310
+        jmp     .L39               #
+.L38:
+        movl    -12(%ebp), %eax # result, D.3310
+.L39:
+        leave
+        ret
+*/
+
+/*
+(xchg eax tos)       ## exchange top-of-stack and bottom-of-frame
+(push frame)         ## push old frame
+(push bos)           ## push old bottom-of-stack
+(mov eax frame)      ## set new frame
+(mov tos bos)        ## set new  bottom-of-stack
+(push (const 0))     ## alloc ret
+(mov top eax)        ## hold address of result
+(push eax)           ## push address of result
+(push (arg 0))       ## push size
+(push (arg 1))       ## push atom
+(push  eax)          ## push &ret
+(call node_Allocate) ## call
+(drop 4)             ## clear stack
+(let ((pass (new-label))
+      (exit (new-label)))
+   (xor (const 1) eax)  ## mask result
+   (test al al)         ## test result
+   (je pass)            ##
+   (mov (const 0) eax)
+   (jmp exit)
+   (label pass)
+   (pop eax)
+   (label exit))
+(mov frame scr)  ## mov the frame(old-tos) to scr
+(mov bos tos)    ## clear stack/locals
+(pop bos)        ## pop the old bottom-of-stack
+(pop frame)      ## pop the old frame
+(mov scr tos)    ## set old top-of-stack
+(ret)
+*/
+
+
+bool foo_true()
+{
+    return true;
+}
+
+/*
+foo_true:
+        pushl   %ebp    #
+        movl    %esp, %ebp      #,
+        movl    $1, %eax        #, D.3313
+        popl    %ebp    #
+        ret
+*/
+
+bool foo_false()
+{
+    return false;
+}
+
+/*
+foo_false:
+        pushl   %ebp    #
+        movl    %esp, %ebp      #,
+        movl    $0, %eax        #, D.3316
+        popl    %ebp    #
+        ret
+*/
+
+int  xx_one = 1;
+int  xx_two = 2;
+bool xx_test;
+
+int foo_if()
+{
+    if (!xx_test) return xx_one;
+    else return xx_two;
+}
+
+/*
+foo_if:
+        pushl   %ebp            #
+        movl    %esp, %ebp      #
+        movzbl  xx_test, %eax   # xx_test
+        xorl    $1, %eax        # (xor 1 xx_test) == 0 if xx_test == 1
+        testb   %al, %al        # set ZF to 1 if al == 0
+        je      .L46            # jump if ZF == 1
+        movl    xx_one, %eax    #
+        jmp     .L47            #
+.L46:
+        movl    xx_two, %eax    #
+.L47:
+        popl    %ebp            #
+        ret
+*/

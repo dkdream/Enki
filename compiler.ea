@@ -133,6 +133,9 @@
 (define (offset x offset) (list (number->string offset) (indirect x)))
 (define (absolute x)      (list "*" x))
 
+(define (arg index) 
+   (offset frame (* -1 index)))
+
 ## Use this one inside of "indirect" or "offset".
 (define (index-register base index size)
    (list base "," index "," (number->string size)))

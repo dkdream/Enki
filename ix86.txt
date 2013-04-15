@@ -64,6 +64,16 @@ ret $xx = popl %eip
 (gcc) return-value : %edx (high-bits)
 
 --------------------------
+
+       arg(n)
+       arg(n-1)
+       ...
+       arg(4)
+       arg(3)
+       arg(2)
+       arg(1)
+esp -> return-pointer
+
 (gcc) standard enter sequence
 
    pushl %ebp # 
@@ -164,18 +174,19 @@ eax -> arg(n)
 
 (enki) stack layout after enter sequence
 
-ebp -> return-pointer
- -4    arg(1)
- -8    arg(2)
-       ...
-       arg(n-1)
-       arg(n)
-esp -> old-frame-pointer
- -4    scratch(1)
- -8    scratch(2)
-       ...
-       scratch(n-1)
-       scratch(n)
+ebp ->      return-pointer
+ -4         arg(1)
+ -8         arg(2)
+            ...
+            arg(n-1)
+            arg(n)
+            old-frame-pointer
+esp(esi) -> old-bottom-of-stack
+ -4         scratch(1)
+ -8         scratch(2)
+            ...
+            scratch(n-1)
+            scratch(n)
 
 (enki) standard epilogue sequence
    
