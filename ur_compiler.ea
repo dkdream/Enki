@@ -305,8 +305,12 @@
 
 ###  Some convenience stuff for the structure of the program.
 
-(define stuff-to-put-in-the-header (lambda () nil))
-(define (concatenate-thunks a b) (lambda () (a) (b)))
+(define stuff-to-put-in-the-header
+   (lambda () nil))
+
+(define (concatenate-thunks a b)
+   (lambda () (a) (b)))
+
 (define (add-to-header proc) 
    (set stuff-to-put-in-the-header 
         (concatenate-thunks stuff-to-put-in-the-header proc)))
@@ -314,9 +318,7 @@
 ## Add code to the header to define an error message.
 (define (define-error-routine labelname message)
    (add-to-header (lambda ()
-                     (let ((errlabel         
-                            (constant-string (string-append "error: " 
-                                                            (string-append message "\n")))))
+                     (let ((errlabel (constant-string (string-append "error: " (string-append message "\n")))))
                         (label labelname)
                         (mov (const errlabel) tos)
                         (jmp "report_error")))))
