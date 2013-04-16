@@ -2,6 +2,6 @@
 #include <stdio.h>
 
 int main(int argc, char** argv){
-  printf("%d\n", enki_entry());
+    printf("%p\n", (void*)enki_entry());
   return 0;
 }

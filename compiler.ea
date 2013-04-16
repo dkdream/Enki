@@ -19,23 +19,8 @@
 ## emit: output a line of assembly by concatenating the strings in an
 ## arbitrarily nested list structure
 
-(define assembly-diversions nil)
-(define diverted-assembly   nil)
-
 (define (asm-display stuff)
-   (if assembly-diversions
-         (set diverted-assembly (cons stuff diverted-assembly))
-      (print stuff)))
-
-(define (push-assembly-diversion)
-   (assert (not assembly-diversions) "already diverted")
-   (set assembly-diversions true))
-
-(define (pop-diverted-assembly)
-   (let ((result (asm-flatten (reverse diverted-assembly))))
-      (set assembly-diversions nil)
-      (set diverted-assembly nil)
-      result))
+   (print stuff))
 
 (define (emit . stuff)
    (asm-display (asm-flatten (cons stuff "\n"))))
@@ -47,7 +32,7 @@
 
 (define (asm-flatten-inner buf stuff)
    (if (nil? stuff)
-         nil
+         ""
       (if (pair? stuff)
             (let ()
                (asm-flatten-inner buf (car stuff))
@@ -73,11 +58,11 @@
       (insn mnemonic " " src ", " dest)))
 
 ## For example:
-(define mov     (twoarg "movl"))
+(define mov     (twoarg "mov"))
 (define movb    (twoarg "movb"))
 (define movzbl  (twoarg "movzbl"))
 (define test    (twoarg "test"))
-(define cmp     (twoarg "cmpl"))
+(define cmp     (twoarg "cmp"))
 (define lea     (twoarg "lea"))
 (define add     (twoarg "add"))
 (define sub     (twoarg "sub"))
@@ -95,7 +80,7 @@
 (define jmp       (onearg "jmp"))
 (define jnz       (onearg "jnz"))
 (define je        (onearg "je"))
-(define jz je)
+## (define jz je)
 (define jnb       (onearg "jnb"))
 (define jl        (onearg "jl"))
 (define js        (onearg "js"))
@@ -138,11 +123,11 @@
 (define (absolute x)      (list "*" x))
 
 (define (arg index) 
-   (offset frame (* -1 index)))
+   (offset frame (* -4 index)))
 
 (define (drop count)
-   (let ((offset (* -4 count)))
-      (sub (const offset) tos)))
+   (let ((size (* -4 count)))
+      (sub (const size) tos)))
 
 ## Use this one inside of "indirect" or "offset".
 (define (index-register base index size)

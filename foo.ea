@@ -7,8 +7,8 @@
                         (push (const 0))       ## alloc ret
                         (mov tos eax)          ## hold address of result
                         (push "_zero_space")   ## push _zero_space
-                        (push (arg 0))         ## push size
-                        (push (arg 1))         ## push atom
+                        (push (arg 1))         ## push size
+                        (push (arg 2))         ## push atom
                         (push  eax)            ## push &ret
                         (call "node_Allocate") ## call
                         (drop 4)               ## clear stack
@@ -22,5 +22,6 @@
                            (label pass)
                            (pop eax)
                            (label exit)))))
+
 
 (alloc_gc)

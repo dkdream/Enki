@@ -41,7 +41,7 @@ static void print_ptr(ptr val) {
 int main(int argc, char** argv) {
     if (POINTER_SIZE != PTR_SIZE) {
         fprintf(stderr,
-                "sizeof(pointer)=%d and sizeof(ptr)=%d differ\n",
+                "sizeof(pointer)=%lu and sizeof(ptr)=%lu differ\n",
                 POINTER_SIZE,
                 PTR_SIZE);
     }

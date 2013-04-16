@@ -42,9 +42,9 @@ endif
 RUNFLAGS := 
 
 INCFLAGS := -I. $(COPPER_INC)
-DBFLAGS  := -ggdb -Wall -mtune=i686 -rdynamic -fPIC
+DBFLAGS  := -Wall -mtune=i686 -rdynamic -fPIC
 CFLAGS   := $(DBFLAGS) $(INCFLAG) $(TAILFLAGS)
-SFLAGS   := -mtune=i686 -rdynamic -fdelete-null-pointer-checks -fverbose-asm
+SFLAGS   := -mtune=i686 -rdynamic -fdelete-null-pointer-checks
 ASFLAGS  := -V -Qy
 LIBFLAGS := $(COPPER_LIB)
 ARFLAGS  := rcu
@@ -59,8 +59,12 @@ OBJS    := $(C_SOURCES:%.c=.objects/%.o)
 TSTS    := $(notdir $(wildcard test_*.ea))
 RUNS    := $(TSTS:test_%.ea=.run/test_%.log)
 
-ASMS    := $(C_SOURCES:%.c=.assembly/%_32.s) $(C_SOURCES:%.c=.assembly/%_64.s)
-ASMS    += $(FOOS:%.c=.assembly/%_32.s) $(FOOS:%.c=.assembly/%_64.s)
+ASMS    := $(C_SOURCES:%.c=.assembly/%_32.s)
+ASMS    += $(C_SOURCES:%.c=.assembly/%_64.s)
+ASMS    += $(FOOS:%.c=.assembly/%_32.s)
+ASMS    += $(FOOS:%.c=.assembly/%_64.s)
+ASMS    += $(MAINS:%.c=.assembly/%_32.s)
+ASMS    += $(MAINS:%.c=.assembly/%_64.s)
 
 DEPENDS := $(C_SOURCES:%.c=.depends/%.d)
 DEPENDS += $(MAINS:%.c=.depends/%.d)
@@ -93,12 +97,13 @@ clean ::
 
 scrub :: 
 	@make clean
-	@rm -rf .depends .assembly
+	@rm -rf .depends
 
 enki.vm : .objects/enki_main.o libEnki.a 
 	$(GCC) $(CFLAGS) -o $@ $^ $(LIBFLAGS)
 
-enki_main.o : enki_main.c
+link_main.x : .objects/link_main_32.o
+	$(GCC) $(CFLAGS) -m32 -o $@ $^
 
 $(UNIT_TESTS:%.gcc=%.x) : libEnki.a
 
@@ -107,6 +112,9 @@ libEnki.a : $(OBJS) $(ASMS)
 	$(AR) $(ARFLAGS) $@ $(OBJS)
 	$(RANLIB) $@
 	@touch $@
+
+obj :: $(OBJS)
+obj :: $(MAINS:%.c=.objects/%.o)
 
 $(BINDIR) : ; [ -d $@ ] || mkdir -p $@
 $(INCDIR) : ; [ -d $@ ] || mkdir -p $@
@@ -130,6 +138,7 @@ enki_ver.h : FORCE
 .PHONY :: all
 .PHONY :: enki
 .PHONY :: asm
+.PHONY :: obj
 .PHONY :: test
 .PHONY :: units
 .PHONY :: install
@@ -162,6 +171,14 @@ enki_ver.h : FORCE
 .objects/%.o : %.gcc .objects
 	@echo $(GCC) $(DBFLAGS) -c -o $@ $<
 	@$(GCC) $(CFLAGS) -x c -c -o $@ $<
+
+.objects/%_32.o : .assembly/%_32.s
+	$(AS) $(ASFLAGS) --32 -o $@ $< 
+	objdump --disassemble-all -x $@
+
+.objects/%_64.o : .assembly/%_64.s
+	$(AS) $(ASFLAGS) --32 -o $@ $< 
+	objdump --disassemble-all -x $@
 
 %_32.o : %_32.s
 	$(AS) $(ASFLAGS) --32 -o $@ $< 
