@@ -25,7 +25,7 @@
 (define (asm-display stuff)
    (if assembly-diversions
          (set diverted-assembly (cons stuff diverted-assembly))
-      (display stuff)))
+      (print stuff)))
 
 (define (push-assembly-diversion)
    (assert (not assembly-diversions) "already diverted")
@@ -49,12 +49,15 @@
    (if (nil? stuff)
          nil
       (if (pair? stuff)
-            (begin
+            (let ()
                (asm-flatten-inner buf (car stuff))
                (asm-flatten-inner buf (cdr stuff)))
          (if (text? stuff)
-               (asm-flatten-inner buf stuff)
-            (error 'flattening stuff)))))
+               (bprint buf stuff)
+            (if (integer? stuff)
+                  (bprint buf (format "@{s}" stuff))
+               (dumpln stuff)
+               (error 'flattening "xx"))))))
 
 
 ## Emit an indented instruction
@@ -80,6 +83,7 @@
 (define sub     (twoarg "sub"))
 (define xchg    (twoarg "xchg"))
 (define asm-and (twoarg "and"))
+(define xor     (twoarg "xor"))
 
 ## Emit a one-argument instruction
 (define (onearg mnemonic)
@@ -130,15 +134,19 @@
 ## x86 addressing modes:
 (define (const x)         (list "$" x))
 (define (indirect x)      (list "(" x ")"))
-(define (offset x offset) (list (number->string offset) (indirect x)))
+(define (offset x offset) (list offset (indirect x)))
 (define (absolute x)      (list "*" x))
 
 (define (arg index) 
    (offset frame (* -1 index)))
 
+(define (drop count)
+   (let ((offset (* -4 count)))
+      (sub (const offset) tos)))
+
 ## Use this one inside of "indirect" or "offset".
 (define (index-register base index size)
-   (list base "," index "," (number->string size)))
+   (list base "," index "," size))
 
 (define (syscall) (int (const "0x80")))
 
@@ -156,7 +164,7 @@
 (define label-index-counter 0)
 (define label-prefix        "K")
 (define (new-label)
-   (set label-index-counter (++ label-index-counter))
+   (define label-index-counter (++ label-index-counter))
    (list label-prefix "_" (format "@{s}" label-index-counter)))
 
 #thom# string need to be converted to a c-string
@@ -204,11 +212,12 @@
 
 (define (compile-function bodylabel nargs body)
    (text)
+   (insn ".align 4")
    (insn ".type " bodylabel ", @function")  ## may not be needed
    (label bodylabel)
-   (compile-procedure-prologue nargs)
+   (compile-function-prologue)
    (body)
-   (compile-procedure-epilogue)
+   (compile-function-epilogue)
    (insn ".size " bodylabel ", .-" bodylabel)) ## may not be needed
 
 (define (compile-c-call function nargs))

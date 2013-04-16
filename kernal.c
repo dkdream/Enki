@@ -404,7 +404,7 @@ extern SUBR(encode_let) {
     pair_GetCar(args.pair, &locals);
 
     if (!isType(locals, t_pair)) {
-        list_Map(encode, args.pair, env, result);
+        encode(args, env, result);
         return;
     }
 
@@ -434,11 +434,15 @@ extern SUBR(let)
     pair_GetCar(args.pair, &bindings);
     pair_GetCdr(args.pair, &body);
 
-    list_Map(eval_binding, bindings.pair, env, &(env2.pair));
+    if (!isType(bindings, t_pair)) {
+        eval_begin(body, env, result);
+    } else {
+        list_Map(eval_binding, bindings.pair, env, &(env2.pair));
 
-    list_SetEnd(env2.pair, env);
+        list_SetEnd(env2.pair, env);
 
-    eval_begin(body, env2, result);
+        eval_begin(body, env2, result);
+    }
 }
 
 extern void environ_Lambda(Node symbol, Node env, Target result)
