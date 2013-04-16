@@ -14,6 +14,7 @@ PATH := .:$(PATH)
 MACHINE := $(shell uname --machine)
 
 GCC    := gcc
+AS     := as
 DIFF   := diff
 AR     := ar
 RANLIB := ranlib
@@ -32,6 +33,7 @@ TAILFLAGS += -fif-conversion
 TAILFLAGS += -fif-conversion2
 TAILFLAGS += -fdelete-null-pointer-checks
 TAILFLAGS += -Wformat-security
+##TAILFLAGS += -fconserve-stack 
 
 ifneq ($(MACHINE),x86_64)
 TAILFLAGS += -fconserve-stack
@@ -43,6 +45,7 @@ INCFLAGS := -I. $(COPPER_INC)
 DBFLAGS  := -ggdb -Wall -mtune=i686 -rdynamic -fPIC
 CFLAGS   := $(DBFLAGS) $(INCFLAG) $(TAILFLAGS)
 SFLAGS   := -mtune=i686 -rdynamic -fdelete-null-pointer-checks -fverbose-asm
+ASFLAGS  := -V -Qy
 LIBFLAGS := $(COPPER_LIB)
 ARFLAGS  := rcu
 
@@ -159,6 +162,14 @@ enki_ver.h : FORCE
 .objects/%.o : %.gcc .objects
 	@echo $(GCC) $(DBFLAGS) -c -o $@ $<
 	@$(GCC) $(CFLAGS) -x c -c -o $@ $<
+
+%_32.o : %_32.s
+	$(AS) $(ASFLAGS) --32 -o $@ $< 
+	objdump --disassemble-all -x $@
+
+%_64.o : %_64.s
+	$(AS) $(ASFLAGS) --64 -o $@ $< 
+	objdump --disassemble-all -x $@
 
 %.x              : .objects/%.o  ; $(GCC) $(CFLAGS) -o $@ $+ libEnki.a
 .depends/%.d     : %.c .depends  ; @$(GCC) $(CFLAGS) -MM -MP -MG -MF $@ $<

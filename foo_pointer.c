@@ -356,39 +356,68 @@ Reference alloc_gc(Size size, bool atom, Reference type)
                        size,
                        &result)) return 0;
 
+    (((Kind)result) - 1)->type.reference = type;
+
     return result;
 }
 
+/*
+       arg(3) type
+       arg(2) atom
+       arg(1) size
+esp -> return-pointer
+--------------------
+ebp+16 arg(3) type
+ebp+12 arg(2) atom
+ebp+8  arg(1) size
+ebp+4  return-pointer
+ebp -> old-frame    esp+40
+ebp-4  result
+ebp-8
+ebp-12
+ebp-16
+ebp-20 <atom>
+ebp-24 retval (0 or result)
+..
+esp+16
+esp+12 &result
+esp+8  size
+esp+4  <atom>
+esp->  _zero_space
+
+
+ */
+
 /* m32
 alloc_gc:
-        pushl   %ebp               #
-        movl    %esp, %ebp         #,
-        subl    $56, %esp          #,
-
-        movl    12(%ebp), %eax     # atom, tmp65
-        movb    %al, -28(%ebp)     # tmp65, atom
-
-        movl    $0, %eax           #, D.3303
-        leal    -12(%ebp), %eax    #, tmp66
-
-        movzbl  -28(%ebp), %ecx    # atom, D.3304
-
-        movl    %eax, 12(%esp)     # D.3303,
-        movl    8(%ebp), %eax      # size, tmp67
-        movl    %eax, 8(%esp)      # tmp67,
-        movl    %ecx, 4(%esp)      # D.3304,
-        movl    _zero_space, %edx  # _zero_space, _zero_space.13
-        movl    %edx, (%esp)       # _zero_space.13,
-        call    node_Allocate      #
-
-        xorl    $1, %eax           # D.3307 (??)
-        testb   %al, %al           # D.3307 (??)
-        je      .L38               #
-        movl    $0, %eax           #, D.3310
-        jmp     .L39               #
+        pushl   %ebp    #
+        movl    %esp, %ebp      #,
+        subl    $40, %esp       #,
+        movl    12(%ebp), %eax  # atom, atom
+        movb    %al, -20(%ebp)  # atom, atom
+        leal    -4(%ebp),    %eax  #, tmp69
+        movzbl  -20(%ebp),   %edx # atom, D.3411
+        movl    _zero_space, %ecx       # _zero_space, _zero_space.8
+        movl    %eax, 12(%esp)  # D.3410,
+        movl    8(%ebp), %eax   # size, size
+        movl    %eax, 8(%esp)   # size,
+        movl    %edx, 4(%esp)   # D.3411,
+        movl    %ecx, (%esp)    # _zero_space.8,
+        call    node_Allocate   #
+        xorl    $1, %eax        #, D.3414
+        testb   %al, %al        # D.3414
+        je      .L38    #,
+        movl    $0, -24(%ebp)   #, D.3415
+        jmp     .L40    #
 .L38:
-        movl    -12(%ebp), %eax # result, D.3310
-.L39:
+        movl    -4(%ebp), %eax  # result, result.9
+        leal    -8(%eax), %edx  #, D.3418
+        movl    16(%ebp), %eax  # type, type
+        movl    %eax, (%edx)    # type, <variable>.type.reference
+        movl    -4(%ebp), %eax  # result,
+        movl    %eax, -24(%ebp) #, D.3415
+.L40:
+        movl    -24(%ebp), %eax # D.3415, <result>
         leave
         ret
 */
@@ -401,7 +430,7 @@ alloc_gc:
 (mov tos bos)        ## set new  bottom-of-stack
 (push (const 0))     ## alloc ret
 (mov top eax)        ## hold address of result
-(push eax)           ## push address of result
+(push _zero_space)   ## push _zero_space
 (push (arg 0))       ## push size
 (push (arg 1))       ## push atom
 (push  eax)          ## push &ret
