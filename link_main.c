@@ -1,9 +1,10 @@
 #include "tuple.h"
 #include <stdio.h>
 
+
 typedef void *Space;
 
-Space _zero_space = 16;
+Space _zero_space = (void*)16;
 
 bool node_Allocate(const Space space,
                    bool atom,
@@ -16,7 +17,7 @@ bool node_Allocate(const Space space,
            size,
            target);
 
-    target.reference[0] = 32;
+    target.reference[0] = (void*)32;
 
     return true;
 }
@@ -39,7 +40,7 @@ void enki_test(void* one, void* two) {
 
 int main(int argc, char** argv) {
     printf("_zero_space %p\n", _zero_space);
-    enki_test(4,8);
+    enki_test((void*)4, (void*)8);
     printf("done\n");
     return 0;
 }
