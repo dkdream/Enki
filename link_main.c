@@ -1,28 +1,9 @@
-#include "tuple.h"
+#include "reference.h"
+#include "pair.h"
+#include "treadmill.h"
 #include <stdio.h>
 
-
-typedef void *Space;
-
-Space _zero_space = (void*)16;
-
-bool node_Allocate(const Space space,
-                   bool atom,
-                   Size size,
-                   Target target)
-{
-    printf("space %p atom %d size %u target %p\n",
-           space,
-           atom,
-           size,
-           target);
-
-    target.reference[0] = (void*)32;
-
-    return true;
-}
-
-void enki_test(void* one, void* two) {
+void enki_test(void* atom, void* size) {
     void* holding = 0;
 
     asm("movl %1,-8(%%esp)\n\t"
@@ -31,7 +12,7 @@ void enki_test(void* one, void* two) {
         "call alloc_gc\n\t"
         "movl %%eax,%0"
         : "=r" (holding)
-        : "r" (one), "r" (two)
+        : "r" (atom), "r" (size)
         : "%eax", "%ebx", "%esi", "edi"
         );
 
@@ -39,8 +20,12 @@ void enki_test(void* one, void* two) {
 }
 
 int main(int argc, char** argv) {
+    startEnkiLibrary();
+
     printf("_zero_space %p\n", _zero_space);
-    enki_test((void*)4, (void*)8);
+    enki_test((void*)0, (void*)(sizeof(struct pair)));
     printf("done\n");
+
+    stopEnkiLibrary();
     return 0;
 }

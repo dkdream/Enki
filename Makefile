@@ -45,7 +45,7 @@ INCFLAGS := -I. $(COPPER_INC)
 DBFLAGS  := -Wall -mtune=i686 -rdynamic -fPIC
 CFLAGS   := $(DBFLAGS) $(INCFLAG) $(TAILFLAGS)
 SFLAGS   := -mtune=i686 -rdynamic -fdelete-null-pointer-checks
-ASFLAGS  := -V -Qy
+ASFLAGS  := -Qy
 LIBFLAGS := $(COPPER_LIB)
 ARFLAGS  := rcu
 
@@ -55,25 +55,17 @@ C_SOURCES := $(filter-out $(MAINS) $(FOOS),$(notdir $(wildcard *.c)))
 H_SOURCES := $(filter-out enki.h, $(notdir $(wildcard *.h)))
 GCC_SRCS  := $(notdir $(wildcard *.gcc))
 
-OBJS    := $(C_SOURCES:%.c=.objects/%.o)
+OBJS    := $(C_SOURCES:%.c=.objects/%_n.o)
 TSTS    := $(notdir $(wildcard test_*.ea))
 RUNS    := $(TSTS:test_%.ea=.run/test_%.log)
-
-ASMS    := $(C_SOURCES:%.c=.assembly/%_32.s)
-ASMS    += $(C_SOURCES:%.c=.assembly/%_64.s)
-ASMS    += $(FOOS:%.c=.assembly/%_32.s)
-ASMS    += $(FOOS:%.c=.assembly/%_64.s)
-ASMS    += $(MAINS:%.c=.assembly/%_32.s)
-ASMS    += $(MAINS:%.c=.assembly/%_64.s)
 
 DEPENDS := $(C_SOURCES:%.c=.depends/%.d)
 DEPENDS += $(MAINS:%.c=.depends/%.d)
 
 UNIT_TESTS := test_reader.gcc test_sizes.gcc
 
-all   :: enki asm
-enki  :: $(RUNS) ; @make --touch --quiet --no-print-directory $@
-asm   :: $(ASMS)
+all   :: enki
+enki  :: $(RUNS)
 test  :: $(RUNS) ; @echo all test runs
 units :: $(UNIT_TESTS:%.gcc=%.x) ; ls -l $(UNIT_TESTS:%.gcc=%.x)
 
@@ -91,25 +83,31 @@ $(RUNS) : enki.vm
 
 clean ::
 	rm -fr .depends .objects .assembly .run
-	rm -f enki.vm libEnki.a
-	rm -f *~ ./#* *.x *.s
+	rm -f enki.vm libEnki.a libEnki_32.a libEnki_64.a
+	rm -f *~ ./#* *.x test.s *.o
 	rm -f test.*.out test.out
 
 scrub :: 
 	@make clean
 	@rm -rf .depends
 
-enki.vm : .objects/enki_main.o libEnki.a 
+enki.vm : .objects/enki_main_n.o libEnki.a 
 	$(GCC) $(CFLAGS) -o $@ $^ $(LIBFLAGS)
 
-link_main.x : .objects/link_main_32.o foo_32.o
-	$(GCC) $(CFLAGS) -m32 -o $@ .objects/link_main_32.o foo_32.o
+link_main.x : .objects/link_main_32.o .objects/foo_32.o libEnki_32.a
+	$(GCC) $(CFLAGS) -m32 -o $@ .objects/link_main_32.o .objects/foo_32.o -L. -lEnki_32
 
 $(UNIT_TESTS:%.gcc=%.x) : libEnki.a
 
 libEnki.a : $(OBJS) $(ASMS)
 	-$(RM) $@
 	$(AR) $(ARFLAGS) $@ $(OBJS)
+	$(RANLIB) $@
+	@touch $@
+
+libEnki_32.a : $(OBJS:%_n.o=%_32.o)
+	-$(RM) $@
+	$(AR) $(ARFLAGS) $@ $(OBJS:%_n.o=%_32.o)
 	$(RANLIB) $@
 	@touch $@
 
@@ -159,39 +157,72 @@ enki_ver.h : FORCE
 .depends  : ; @mkdir .depends
 .assembly : ; @mkdir .assembly
 .objects  : ; @mkdir .objects
+.dumps    : ; @mkdir .dumps
 .run      : ; @mkdir .run
-
-.objects/%.o : %.c .objects
-	@echo $(GCC) $(DBFLAGS) -c -o $@ $<
-	@$(GCC) $(CFLAGS) -c -o $@ $<
 
 .run/%.log : %.ea .run
 	@./run.it $(ENKI.test) "$(RUNFLAGS)" $< $@
 
-.objects/%.o : %.gcc .objects
+## === native c-compile ===
+
+.PRECIOUS :: .objects/%_n.o .assembly/%_n.s
+
+%_n.x : .objects/%_n.o
+	$(GCC) $(CFLAGS) -o $@ $+ libEnki.a
+
+.objects/%_n.o : .assembly/%_n.s | .objects
+	$(AS) $(ASFLAGS) -o $@ $< 
+
+.assembly/%_n.s : %.c | .assembly
 	@echo $(GCC) $(DBFLAGS) -c -o $@ $<
-	@$(GCC) $(CFLAGS) -x c -c -o $@ $<
+	@$(GCC) $(CFLAGS) -S -fverbose-asm -o $@ $<
 
-.objects/%_32.o : .assembly/%_32.s
+## === m32 c-compile ===
+
+.PRECIOUS :: .objects/%_32.o .assembly/%_32.s
+
+%_32.x : .objects/%_32.o
+	$(GCC) $(CFLAGS) -m32 -o $@ $+ libEnki_32.a
+
+.objects/%_32.o : .assembly/%_32.s | .objects
 	$(AS) $(ASFLAGS) --32 -o $@ $< 
-	objdump --disassemble-all -x $@
 
-.objects/%_64.o : .assembly/%_64.s
+.assembly/%_32.s : %.c | .assembly
+	$(GCC) $(SFLAGS) -S -m32 -fverbose-asm -o $@ $<
+
+## === m64 c-compile ===
+
+.PRECIOUS :: .objects/%_64.o .assembly/%_64.s
+
+%_64.x : .objects/%_64.o
+	$(GCC) $(CFLAGS) -o $@ $+ libEnki_64.a
+
+.objects/%_64.o : .assembly/%_64.s | .objects
 	$(AS) $(ASFLAGS) --32 -o $@ $< 
-	objdump --disassemble-all -x $@
 
-%_32.o : %_32.s
+.assembly/%_64.s : %.c | .assembly
+	$(GCC) $(SFLAGS) -S -m64 -fverbose-asm -o $@ $<
+
+## ## ## ##
+
+.objects/%_32.o : %_32.s | .objects
 	$(AS) $(ASFLAGS) --32 -o $@ $< 
-	objdump --disassemble-all -x $@
 
-%_64.o : %_64.s
+.dumps/%_32.s : .objects/%_32.o | .dumps 
+	objdump --disassemble-all -x $< >$@
+
+## ## ## ##
+
+.objects/%_64.o : %_64.s | .objects
 	$(AS) $(ASFLAGS) --64 -o $@ $< 
-	objdump --disassemble-all -x $@
 
-%.x              : .objects/%.o  ; $(GCC) $(CFLAGS) -o $@ $+ libEnki.a
-.depends/%.d     : %.c .depends  ; @$(GCC) $(CFLAGS) -MM -MP -MG -MF $@ $<
-.assembly/%_32.s : %.c .assembly ; @$(GCC) $(SFLAGS) -S -m32 -fverbose-asm -o $@ $<
-.assembly/%_64.s : %.c .assembly ; @$(GCC) $(SFLAGS) -S -m64 -fverbose-asm -o $@ $<
+.dumps/%_64.s : .objects/%_64.o | .dumps
+	objdump --disassemble-all -x $< >$@
+
+## ## ## ##
+
+.depends/%.d : %.c | .depends
+	@$(GCC) $(CFLAGS) -MM -MP -MG -MF $@ $<
 
 -include $(DEPENDS)
 
