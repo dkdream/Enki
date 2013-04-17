@@ -1,17 +1,19 @@
 (require "boot.ea")
 (require "compiler.ea")
 
+## (alloc_gc atom size)
+
 (define (alloc_gc)
-   (compile-function "alloc_gc" 3
+   (compile-function "alloc_gc" 2 1
                      (lambda () 
-                        (push (const 0))       ## alloc ret
-                        (mov tos eax)          ## hold address of result
-                        (push "_zero_space")   ## push _zero_space
-                        (push (arg 1))         ## push size
-                        (push (arg 2))         ## push atom
-                        (push  eax)            ## push &ret
-                        (call "node_Allocate") ## call
-                        (drop 4)               ## clear stack
+                        (mov (const 0) (lcl 0)) ## init ret
+                        (lea (lcl 0) eax)       ## hold address of result
+                        (push eax)              ## push &ret
+                        (push (arg 1))          ## push size
+                        (push (arg 0))          ## push atom
+                        (push "_zero_space")    ## push _zero_space
+                        (call "node_Allocate")  ## call
+                        (drop 4)                ## clear stack
                         (let ((pass (new-label))
                               (exit (new-label)))
                            (xor (const 1) eax)  ## mask result

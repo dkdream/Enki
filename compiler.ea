@@ -58,7 +58,7 @@
       (insn mnemonic " " src ", " dest)))
 
 ## For example:
-(define mov     (twoarg "mov"))
+(define mov     (twoarg "movl"))
 (define movb    (twoarg "movb"))
 (define movzbl  (twoarg "movzbl"))
 (define test    (twoarg "test"))
@@ -99,6 +99,8 @@
 (define (ret)        (insn "ret"))
 (define (rep-stosb)  (insn "rep stosb"))
 (define (repe-cmpsb) (insn "repe cmpsb"))
+(define (save)       (insn "pusha"))
+(define (restore)    (insn "popa"))
 
 ## Registers:
 (define eax "%eax") ## bottom of frame/return-value/scratch
@@ -123,11 +125,14 @@
 (define (absolute x)      (list "*" x))
 
 (define (arg index) 
-   (offset frame (* -4 index)))
+   (offset frame (* -4 (++ index))))
+
+(define (lcl index) 
+   (offset bos (* -4 (++ index))))
 
 (define (drop count)
-   (let ((size (* -4 count)))
-      (sub (const size) tos)))
+   (let ((size (* 4 count)))
+      (add (const size) tos)))
 
 ## Use this one inside of "indirect" or "offset".
 (define (index-register base index size)
@@ -195,12 +200,14 @@
    (mov scr tos)    ## set old top-of-stack
    (ret))
 
-(define (compile-function bodylabel nargs body)
+(define (compile-function bodylabel nargs nlcls body)
    (text)
    (insn ".align 4")
    (insn ".type " bodylabel ", @function")  ## may not be needed
-   (label bodylabel)
+   (global-label bodylabel)
    (compile-function-prologue)
+   (if (< 0 nlcls)
+         (sub (const (* 4 nlcls)) tos))
    (body)
    (compile-function-epilogue)
    (insn ".size " bodylabel ", .-" bodylabel)) ## may not be needed

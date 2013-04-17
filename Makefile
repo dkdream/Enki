@@ -102,8 +102,8 @@ scrub ::
 enki.vm : .objects/enki_main.o libEnki.a 
 	$(GCC) $(CFLAGS) -o $@ $^ $(LIBFLAGS)
 
-link_main.x : .objects/link_main_32.o
-	$(GCC) $(CFLAGS) -m32 -o $@ $^
+link_main.x : .objects/link_main_32.o foo_32.o
+	$(GCC) $(CFLAGS) -m32 -o $@ .objects/link_main_32.o foo_32.o
 
 $(UNIT_TESTS:%.gcc=%.x) : libEnki.a
 
