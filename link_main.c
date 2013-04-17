@@ -39,7 +39,7 @@ void enki_test(void* one, void* two) {
 
 int main(int argc, char** argv) {
     printf("_zero_space %p\n", _zero_space);
-    enki_test(1,2);
+    enki_test(4,8);
     printf("done\n");
     return 0;
 }
