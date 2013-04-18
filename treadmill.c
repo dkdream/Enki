@@ -403,25 +403,21 @@ static void release_Header(const Header header) {
 }
 
 extern bool darken_Node(const Node node) {
-    if (!node.reference) return true;
-
+    if (!node.reference)  return true;
     if (!boxed_Tag(node)) return true;
 
     const Header header = asHeader(node);
-
-    if (!header->kind.inside) return true;
-
-    const Space space = header->space;
-
-    if (!space) return true;
+    const Space   space = header->space;
 
     if (!header->kind.live) {
         fprintf(stderr, "found in space %p a dead ", space);
         dump(stderr, node);
         fprintf(stderr, "\n");
+        fatal("GC BOOM");
     }
 
-    header->kind.live = 1;
+    if (!header->kind.inside) return true;
+    if (!space) return true;
 
     if (header->kind.color == space->visiable) return true;
 
@@ -522,7 +518,7 @@ extern inline void scan_Node(const Header header) __attribute__((always_inline))
 extern inline void scan_Node(const Header header) {
     if (!header) return;
 
-    VM_DEBUG(5, "scanning header %p(%s,%s,%s,%s)[%u]",
+    VM_DEBUG(5, "scan header %p(%s,%s,%s,%s)[%u] begin ",
              header,
              colorName(header->kind.color),
              (header->kind.atom ? "atom" : "compound"),
@@ -555,7 +551,9 @@ extern inline void scan_Node(const Header header) {
         darken_Node(slot[inx]);
     }
 
-    VM_DEBUG(5, "scan (%p) end", slot);
+    VM_DEBUG(5, "scan reference (%p) end", slot);
+
+    VM_DEBUG(5, "scan header (%p) end", header);
 }
 
 extern bool node_Allocate(const Space space,
@@ -572,7 +570,7 @@ extern bool node_Allocate(const Space space,
     if (inside) {
         ++counter;
         if (100 < counter) {
-            unsigned count = 3;
+            unsigned count = 10;
             // scan first
             space_Scan(space, count);
 
@@ -598,7 +596,7 @@ extern bool node_Allocate(const Space space,
     VM_DEBUG(1,
              "allocating node %p (%s,%s,%s,%s)[%u]"
              " (header %p)"
-             " (space %p  visiable %s scan %p top %p count %u)",
+             " (space %p visiable %s scan %p top %p count %u)",
              asReference(header),
              colorName(header->kind.color),
              (header->kind.atom ? "atom" : "compound"),
@@ -650,6 +648,9 @@ extern void space_Init(const Space space) {
     init_atom(bottom,0);
     init_atom(root,0);
 
+    top->kind.live    = 0;
+    bottom->kind.live = 0;
+
     top->space    = space;
     bottom->space = space;
     root->space   = space;
@@ -687,6 +688,8 @@ extern void space_Scan(const Space space, unsigned int upto) {
 
     if (1 > upto) return;
 
+    VM_DEBUG(2, "scan space %p begin", space);
+
     space_Check(space);
 
     const Header top = &(space->top);
@@ -713,7 +716,7 @@ extern void space_Scan(const Space space, unsigned int upto) {
 
     space_Check(space);
 
-    VM_DEBUG(5, "scan space %p end", space);
+    VM_DEBUG(2, "scan space %p end", space);
 }
 
 extern void space_Flip(const Space space) {
@@ -745,27 +748,6 @@ extern void space_Flip(const Space space) {
 
     // set root to new visiable
     root->kind.color = space->visiable = space_Hidden(space);
-
-#if defined(DO_RELEASE)
-    for (;;) {
-        const Header hold = free;
-
-        if (hold == bottom) break;
-
-        free = hold->after;
-
-        release_Header(hold);
-    }
-#else
-    {
-    Header hold = free;
-        for (; hold == bottom ; hold = hold->after) {
-            hold->kind.live = 0;
-        }
-    }
-#endif
-
-    space->free = free;
 
     space_Check(space);
 
@@ -808,7 +790,43 @@ extern void space_Flip(const Space space) {
         return;
     }
 
-    VM_DEBUG(5, "moving top (4)");
+    VM_DEBUG(5, "marking node in free segment (4)");
+
+#if defined(DO_RELEASE)
+    for (;;) {
+        const Header hold = free;
+
+        if (hold == bottom) break;
+
+        free = hold->after;
+
+        release_Header(hold);
+    }
+#else
+    {
+        Header hold = free;
+
+        VM_DEBUG(1, "free %p bottom %p",
+                 hold,
+                 bottom);
+
+        for (; hold != bottom ; hold = hold->after) {
+            hold->kind.live = 0;
+            VM_DEBUG(1, "marking dead header %p(%s,%s,%s,%s)[%u] in space %p",
+                     hold,
+                     colorName(hold->kind.color),
+                     (hold->kind.atom ? "atom" : "compound"),
+                     (hold->kind.live ? "live" : "dead"),
+                     (hold->kind.inside ? "in" : "out"),
+                     (unsigned) hold->kind.count,
+                     space);
+        }
+    }
+#endif
+
+    space->free = free;
+
+    VM_DEBUG(5, "moving top (5)");
 
     if (!extract_From(top)) {
         VM_ERROR("unable ot extract the top");
@@ -821,7 +839,7 @@ extern void space_Flip(const Space space) {
         return;
     }
 
-    VM_DEBUG(5, "scan clinks (5)");
+    VM_DEBUG(5, "scan clinks (6)");
 
     Clink *start = &space->start_clinks;
     Clink *end   = &space->start_clinks;
@@ -877,7 +895,7 @@ extern void space_Flip(const Space space) {
 
     space_Check(space);
 
-    VM_DEBUG(5, "flip space %p end", space);
+    VM_DEBUG(2, "flip space %p end", space);
 
     (void)release_Header;
 }

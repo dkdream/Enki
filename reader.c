@@ -5,6 +5,7 @@
  ** Routine List:
  **    <routine-list-end>
  **/
+#define debug_THIS
 
 #include "all_types.inc"
 #include "treadmill.h"
@@ -707,7 +708,7 @@ extern bool readExpr(FILE *fp, Target result)
               if (!isPrint(chr)) continue;
               bool rtn = readSymbol(fp, chr, result);
               if (isType(*(result.reference), t_pair)) {
-                if (!list_UnDot(*(result.pair))) return false;
+                  if (!list_UnDot(*(result.pair))) return false;
               }
               return rtn;
             }
@@ -740,8 +741,9 @@ extern void readFile(FILE *stream)
 
         if (!readExpr(stream, &obj)) break;
 
+        VM_DEBUG(1, " read ");
+
         VM_ON_DEBUG(1, {
-                fprintf(stderr,"read: ");
                 prettyPrint(stderr, obj);
                 fprintf(stderr,"\n");
                 fflush(stderr);
@@ -774,6 +776,8 @@ extern void readFile(FILE *stream)
         fprintf(stderr, "encode %.3f cpu sec; ", ((double)cencode - (double)cexpand)* 1.0e-6);
         fprintf(stderr, "eval   %.3f cpu sec\n", ((double)ceval   - (double)cencode)* 1.0e-6);
 #endif
+
+        VM_DEBUG(1, " result ");
 
         VM_ON_DEBUG(1, {
                 fprintf(stderr, "result ");
