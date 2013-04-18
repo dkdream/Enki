@@ -2391,6 +2391,20 @@ void startEnkiLibrary() {
     __alloc_cycle = 100;
     __scan_cycle  = 10;
 
+    VM_DEBUG(1, "startEnkiLibrary --");
+
+    while (!space_CanFlip(_zero_space)) {
+        space_Scan(_zero_space, 1000);
+    }
+
+    space_Flip(_zero_space);
+
+    while (!space_CanFlip(_zero_space)) {
+        space_Scan(_zero_space, 1000);
+    }
+
+    space_Flip(_zero_space);
+
     VM_DEBUG(1, "startEnkiLibrary end");
 }
 
