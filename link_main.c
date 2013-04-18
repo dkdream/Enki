@@ -24,9 +24,12 @@ void enki_test(void* atom, void* type, void* size) {
 }
 
 int main(int argc, char** argv) {
-    ea_global_debug = 10;
+    ea_global_debug = 0;
 
     startEnkiLibrary();
+
+    ea_global_debug = 1;
+    __scan_cycle = 0;
 
     printf("_zero_space %p %u\n", _zero_space, sizeof(struct pair)/sizeof(void*));
     enki_test((void*)0, (void*)0, (void*)(sizeof(struct pair)));

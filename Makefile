@@ -84,7 +84,7 @@ $(RUNS) : enki.vm
 clean ::
 	rm -fr .depends .objects .assembly .run
 	rm -f enki.vm libEnki.a libEnki_32.a libEnki_64.a
-	rm -f *~ ./#* *.x test.s *.o
+	rm -f *~ ./#* *.x *.s *.o
 	rm -f test.*.out test.out
 
 scrub :: 
@@ -93,6 +93,9 @@ scrub ::
 
 enki.vm : .objects/enki_main_n.o libEnki.a 
 	$(GCC) $(CFLAGS) -o $@ $^ $(LIBFLAGS)
+
+test :: link_main.x
+	./link_main.x
 
 link_main.x : .objects/link_main_32.o .objects/foo_32.o libEnki_32.a
 	$(GCC) $(CFLAGS) -m32 -o $@ .objects/link_main_32.o .objects/foo_32.o -L. -lEnki_32
