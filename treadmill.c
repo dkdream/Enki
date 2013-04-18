@@ -466,7 +466,6 @@ extern bool darken_Node(const Node node) {
         return false;
     }
 
-    header->kind.live  = 1;
     header->kind.color = space->visiable;
 
     if (!extract_From(header)) {
@@ -475,6 +474,8 @@ extern bool darken_Node(const Node node) {
     if (!insert_After(top, header)) {
         BOOM();
     }
+
+    space->count += 1;
 
     return true;
 }
@@ -540,8 +541,6 @@ extern inline void scan_Node(const Header header) {
         return;
     }
 
-    space->count += 1;
-
     if (header->kind.atom) return;
     if (1 > header->kind.count) return;
 
@@ -572,7 +571,7 @@ extern bool node_Allocate(const Space space,
 
     if (inside) {
         ++counter;
-        if (10 < counter) {
+        if (100 < counter) {
             unsigned count = 3;
             // scan first
             space_Scan(space, count);
@@ -747,6 +746,7 @@ extern void space_Flip(const Space space) {
     // set root to new visiable
     root->kind.color = space->visiable = space_Hidden(space);
 
+#if defined(DO_RELEASE)
     for (;;) {
         const Header hold = free;
 
@@ -756,6 +756,14 @@ extern void space_Flip(const Space space) {
 
         release_Header(hold);
     }
+#else
+    {
+    Header hold = free;
+        for (; hold == bottom ; hold = hold->after) {
+            hold->kind.live = 0;
+        }
+    }
+#endif
 
     space->free = free;
 
@@ -776,10 +784,11 @@ extern void space_Flip(const Space space) {
 
     space->scan = root; // set the start of the new gray chain
 
-    VM_DEBUG(5, "check free and bottom and top (2)");
+    VM_DEBUG(5, "check free with bottom and top (2)");
 
     if (free == bottom) {
         if (bottom->after != top) {
+            VM_DEBUG(5, "ajusting free");
             free = bottom->after;
             space->free = free;
         }
