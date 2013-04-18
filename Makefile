@@ -64,9 +64,9 @@ DEPENDS += $(MAINS:%.c=.depends/%.d)
 
 UNIT_TESTS := test_reader.gcc test_sizes.gcc
 
-all   :: enki
+all   :: enki 
 enki  :: $(RUNS)
-test  :: $(RUNS) ; @echo all test runs
+test  :: $(RUNS)
 units :: $(UNIT_TESTS:%.gcc=%.x) ; ls -l $(UNIT_TESTS:%.gcc=%.x)
 
 install : install.bin install.inc install.lib
@@ -97,6 +97,9 @@ enki.vm : .objects/enki_main_n.o libEnki.a
 test :: link_main.x
 	./link_main.x
 
+test :: $(FOOS:%.c=.dumps/%_32.s)
+test :: $(FOOS:%.c=.dumps/%_64.s)
+
 link_main.x : .objects/link_main_32.o .objects/foo_32.o libEnki_32.a
 	$(GCC) $(CFLAGS) -m32 -o $@ .objects/link_main_32.o .objects/foo_32.o -L. -lEnki_32
 
@@ -114,6 +117,12 @@ libEnki.a : $(OBJS) $(ASMS)
 libEnki_32.a : $(OBJS:%_n.o=%_32.o)
 	-$(RM) $@
 	$(AR) $(ARFLAGS) $@ $(OBJS:%_n.o=%_32.o)
+	$(RANLIB) $@
+	@touch $@
+
+libEnki_64.a : $(OBJS:%_n.o=%_64.o)
+	-$(RM) $@
+	$(AR) $(ARFLAGS) $@ $(OBJS:%_n.o=%_64.o)
 	$(RANLIB) $@
 	@touch $@
 
@@ -190,6 +199,9 @@ enki_ver.h : FORCE
 %_32.x : .objects/%_32.o
 	$(GCC) $(CFLAGS) -m32 -o $@ $+ libEnki_32.a
 
+.dumps/%_32.s : .objects/%_32.o | .dumps 
+	objdump --disassemble-all -x $< >$@
+
 .objects/%_32.o : .assembly/%_32.s | .objects
 	$(AS) $(ASFLAGS) --32 -o $@ $< 
 
@@ -203,8 +215,11 @@ enki_ver.h : FORCE
 %_64.x : .objects/%_64.o
 	$(GCC) $(CFLAGS) -o $@ $+ libEnki_64.a
 
+.dumps/%_64.s : .objects/%_64.o | .dumps
+	objdump --disassemble-all -x $< >$@
+
 .objects/%_64.o : .assembly/%_64.s | .objects
-	$(AS) $(ASFLAGS) --32 -o $@ $< 
+	$(AS) $(ASFLAGS) --64 -o $@ $< 
 
 .assembly/%_64.s : %.c | .assembly
 	$(GCC) $(SFLAGS) -S -m64 -fverbose-asm -o $@ $<
@@ -214,16 +229,10 @@ enki_ver.h : FORCE
 .objects/%_32.o : %_32.s | .objects
 	$(AS) $(ASFLAGS) --32 -o $@ $< 
 
-.dumps/%_32.s : .objects/%_32.o | .dumps 
-	objdump --disassemble-all -x $< >$@
-
 ## ## ## ##
 
 .objects/%_64.o : %_64.s | .objects
 	$(AS) $(ASFLAGS) --64 -o $@ $< 
-
-.dumps/%_64.s : .objects/%_64.o | .dumps
-	objdump --disassemble-all -x $< >$@
 
 ## ## ## ##
 

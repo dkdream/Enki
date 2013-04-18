@@ -2,6 +2,7 @@
 #include "pair.h"
 #include "treadmill.h"
 #include "debug.h"
+#include "type.h"
 #include <stdio.h>
 
 void enki_test(void* atom, void* type, void* size) {
@@ -31,8 +32,13 @@ int main(int argc, char** argv) {
     ea_global_debug = 1;
     __scan_cycle = 0;
 
-    printf("_zero_space %p %u\n", _zero_space, sizeof(struct pair)/sizeof(void*));
-    enki_test((void*)0, (void*)0, (void*)(sizeof(struct pair)));
+    printf("_zero_space %p count %u type %p\n",
+           _zero_space,
+           sizeof(struct pair)/sizeof(void*),
+           t_pair);
+
+    enki_test((void*)0, (void*)t_pair, (void*)(sizeof(struct pair)));
+
     printf("done\n");
 
     stopEnkiLibrary();
