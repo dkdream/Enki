@@ -97,6 +97,9 @@ enki.vm : .objects/enki_main_n.o libEnki.a
 link_main.x : .objects/link_main_32.o .objects/foo_32.o libEnki_32.a
 	$(GCC) $(CFLAGS) -m32 -o $@ .objects/link_main_32.o .objects/foo_32.o -L. -lEnki_32
 
+foo_32.s : foo.ea | enki.vm
+	./enki.vm ./foo.ea >foo_32.s
+
 $(UNIT_TESTS:%.gcc=%.x) : libEnki.a
 
 libEnki.a : $(OBJS) $(ASMS)

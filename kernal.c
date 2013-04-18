@@ -2077,6 +2077,40 @@ extern SUBR(symbol_q) {
     }
 }
 
+extern SUBR(alloc_cycle) {
+    Node value;
+    unsigned count = checkArgs(args, "alloc-cycle", 0, NIL);
+
+    integer_Create(__alloc_cycle, result.integer);
+
+    if (0 >= count) return;
+
+    pair_GetCar(args.pair, &value);
+
+    if (!isType(value, t_integer)) return;
+
+    if (0 > value.integer->value) return;
+
+    __alloc_cycle = value.integer->value;
+}
+
+extern SUBR(scan_cycle) {
+    Node value;
+    unsigned count = checkArgs(args, "scan-cycle", 0, NIL);
+
+    integer_Create(__scan_cycle, result.integer);
+
+    if (0 >= count) return;
+
+    pair_GetCar(args.pair, &value);
+
+    if (!isType(value, t_integer)) return;
+
+    if (0 > value.integer->value) return;
+
+    __scan_cycle = value.integer->value;
+}
+
 /***************************************************************
  ***************************************************************
  ***************************************************************
@@ -2378,6 +2412,8 @@ void startEnkiLibrary() {
     MK_OPR(close-buffer,close_buffer);
     MK_OPR(text?,text_q);
     MK_OPR(symbol?,symbol_q);
+    MK_OPR(alloc-cycle,alloc_cycle);
+    MK_OPR(scan-cycle,scan_cycle);
 
     clock_t cend = clock();
 

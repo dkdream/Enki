@@ -1,10 +1,10 @@
 (require "boot.ea")
 (require "compiler.ea")
 
-## (alloc_gc atom size)
+## (alloc_gc atom size type)
 
 (define (alloc_gc)
-   (compile-function "alloc_gc" 2 1
+   (compile-function "alloc_gc" 3 1
                      (lambda () 
                         (mov (const 0) (lcl 0)) ## init ret
                         (lea (lcl 0) eax)       ## hold address of result

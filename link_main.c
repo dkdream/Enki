@@ -4,18 +4,21 @@
 #include "debug.h"
 #include <stdio.h>
 
-void enki_test(void* atom, void* size) {
+void enki_test(void* atom, void* type, void* size) {
     void* holding = 0;
 
-    asm("movl %1,-8(%%esp)\n\t"
-        "movl %2,-12(%%esp)\n\t"
-        "lea -12(%%esp),%%eax\n\t"
+    asm("movl %1,%%eax\n\t"
+        "movl %2,%%ebx\n\t"
+        "movl %3,%%ecx\n\t"
+        "movl %%eax,-8(%%esp)\n\t"  //atom
+        "movl %%ebx,-12(%%esp)\n\t" //size
+        "movl %%ecx,-16(%%esp)\n\t" //type
+        "lea -16(%%esp),%%eax\n\t"
         "call alloc_gc\n\t"
         "movl %%eax,%0"
-        : "=r" (holding)
-        : "r" (atom), "r" (size)
-        : "%eax", "%ebx", "%esi", "edi"
-        );
+        : "=m" (holding)
+        : "m" (atom), "m" (size), "m" (type)
+        : "%eax", "%ebx", "%ecx", "%esi", "edi");
 
     printf("results %p\n", holding);
 }
@@ -26,7 +29,7 @@ int main(int argc, char** argv) {
     startEnkiLibrary();
 
     printf("_zero_space %p %u\n", _zero_space, sizeof(struct pair)/sizeof(void*));
-    enki_test((void*)0, (void*)(sizeof(struct pair)));
+    enki_test((void*)0, (void*)0, (void*)(sizeof(struct pair)));
     printf("done\n");
 
     stopEnkiLibrary();
