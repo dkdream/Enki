@@ -147,6 +147,8 @@ struct gc_treadmill {
 };
 
 extern Space _zero_space;
+extern unsigned __alloc_cycle;
+extern unsigned __scan_cycle;
 
 extern void space_Init(const Space); // this will erase the contents of the space
 extern void space_Flip(const Space);

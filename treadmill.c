@@ -569,8 +569,8 @@ extern bool node_Allocate(const Space space,
 
     if (inside) {
         ++counter;
-        if (100 < counter) {
-            unsigned count = 10;
+        if (__alloc_cycle < counter) {
+            unsigned count = __scan_cycle;
             // scan first
             space_Scan(space, count);
 

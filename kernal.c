@@ -36,7 +36,9 @@ unsigned int ea_global_trace = 0;
 struct gc_treadmill enki_zero_space;
 struct gc_header    enki_true;
 
-Space _zero_space;
+Space     _zero_space;
+unsigned __alloc_cycle;
+unsigned __scan_cycle;
 
 Node        enki_globals = NIL; // nt_pair(nil, alist)
 Node              true_v = NIL;
@@ -1548,6 +1550,12 @@ static ID_set loaded_inodes = SET_INITIALISER;
 extern SUBR(require) {
     Node path;
 
+    unsigned xxx = __alloc_cycle;
+    unsigned yyy = __scan_cycle;
+
+    __alloc_cycle = 10000;
+    __scan_cycle  = 1;
+
     checkArgs(args, "require", 1, t_text);
     forceArgs(args, &path, 0);
 
@@ -1591,6 +1599,9 @@ extern SUBR(require) {
 #endif
 
     integer_Create(id, result.integer);
+
+    __alloc_cycle = xxx;
+    __scan_cycle  = yyy;
 }
 
 struct os_file {
@@ -2188,7 +2199,9 @@ void startEnkiLibrary() {
 
     set_init(&loaded_inodes, SET_COLUMNS);
 
-    _zero_space = &enki_zero_space;
+    _zero_space   = &enki_zero_space;
+    __alloc_cycle = 1000;
+    __scan_cycle  = 10;
 
     space_Init(_zero_space);
 
@@ -2374,6 +2387,9 @@ void startEnkiLibrary() {
     fflush(stderr);
 
     csegment = clock();
+
+    __alloc_cycle = 100;
+    __scan_cycle  = 10;
 
     VM_DEBUG(1, "startEnkiLibrary end");
 }
