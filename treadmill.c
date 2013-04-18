@@ -285,6 +285,29 @@ extern inline void space_Check__(const Space space,
     BOOM();
 }
 
+static void scan_ForDead__(const Header root, const Header top) {
+    if (!root) return;
+    if (!top)  return;
+
+    Header cursor = root->before;
+
+    for (; cursor != top; cursor = cursor->before) {
+        if (cursor->kind.atom) continue;
+        if (1 > cursor->kind.count) continue;
+
+        Reference *slot = (Reference*) asReference(cursor);
+
+        int inx;
+        for (inx = 0; inx < cursor->kind.count; ++inx) {
+            const Header header = asHeader(slot[inx]);
+            if (!header) continue;
+            if (!header->kind.live) {
+                fatal("ForDead");
+            }
+        }
+    }
+}
+
 extern bool insert_After(const Header mark, const Header node) {
     if (!mark)        VM_ERROR("no mark");
     if (!node)        VM_ERROR("no node");
@@ -825,6 +848,8 @@ extern void space_Flip(const Space space) {
 #endif
 
     space->free = free;
+
+    scan_ForDead__(root, top);
 
     VM_DEBUG(5, "moving top (5)");
 

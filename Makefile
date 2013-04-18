@@ -175,7 +175,7 @@ enki_ver.h : FORCE
 
 .assembly/%_n.s : %.c | .assembly
 	@echo $(GCC) $(DBFLAGS) -c -o $@ $<
-	@$(GCC) $(CFLAGS) -S -fverbose-asm -o $@ $<
+	@$(GCC) $(CFLAGS) -ggdb -S -fverbose-asm -o $@ $<
 
 ## === m32 c-compile ===
 
