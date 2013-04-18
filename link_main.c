@@ -1,6 +1,7 @@
 #include "reference.h"
 #include "pair.h"
 #include "treadmill.h"
+#include "debug.h"
 #include <stdio.h>
 
 void enki_test(void* atom, void* size) {
@@ -20,6 +21,8 @@ void enki_test(void* atom, void* size) {
 }
 
 int main(int argc, char** argv) {
+    ea_global_debug = 10;
+
     startEnkiLibrary();
 
     printf("_zero_space %p\n", _zero_space);
@@ -27,5 +30,8 @@ int main(int argc, char** argv) {
     printf("done\n");
 
     stopEnkiLibrary();
+
+    ea_global_debug = 0;
+
     return 0;
 }

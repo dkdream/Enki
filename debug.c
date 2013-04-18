@@ -24,7 +24,7 @@ static void dump_c_stack()
     char **strings;
     size_t i;
 
-    size    = backtrace (array, 100);
+    size    = backtrace (array, 10);
     strings = backtrace_symbols (array, size);
 
     fprintf(stderr, "Obtained %zd stack frames.\n", size);

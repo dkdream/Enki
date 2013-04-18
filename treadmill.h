@@ -135,8 +135,6 @@ struct gc_treadmill {
     unsigned long count;
     Color  visiable;
     Header free;   // start of the free    list
-    //    Header bottom; // start of the hidden  list
-    //    Header top;    // end   of the hidden  list
     Header scan;   // end   of the resting list
     /**/
     struct gc_header top;

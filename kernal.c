@@ -2179,6 +2179,9 @@ void startEnkiLibrary() {
         fatal("sizeof(void*) != sizeof(long)");
     }
 
+    VM_DEBUG(1, "startEnkiLibrary begin");
+
+
     clock_t cbegin = clock();
 
     cstart = cbegin;
@@ -2189,9 +2192,15 @@ void startEnkiLibrary() {
 
     space_Init(_zero_space);
 
+    VM_DEBUG(1, "startEnkiLibrary enki_globals %p", &enki_globals);
+
     clink_Manage(&(enki_zero_space.start_clinks), &enki_globals);
 
+    VM_DEBUG(1, "startEnkiLibrary init symbol table");
+
     init_global_symboltable();
+
+    VM_DEBUG(1, "startEnkiLibrary init type table");
     init_global_typetable();
 
     true_v = (Node)init_atom(&enki_true, 0);
@@ -2205,11 +2214,17 @@ void startEnkiLibrary() {
 
     MK_CONST(Zero,zero_s);
 
+    VM_DEBUG(1, "startEnkiLibrary FXD");
+
     MK_PRM(system_check);
+
+    VM_DEBUG(1, "startEnkiLibrary ---");
 
     MK_FXD(define);
     MK_EFXD(quote,list);
     MK_EFXD(type,list);
+
+    VM_DEBUG(1, "startEnkiLibrary ---");
 
     MK_FXD(if);
     MK_FXD(and);
@@ -2217,13 +2232,19 @@ void startEnkiLibrary() {
     MK_FXD(set);
     MK_FXD(delay);
 
+    VM_DEBUG(1, "startEnkiLibrary ---");
+
     MK_EFXD(let,encode_let);
     MK_EFXD(lambda,encode_lambda);
+
+    VM_DEBUG(1, "startEnkiLibrary ---");
 
     MK_OPR(%if,if);
     MK_OPR(%and,and);
     MK_OPR(%or,or);
     MK_OPR(%set,set);
+
+    VM_DEBUG(1, "startEnkiLibrary ---");
 
     MK_OPR(%let,let);
     MK_OPR(%lambda,lambda);
@@ -2232,16 +2253,22 @@ void startEnkiLibrary() {
     MK_OPR(%encode-let,encode_let);
     MK_OPR(%encode-lambda,encode_lambda);
 
+    VM_DEBUG(1, "startEnkiLibrary ---");
+
     MK_PRM(gensym);
     MK_PRM(member);
     MK_PRM(find);
     MK_PRM(map);
+
+    VM_DEBUG(1, "startEnkiLibrary ---");
 
     p_eval_symbol  = MK_OPR(%eval-symbol,eval_symbol);
     p_eval_pair    = MK_OPR(%eval-pair,eval_pair);
 
     p_apply_lambda = MK_OPR(%apply-lambda,apply_lambda);
     p_apply_form   = MK_OPR(%apply-form,apply_form);
+
+    VM_DEBUG(1, "startEnkiLibrary ---");
 
     MK_PRM(expand);
     MK_PRM(encode);
@@ -2251,9 +2278,13 @@ void startEnkiLibrary() {
     MK_PRM(form);
     MK_PRM(fixed);
 
+    VM_DEBUG(1, "startEnkiLibrary ---");
+
     MK_OPR(type-of, type_of);
 
     MK_OPR(~,com);
+
+    VM_DEBUG(1, "startEnkiLibrary ---");
 
 #define _do(NAME, OP) definePrimitive(#OP, opr_ ## NAME);
 
@@ -2261,6 +2292,8 @@ void startEnkiLibrary() {
     _do_relation();
 
 #undef _do
+
+    VM_DEBUG(1, "startEnkiLibrary ---");
 
     MK_OPR(==,eq);
     MK_OPR(!=,neq);
@@ -2281,23 +2314,35 @@ void startEnkiLibrary() {
     MK_PRM(tuple);
     MK_PRM(allocate);
 
+    VM_DEBUG(1, "startEnkiLibrary ---");
+
     MK_PRM(force);
     MK_OPR(concat-text,concat_text);
     MK_OPR(concat-symbol,concat_symbol);
 
+    VM_DEBUG(1, "startEnkiLibrary ---");
+
     MK_OPR(start-time,start_time);
     MK_OPR(mark-time,mark_time);
+
+    VM_DEBUG(1, "startEnkiLibrary ---");
 
     MK_PRM(system);
     MK_PRM(error);
     MK_PRM(format);
     MK_PRM(require);
 
+    VM_DEBUG(1, "startEnkiLibrary ---");
+
     MK_OPR(open-in,open_in);
     MK_OPR(open-out,open_out);
 
+    VM_DEBUG(1, "startEnkiLibrary ---");
+
     MK_OPR(close-in,close_in);
     MK_OPR(close-out,close_out);
+
+    VM_DEBUG(1, "startEnkiLibrary ---");
 
     MK_PRM(fprint);
     MK_OPR(read-line,read_line);
@@ -2329,6 +2374,8 @@ void startEnkiLibrary() {
     fflush(stderr);
 
     csegment = clock();
+
+    VM_DEBUG(1, "startEnkiLibrary end");
 }
 
 void stopEnkiLibrary() {

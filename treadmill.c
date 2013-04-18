@@ -62,7 +62,7 @@
  **     if we are working with a node it must be black or gray.
  **   end
  ***/
-//#define debug_THIS
+#define debug_THIS
 
 #include "treadmill.h"
 #include "all_types.inc"
@@ -85,6 +85,16 @@ static inline void fast_unlock(int *address) {
 
 static Target *clink_Slots(Clink *link) {
     return (Target *)(link + 1);
+}
+
+extern inline const char* colorName(enum gc_color value) __attribute__((always_inline));
+extern inline const char* colorName(enum gc_color value) {
+    switch (value) {
+    case nc_unknown: return "unknown";
+    case nc_blue:    return "blue";
+    case nc_orange:  return "orange";
+    default: return ":UNKNOWN:";
+    }
 }
 
 extern inline Color space_Hidden(const Space space) __attribute__((always_inline));
@@ -289,6 +299,16 @@ extern bool insert_After(const Header mark, const Header node) {
     mark->after   = node;
     after->before = node;
 
+#if defined(CHECK_INSERTS)
+    Header cursor = mark;
+
+    for (;;) {
+        if (cursor->before == node) break;
+        cursor = cursor->before;
+        if (cursor->after == mark) VM_ERROR("node not in the circle");
+    }
+#endif
+
     return true;
 }
 
@@ -305,6 +325,16 @@ extern bool insert_Before(const Header mark, const Header node) {
 
     mark->before  = node;
     before->after = node;
+
+#if defined(CHECK_INSERTS)
+    Header cursor = mark;
+
+    for (;;) {
+        if (cursor->after == node) break;
+        cursor = cursor->after;
+        if (cursor->after == mark) VM_ERROR("node not in the circle");
+    }
+#endif
 
     return true;
 }
@@ -339,27 +369,36 @@ static void release_Header(const Header header) {
 
     const Space space = header->space;
 
-    if (!space)  return;
+    if (!space) return;
+
     if (header->kind.color == space->visiable) {
         VM_ERROR("releasing a dark header");
     }
 
     extract_From(header);
 
-    VM_DEBUG(1, "releasing node %p (%d,%s)[%d] (header %p) (space %p scan %p top %p)",
+    VM_DEBUG(1, "releasing node %p (%s,%s,%s,%s)[%u]"
+             " (header %p)"
+             " (space %p visiable %s scan %p top %p count %u)",
              asReference(header),
-             header->kind.tribe,
-             (header->kind.live ? "l" : "d"),
-             header->kind.count,
+             colorName(header->kind.color),
+             (header->kind.atom ? "atom" : "compound"),
+             (header->kind.live ? "live" : "dead"),
+             (header->kind.inside ? "in" : "out"),
+             (unsigned) header->kind.count,
              header,
              space,
+             colorName(space->visiable),
              space->scan,
-             space->top);
+             &(space->top),
+             (unsigned) space->count);
 
+    header->kind.color  = nc_unknown;
     header->kind.live   = 0;
     header->kind.inside = 0;
     header->kind.count  = 0;
     header->space       = 0;
+
     free(header);
 }
 
@@ -367,8 +406,6 @@ extern bool darken_Node(const Node node) {
     if (!node.reference) return true;
 
     if (!boxed_Tag(node)) return true;
-
-    return true;
 
     const Header header = asHeader(node);
 
@@ -388,12 +425,21 @@ extern bool darken_Node(const Node node) {
 
     if (header->kind.color == space->visiable) return true;
 
-    VM_DEBUG(1, "darkening node %p (size=%d) (header %p) (space %p scan %p)",
+    VM_DEBUG(1, "darkening node %p (%s,%s,%s,%s)[%u]"
+             " (header %p)"
+             " (space %p visiable %s scan %p top %p count %u)",
              node.reference,
-             header->kind.count,
+             colorName(header->kind.color),
+             (header->kind.atom ? "atom" : "compound"),
+             (header->kind.live ? "live" : "dead"),
+             (header->kind.inside ? "in" : "out"),
+             (unsigned) header->kind.count,
              header,
              space,
-             space->scan);
+             colorName(space->visiable),
+             space->scan,
+             &(space->top),
+             (unsigned) space->count);
 
     const Header scan   = space->scan;
     const Header free   = space->free;
@@ -473,7 +519,16 @@ extern void check_Node(const Node node) {
 
 extern inline void scan_Node(const Header header) __attribute__((always_inline));
 extern inline void scan_Node(const Header header) {
-    if (!header)              return;
+    if (!header) return;
+
+    VM_DEBUG(5, "scanning header %p(%s,%s,%s,%s)[%u]",
+             header,
+             colorName(header->kind.color),
+             (header->kind.atom ? "atom" : "compound"),
+             (header->kind.live ? "live" : "dead"),
+             (header->kind.inside ? "in" : "out"),
+             (unsigned) header->kind.count);
+
     if (!header->kind.inside) return;
 
     const Space space = header->space;
@@ -489,11 +544,6 @@ extern inline void scan_Node(const Header header) {
 
     if (header->kind.atom) return;
     if (1 > header->kind.count) return;
-
-    VM_DEBUG(5, "scanning header %p[%d] in space %p",
-             header,
-             header->kind.count,
-             space);
 
     darken_Node(header->kind.type);
 
@@ -537,15 +587,6 @@ extern bool node_Allocate(const Space space,
 
     const Header header = fresh_tuple(inside, size_in_char);
 
-    VM_DEBUG(1, "allocating node %p (%s)[%d] (header %p) (space %p scan %p top %p)",
-             asReference(header),
-             (header->kind.live ? "l" : "d"),
-             header->kind.count,
-             header,
-             space,
-             space->scan,
-             space->top);
-
     header->kind.atom = (atom ? 1 : 0);
 
     if (!inside) return true;
@@ -554,6 +595,23 @@ extern bool node_Allocate(const Space space,
     header->space      = space;
 
     space->count += 1;
+
+    VM_DEBUG(1,
+             "allocating node %p (%s,%s,%s,%s)[%u]"
+             " (header %p)"
+             " (space %p  visiable %s scan %p top %p count %u)",
+             asReference(header),
+             colorName(header->kind.color),
+             (header->kind.atom ? "atom" : "compound"),
+             (header->kind.live ? "live" : "dead"),
+             (header->kind.inside ? "in" : "out"),
+             (unsigned) header->kind.count,
+             (void*) header,
+             space,
+             colorName(space->visiable),
+             space->scan,
+             &(space->top),
+             (unsigned) space->count);
 
     // insert into the black chain
     if (!insert_Before(space->free, header)) {
@@ -635,22 +693,26 @@ extern void space_Scan(const Space space, unsigned int upto) {
     const Header top = &(space->top);
 
     for ( ; 0 < upto ; --upto) {
-        VM_DEBUG(5, "scan space %p %u", space, upto);
-
         const Header scan = space->scan;
 
         if (scan == top) break;
 
-        space_Check(space);
+        VM_DEBUG(1, "found header %p(%s,%s,%s,%s)[%u] in space %p[%u]",
+                 scan,
+                 colorName(scan->kind.color),
+                 (scan->kind.atom ? "atom" : "compound"),
+                 (scan->kind.live ? "live" : "dead"),
+                 (scan->kind.inside ? "in" : "out"),
+                 (unsigned) scan->kind.count,
+                 space,
+                 (unsigned) space->count);
 
         scan_Node(scan);
 
-        space_Check(space);
-
         space->scan = scan->before;
-
-        space_Check(space);
     }
+
+    space_Check(space);
 
     VM_DEBUG(5, "scan space %p end", space);
 }
@@ -667,7 +729,7 @@ extern void space_Flip(const Space space) {
 
     if (scan != top) return;
 
-    VM_DEBUG(2, "flip space %p(%ld) begin", space, space->count);
+    VM_DEBUG(2, "flip space %p[%ld] begin", space, space->count);
 
     space->count = 0;
 
@@ -694,6 +756,7 @@ extern void space_Flip(const Space space) {
 
         release_Header(hold);
     }
+
     space->free = free;
 
     space_Check(space);
@@ -713,7 +776,16 @@ extern void space_Flip(const Space space) {
 
     space->scan = root; // set the start of the new gray chain
 
-    VM_DEBUG(5, "moving bottom (2)");
+    VM_DEBUG(5, "check free and bottom and top (2)");
+
+    if (free == bottom) {
+        if (bottom->after != top) {
+            free = bottom->after;
+            space->free = free;
+        }
+    }
+
+    VM_DEBUG(5, "moving bottom (3)");
 
     // concatinate the old white and old clear chains into new white chain
     if (!extract_From(bottom)) {
@@ -727,7 +799,7 @@ extern void space_Flip(const Space space) {
         return;
     }
 
-    VM_DEBUG(5, "moving top (3)");
+    VM_DEBUG(5, "moving top (4)");
 
     if (!extract_From(top)) {
         VM_ERROR("unable ot extract the top");
@@ -740,7 +812,7 @@ extern void space_Flip(const Space space) {
         return;
     }
 
-    VM_DEBUG(5, "scan clinks (4)");
+    VM_DEBUG(5, "scan clinks (5)");
 
     Clink *start = &space->start_clinks;
     Clink *end   = &space->start_clinks;
@@ -748,6 +820,7 @@ extern void space_Flip(const Space space) {
     /* CLINK_LOCK */
     do {
         VM_DEBUG(5, "scaning clink %p(%d,%d)", start, start->max, start->index);
+
         const unsigned max = start->max;
         unsigned size = start->index;
         Target *slots = clink_Slots(start);
@@ -764,22 +837,33 @@ extern void space_Flip(const Space space) {
 
             const Reference value = slots[size].reference[0];
 
+            VM_DEBUG(5, "checking clink[%d] reference %p value %p",
+                     size,
+                     slots[size].reference,
+                     value);
+
             if (!value) continue;
 
-            const Header   header = asHeader(value);
-            const Space     space = header->space;
+            const Header header = asHeader(value);
+            const Space  space  = header->space;
 
-            if (!header->kind.inside) {
-                continue;
-            }
-            if (!space) {
-                continue;
-            }
+            VM_DEBUG(1, "found header %p(%s,%s,%s,%s)[%u] in space %p",
+                     header,
+                     colorName(header->kind.color),
+                     (header->kind.atom ? "atom" : "compound"),
+                     (header->kind.live ? "live" : "dead"),
+                     (header->kind.inside ? "in" : "out"),
+                     (unsigned) header->kind.count,
+                     space);
+
+            if (!header->kind.inside) continue;
+            if (!space) continue;
 
             darken_Node(value);
         }
         start = start->after;
-    } while ( start != end );
+
+    } while (start != end);
     /* CLINK_UNLOCK */
 
     space_Check(space);

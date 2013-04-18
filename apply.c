@@ -30,6 +30,11 @@ extern void dump_enki_stack() {
     int inx = 0;
 
     for(; traceStack ; ++inx) {
+        if (8 < inx) {
+            fprintf(stderr, "%3d:", inx);
+            fprintf(stderr, " ... ...\n");
+            break;
+        }
         Node value;
         if (pair_GetCar(traceStack, &value)) {
             fprintf(stderr, "%3d: ", inx);
