@@ -160,7 +160,7 @@ enki_ver.h : FORCE
 .dumps    : ; @mkdir .dumps
 .run      : ; @mkdir .run
 
-.run/%.log : %.ea .run
+.run/%.log : %.ea | .run
 	@./run.it $(ENKI.test) "$(RUNFLAGS)" $< $@
 
 ## === native c-compile ===

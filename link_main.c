@@ -25,7 +25,7 @@ int main(int argc, char** argv) {
 
     startEnkiLibrary();
 
-    printf("_zero_space %p\n", _zero_space);
+    printf("_zero_space %p %u\n", _zero_space, sizeof(struct pair)/sizeof(void*));
     enki_test((void*)0, (void*)(sizeof(struct pair)));
     printf("done\n");
 
