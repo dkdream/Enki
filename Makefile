@@ -53,6 +53,7 @@ FOOS      := $(notdir $(wildcard foo_*.c))
 C_SOURCES := $(filter-out $(MAINS) $(FOOS),$(notdir $(wildcard *.c)))
 H_SOURCES := $(filter-out enki.h, $(notdir $(wildcard *.h)))
 GCC_SRCS  := $(notdir $(wildcard *.gcc))
+BUILDINS  := $(wildcard ./buildins/*.c)
 
 OBJS    := $(C_SOURCES:%.c=.objects/%_n.o)
 TSTS    := $(notdir $(wildcard test_*.ea))
@@ -77,6 +78,8 @@ asm   :: $(FOOS:%.c=.dumps/%_32.s)
 asm   :: $(FOOS:%.c=.dumps/%_64.s)
 
 units :: $(UNIT_TESTS:%.gcc=%.x)
+
+buildins :: $(BUILDINS:./buildins/%.c=.dumps/%_atom.s)
 
 install : install.bin install.inc install.lib
 
@@ -243,6 +246,19 @@ enki_ver.h : FORCE
 
 .objects/%_64.o : %_64.s | .objects
 	$(AS) $(ASFLAGS) --64 -o $@ $< 
+
+## ## ## ##
+
+.PRECIOUS :: .dumps/%_atom.s .objects/%_atom.o .assembly/%_atom.s
+
+.dumps/%_atom.s : .objects/%_atom.o | .dumps
+	objdump --disassemble-all -x $< >$@
+
+.objects/%_atom.o : .assembly/%_atom.s | .objects
+	$(AS) $(ASFLAGS) --32 -o $@ $< 	
+
+.assembly/%_atom.s : ./buildins/%.c | .assembly
+	$(GCC) $(SFLAGS) -S -m32 -fverbose-asm -o $@ $<
 
 ## ## ## ##
 
