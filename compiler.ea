@@ -45,6 +45,24 @@
                (error 'flattening "xx"))))))
 
 
+## Assembly Optimization Tips http://mark.masmcode.com/
+## 80x86 instruction set
+##      http://www.penguin.cz/~literakl/intel/intel.html
+##      http://courses.engr.illinois.edu/ece390/books/labmanual/index.html
+
+## http://www.unixwiz.net/techtips/x86-jumps.html
+## AF = adjust flag
+## CF = carry flag 
+## PF = parity flag 
+## ZF = zero flag
+## SF = sign flag
+## OF = overflow flag
+##------
+## IF = Interrupt flag
+## TF = Trap flag
+##------
+## DF = Direction flag (used in string ops)
+
 ## Emit an indented instruction
 (define (insn . insn)
    (emit (cons "        " insn)))
@@ -61,38 +79,36 @@
    (lambda (rand)
       (insn mnemonic " " rand)))
 
-(define mov     (twoarg "movl"))
-(define movb    (twoarg "movb"))
-(define movzbl  (twoarg "movzbl"))
-(define lea     (twoarg "lea"))
-(define add     (twoarg "add")) 
-(define sub     (twoarg "sub"))
-(define xchg    (twoarg "xchg"))
-(define asm-and (twoarg "and"))
-(define xor     (twoarg "xor"))
+(define mov     (twoarg "movl"))   ## move 32bit->32bit
+(define movb    (twoarg "movb"))   ## move  8bit-> 8bit
+(define movzbl  (twoarg "movzbl")) ## move  8bit->32bit (zero-extended)
+(define lea     (twoarg "lea"))    ## compute address of
+(define add     (twoarg "add"))    ## arth-add    (AF CF OF PF SF ZF)
+(define add     (twoarg "adc"))    ## arth-add+CF (AF CF OF PF SF ZF)
+(define sub     (twoarg "sub"))    ## arth-sub    (AF CF OF PF SF ZF)
+(define sub     (twoarg "sbb"))    ## arth-sub-CF (AF CF OF PF SF ZF)
+(define xchg    (twoarg "xchg"))   ## exchange
+(define asm-and (twoarg "and"))    ## bitwize and (CF OF PF SF ZF)
+(define xor     (twoarg "xor"))    ## bitwize or  (CF OF PF SF ZF)
 
-(define push       (onearg "push"))
-(define pop        (onearg "pop"))
+(define push (onearg "push"))
+(define pop  (onearg "pop"))
 
-## Assembly Optimization Tips http://mark.masmcode.com/
-
-## http://www.unixwiz.net/techtips/x86-jumps.html
-## AF = adjust flag
-## CF = carry flag 
-## PF = parity flag 
-## ZF = zero flag
-## SF = sign flag
-## OF = overflow flag
-
-(define test    (twoarg "test"))
-# CF = 0, OF = 0
+(define test (twoarg "test"))
 # tmp = (argS & argD)
+# CF = 0
+# OF = 0
 # SF = MSB(tmp)
 # ZF = (tmp == 0)
 # PF = 
 
 (define cmp     (twoarg "cmp"))
 # tmp = (argD - argS)
+# CF = 0
+# OF = 0
+# SF = 
+# ZF = (tmp == 0)
+# PF = 
 
 (define jmp        (onearg "jmp"))
 (define jnoverflow (onearg "jno")) ## OF = 0
@@ -112,27 +128,29 @@
 (define jngreater  (onearg "jng")) ## ZF = 1 or SF != OF
 (define jgreater   (onearg "jg"))  ## ZF = 1 or SF == OF
 
-(define inc  (onearg "inc")) ## ++
-(define dec  (onearg "dec")) ## --
 (define call (onearg "call"))
+
+(define inc  (onearg "inc"))  ## ++
+(define dec  (onearg "dec"))  ## --
 (define idiv (onearg "idiv")) ## long divide (EDX:EAX)/xxx (signed)
-(define int  (onearg "int")) ## software interrupt
+(define int  (onearg "int"))  ## software interrupt
 
 ## These have two-arg forms too, but I'm not using them.
-(define sal (onearg "sal"))
-(define sar (onearg "sar"))
+(define sal (onearg "sal")) ## shift-arth-left  (CF OF PF SF ZF) (   CF <- b[n] <- <- b[0] <- 0  )
+(define sar (onearg "sar")) ## shift-arth-right (CF OF PF SF ZF) ( b[n] -> b[n] -> -> b[0] -> CF )
+(define sar (onearg "shr")) ## shift-log-right  (CF OF PF SF ZF) (    0 -> b[n] -> -> b[0] -> CF )
 
 ## Currently only using three zero-argument instructions:
 (define (ret)        (insn "ret"))
 
-(define (rep-stosb)  (insn "rep stosb"))  ## Repeat STOS byte
-(define (repe-cmpsb) (insn "repe cmpsb")) ## Repeat 
+(define (rep-stosb)  (insn "rep stosb"))  ## Repeat STOS byte (??)
+(define (repe-cmpsb) (insn "repe cmpsb")) ## Repeat CMPS byte (??)
 
-(define (save)       (insn "pusha"))
-(define (restore)    (insn "popa"))
+(define (save)       (insn "pusha")) ## push all registers 
+(define (restore)    (insn "popa"))  ## pop all registers
 
 ## Registers:
-(define eax "%eax") ## bottom of frame/return-value/scratch
+(define eax "%eax") ## scratch bottom-of-frame return-value
 (define ebx "%ebx") ## scratch                             (gcc-callee-saved)
 (define ecx "%ecx") ## scratch
 (define edx "%edx") ## scratch
@@ -140,7 +158,7 @@
 (define esp "%esp") ## top of stack    (enki-callee-saved) (gcc-callee-saved)
 (define esi "%esi") ## bottom of stack (enki-callee-saved) (gcc-callee-saved)
 (define edi "%edi") ## scratch                             (gcc-callee-saved)
-(define al  "%al")
+(define al  "%al")  ## low-byte of eax
 
 (define frame ebp)
 (define bos   esi)
