@@ -33,7 +33,6 @@ TAILFLAGS += -fif-conversion
 TAILFLAGS += -fif-conversion2
 TAILFLAGS += -fdelete-null-pointer-checks
 TAILFLAGS += -Wformat-security
-##TAILFLAGS += -fconserve-stack 
 
 ifneq ($(MACHINE),x86_64)
 TAILFLAGS += -fconserve-stack
@@ -64,10 +63,20 @@ DEPENDS += $(MAINS:%.c=.depends/%.d)
 
 UNIT_TESTS := test_reader.gcc test_sizes.gcc
 
-all   :: enki 
-enki  :: $(RUNS)
+all   :: enki test asm
+
+enki  :: enki.vm | lib
+
+lib ::  libEnki.a
+lib ::  libEnki_32.a
+lib ::  libEnki_64.a
+
 test  :: $(RUNS)
-units :: $(UNIT_TESTS:%.gcc=%.x) ; ls -l $(UNIT_TESTS:%.gcc=%.x)
+
+asm   :: $(FOOS:%.c=.dumps/%_32.s)
+asm   :: $(FOOS:%.c=.dumps/%_64.s)
+
+units :: $(UNIT_TESTS:%.gcc=%.x)
 
 install : install.bin install.inc install.lib
 
@@ -79,7 +88,7 @@ checkpoint : ; git checkpoint
 
 depends : $(DEPENDS)
 
-$(RUNS) : enki.vm
+$(RUNS) : | enki.vm
 
 clean ::
 	rm -fr .depends .objects .assembly .run
@@ -149,20 +158,21 @@ enki_ver.h : FORCE
 # --
 
 .PHONY :: all
-.PHONY :: enki
 .PHONY :: asm
-.PHONY :: obj
-.PHONY :: test
-.PHONY :: units
+.PHONY :: checkpoint
+.PHONY :: clean
+.PHONY :: clear
+.PHONY :: depends
+.PHONY :: enki
 .PHONY :: install
 .PHONY :: install.bin
 .PHONY :: install.inc
 .PHONY :: install.lib
-.PHONY :: checkpoint
-.PHONE :: depends
-.PHONY :: clear
-.PHONY :: clean
+.PHONY :: lib
+.PHONY :: obj
 .PHONY :: scrub
+.PHONY :: test
+.PHONY :: units
 .PHONY :: FORCE
 
 ##
@@ -194,7 +204,7 @@ enki_ver.h : FORCE
 
 ## === m32 c-compile ===
 
-.PRECIOUS :: .objects/%_32.o .assembly/%_32.s
+.PRECIOUS :: .dumps/%_32.s .objects/%_32.o .assembly/%_32.s
 
 %_32.x : .objects/%_32.o
 	$(GCC) $(CFLAGS) -m32 -o $@ $+ libEnki_32.a
@@ -210,7 +220,7 @@ enki_ver.h : FORCE
 
 ## === m64 c-compile ===
 
-.PRECIOUS :: .objects/%_64.o .assembly/%_64.s
+.PRECIOUS :: .dumps/%_64.s .objects/%_64.o .assembly/%_64.s
 
 %_64.x : .objects/%_64.o
 	$(GCC) $(CFLAGS) -o $@ $+ libEnki_64.a

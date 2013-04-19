@@ -18,7 +18,7 @@
                               (exit (new-label)))
                            (xor (const 1) eax)  ## mask result
                            (test al al)         ## test result
-                           (je pass)            ##
+                           (jzero pass)         ##
                            (mov (const 0) eax)
                            (jmp exit)
                            (label pass)

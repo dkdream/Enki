@@ -57,39 +57,66 @@
    (lambda (src dest)
       (insn mnemonic " " src ", " dest)))
 
-## For example:
+(define (onearg mnemonic)
+   (lambda (rand)
+      (insn mnemonic " " rand)))
+
 (define mov     (twoarg "movl"))
 (define movb    (twoarg "movb"))
 (define movzbl  (twoarg "movzbl"))
-(define test    (twoarg "test"))
-(define cmp     (twoarg "cmp"))
 (define lea     (twoarg "lea"))
-(define add     (twoarg "add"))
+(define add     (twoarg "add")) 
 (define sub     (twoarg "sub"))
 (define xchg    (twoarg "xchg"))
 (define asm-and (twoarg "and"))
 (define xor     (twoarg "xor"))
 
-## Emit a one-argument instruction
-(define (onearg mnemonic)
-   (lambda (rand)
-      (insn mnemonic " " rand)))
+(define push       (onearg "push"))
+(define pop        (onearg "pop"))
 
-(define push      (onearg "push"))
-(define pop       (onearg "pop"))
-(define jmp       (onearg "jmp"))
-(define jnz       (onearg "jnz"))
-(define je        (onearg "je"))
-## (define jz je)
-(define jnb       (onearg "jnb"))
-(define jl        (onearg "jl"))
-(define js        (onearg "js"))
-(define ja        (onearg "ja"))
-(define call      (onearg "call"))
-(define int       (onearg "int"))
-(define inc       (onearg "inc"))
-(define dec       (onearg "dec"))
-(define idiv      (onearg "idiv"))
+## Assembly Optimization Tips http://mark.masmcode.com/
+
+## http://www.unixwiz.net/techtips/x86-jumps.html
+## AF = adjust flag
+## CF = carry flag 
+## PF = parity flag 
+## ZF = zero flag
+## SF = sign flag
+## OF = overflow flag
+
+(define test    (twoarg "test"))
+# CF = 0, OF = 0
+# tmp = (argS & argD)
+# SF = MSB(tmp)
+# ZF = (tmp == 0)
+# PF = 
+
+(define cmp     (twoarg "cmp"))
+# tmp = (argD - argS)
+
+(define jmp        (onearg "jmp"))
+(define jnoverflow (onearg "jno")) ## OF = 0
+(define joverflow  (onearg "jo"))  ## OF = 1
+(define jnsign     (onearg "jns")) ## SF = 0
+(define jsign      (onearg "js"))  ## SF = 1
+(define jnzero     (onearg "jnz")) ## ZF = 0
+(define jzero      (onearg "jz"))  ## ZF = 1
+(define jncarry    (onearg "jnc")) ## CF = 0
+(define jcarry     (onearg "jc"))  ## CF = 1
+(define jnparity   (onearg "jnp")) ## PF = 0
+(define jparity    (onearg "jp"))  ## PF = 1
+(define jnabove    (onearg "jna")) ## CF = 1 or ZF = 1
+(define jabove     (onearg "ja"))  ## CF = 0 or ZF = 0
+(define jnless     (onearg "jnl")) ## SF == OF 
+(define jless      (onearg "jl"))  ## SF != OF 
+(define jngreater  (onearg "jng")) ## ZF = 1 or SF != OF
+(define jgreater   (onearg "jg"))  ## ZF = 1 or SF == OF
+
+(define inc  (onearg "inc")) ## ++
+(define dec  (onearg "dec")) ## --
+(define call (onearg "call"))
+(define idiv (onearg "idiv")) ## long divide (EDX:EAX)/xxx (signed)
+(define int  (onearg "int")) ## software interrupt
 
 ## These have two-arg forms too, but I'm not using them.
 (define sal (onearg "sal"))
@@ -97,8 +124,10 @@
 
 ## Currently only using three zero-argument instructions:
 (define (ret)        (insn "ret"))
-(define (rep-stosb)  (insn "rep stosb"))
-(define (repe-cmpsb) (insn "repe cmpsb"))
+
+(define (rep-stosb)  (insn "rep stosb"))  ## Repeat STOS byte
+(define (repe-cmpsb) (insn "repe cmpsb")) ## Repeat 
+
 (define (save)       (insn "pusha"))
 (define (restore)    (insn "popa"))
 
