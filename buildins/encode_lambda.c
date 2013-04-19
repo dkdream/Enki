@@ -1,5 +1,10 @@
 #include "prefix.inc"
 
+static void environ_Lambda(Node symbol, Node env, Target result)
+{
+    pair_Create(symbol, NIL, result.pair);
+}
+
 void SUBR(encode_lambda) {
     Node formals; Node body; Node lenv;
 

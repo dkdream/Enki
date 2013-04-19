@@ -589,7 +589,7 @@ extern bool node_Allocate(const Space space,
     VM_DEBUG(1, "node_Allocate(%p, %s, %u, %p)",
              space,
              (atom ? "atom" : "compound"),
-             size_in_char,
+             (unsigned) size_in_char,
              target.reference);
 
     if (!target.reference) return false;

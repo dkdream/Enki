@@ -28,18 +28,11 @@
 #include <unistd.h>
 
 #define SUBR(NAME) opr_##NAME(Node args, Node env, Target result)
+
+#if 0
 #define checkArgs(node, name, min, ...) countArgs(node)
 
-#define int_do(NAME, OP) \
-void SUBR(NAME) \
-{ \
-    Node left; Node right; \
-    checkArgs(args, #OP, 2, t_integer, t_integer); \
-    forceArgs(args, &left, &right, 0); \
-    integer_Create((left.integer->value) OP (right.integer->value), result.integer); \
-}
-
-static unsigned countArgs(Node args) {
+static inline unsigned countArgs(Node args) {
     unsigned count  = 0;
     bool     dotted = false;
 
@@ -48,7 +41,7 @@ static unsigned countArgs(Node args) {
     return count;
 }
 
-static bool opaque_Create(Node type, long size, Reference* target) {
+static inline bool opaque_Create(Node type, long size, Reference* target) {
     if (!node_Allocate(_zero_space,
                        true,
                        size,
@@ -64,23 +57,7 @@ static bool opaque_Create(Node type, long size, Reference* target) {
     return result;
 }
 
-#if 0
-static unsigned checkArgs(Node args, const char* name, unsigned min, ...)
-{
-    unsigned count  = 0;
-    bool     dotted = false;
-
-    list_State(args.pair, &count, &dotted);
-
-    if (count < min) {
-        fatal("too few arguments (%i) to: %s\n", count, name);
-    }
-
-    return count;
-}
-#endif
-
-static void forceArg(Node arg, Target result) {
+static inline void forceArg(Node arg, Target result) {
     GC_Begin(2);
     Node tmp;
 
@@ -108,7 +85,7 @@ static void forceArg(Node arg, Target result) {
     GC_End();
 }
 
-static void forceArgs(Node args, ...)
+static inline void forceArgs(Node args, ...)
 {
     GC_Begin(2);
     Node tmp;
@@ -146,7 +123,7 @@ static void forceArgs(Node args, ...)
     GC_End();
 }
 
-static void fetchArgs(Node args, ...)
+static inline void fetchArgs(Node args, ...)
 {
     va_list ap;
     va_start(ap, args);
@@ -174,8 +151,7 @@ static void fetchArgs(Node args, ...)
     va_end(ap);
 }
 
-
-static void eval_binding(Node binding, Node env, Target entry)
+static inline void eval_binding(Node binding, Node env, Target entry)
 {
     GC_Begin(2);
     Node symbol, expr, value;
@@ -193,7 +169,7 @@ static void eval_binding(Node binding, Node env, Target entry)
     GC_End();
 }
 
-static void eval_begin(Node body, Node env, Target last)
+static inline void eval_begin(Node body, Node env, Target last)
 {
     GC_Begin(2);
 
@@ -212,25 +188,13 @@ static void eval_begin(Node body, Node env, Target last)
     GC_End();
 }
 
-static void environ_Let(Node local, Node env, Target result)
-{
-    Node symbol;
-    pair_GetCar(local.pair, &symbol);
-    pair_Create(symbol, NIL, result.pair);
-}
-
-static void environ_Lambda(Node symbol, Node env, Target result)
-{
-    pair_Create(symbol, NIL, result.pair);
-}
-
-static void call_with(const Node function, const Node value, const Node env, Target target) {
+static inline void call_with(const Node function, const Node value, const Node env, Target target) {
     Pair args;
     pair_Create(value, NIL, &args);
     apply(function, args, env, target);
 }
 
-static void formatAppendTo(TextBuffer *buffer, Node value) {
+static inline void formatAppendTo(TextBuffer *buffer, Node value) {
     char data[20];
 
     if (isNil(value)) return;
@@ -255,9 +219,12 @@ static void formatAppendTo(TextBuffer *buffer, Node value) {
         return;
     }
 }
+#endif
 
 struct os_file {
     FILE* file;
 };
 
 typedef struct os_file* OSFile;
+
+

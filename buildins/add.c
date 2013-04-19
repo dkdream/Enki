@@ -2,8 +2,7 @@
 
 void SUBR(add)
 {
-    Node left; Node right;
-    checkArgs(args, "+", 2, t_integer, t_integer);
+    Integer left; Integer right;
     forceArgs(args, &left, &right, 0);
-    integer_Create((left.integer->value) + (right.integer->value), result.integer);
+    integer_Create((left->value) + (right->value), result.integer);
 }

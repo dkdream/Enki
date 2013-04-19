@@ -64,7 +64,7 @@ DEPENDS += $(MAINS:%.c=.depends/%.d)
 
 UNIT_TESTS := test_reader.gcc test_sizes.gcc
 
-all   :: enki test asm
+all   :: enki test asm buildins
 
 enki  :: enki.vm | lib
 
@@ -94,7 +94,7 @@ depends : $(DEPENDS)
 $(RUNS) : | enki.vm
 
 clean ::
-	rm -fr .depends .objects .assembly .run
+	rm -fr .depends .objects .assembly .run .dumps
 	rm -f enki.vm libEnki.a libEnki_32.a libEnki_64.a
 	rm -f *~ ./#* *.x *.s *.o
 	rm -f test.*.out test.out

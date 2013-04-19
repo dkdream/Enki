@@ -1,5 +1,12 @@
 #include "prefix.inc"
 
+static void environ_Let(Node local, Node env, Target result)
+{
+    Node symbol;
+    pair_GetCar(local.pair, &symbol);
+    pair_Create(symbol, NIL, result.pair);
+}
+
 void SUBR(encode_let) {
     Node locals; Node lenv;
 
