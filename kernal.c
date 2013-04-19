@@ -1849,6 +1849,10 @@ extern SUBR(sizeof) {
         integer_Create(WORD_SIZE, result.integer);
     }
 
+    if (isIdentical(kind, s_clink)) {
+        integer_Create(sizeof(struct gc_clink), result.integer);
+    }
+
     if (isIdentical(kind, s_header)) {
         integer_Create(sizeof(struct gc_header), result.integer);
     }
@@ -1859,6 +1863,42 @@ extern SUBR(sizeof) {
 
     if (isIdentical(kind, s_node)) {
         integer_Create(sizeof(Node), result.integer);
+    }
+
+    if (isIdentical(kind, s_target)) {
+        integer_Create(sizeof(Target), result.integer);
+    }
+
+    if (isIdentical(kind, s_unsigned)) {
+        integer_Create(sizeof(unsigned), result.integer);
+    }
+
+    if (isIdentical(kind, s_integer)) {
+        integer_Create(sizeof(struct integer), result.integer);
+    }
+
+    if (isIdentical(kind, s_pair)) {
+        integer_Create(sizeof(struct pair), result.integer);
+    }
+
+    if (isIdentical(kind, s_hashcode)) {
+        integer_Create(sizeof(HashCode), result.integer);
+    }
+
+    if (isIdentical(kind, s_text)) {
+        integer_Create(sizeof(struct text), result.integer);
+    }
+
+    if (isIdentical(kind, s_type)) {
+        integer_Create(sizeof(struct type), result.integer);
+    }
+
+    if (isIdentical(kind, s_sort)) {
+        integer_Create(sizeof(struct sort), result.integer);
+    }
+
+    if (isIdentical(kind, s_tuple)) {
+        integer_Create(sizeof(struct tuple), result.integer);
     }
 }
 

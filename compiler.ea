@@ -90,6 +90,7 @@
 (define xchg    (twoarg "xchg"))   ## exchange
 (define asm-and (twoarg "and"))    ## bitwize and (CF OF PF SF ZF)
 (define xor     (twoarg "xor"))    ## bitwize or  (CF OF PF SF ZF)
+(define imul    (twoarg "imul"))
 
 (define push (onearg "push"))
 (define pop  (onearg "pop"))
@@ -134,6 +135,8 @@
 (define dec  (onearg "dec"))  ## --
 (define idiv (onearg "idiv")) ## long divide (EDX:EAX)/xxx (signed)
 (define int  (onearg "int"))  ## software interrupt
+(define mul  (onearg "mull")) ##
+
 
 ## These have two-arg forms too, but I'm not using them.
 (define sal (onearg "sal")) ## shift-arth-left  (CF OF PF SF ZF) (   CF <- b[n] <- <- b[0] <- 0  )
@@ -150,7 +153,7 @@
 (define (restore)    (insn "popa"))  ## pop all registers
 
 ## Registers:
-(define eax "%eax") ## scratch bottom-of-frame return-value
+(define eax "%eax") ## scratch    (bottom-of-frame|return-value)
 (define ebx "%ebx") ## scratch                             (gcc-callee-saved)
 (define ecx "%ecx") ## scratch
 (define edx "%edx") ## scratch
@@ -159,6 +162,10 @@
 (define esi "%esi") ## bottom of stack (enki-callee-saved) (gcc-callee-saved)
 (define edi "%edi") ## scratch                             (gcc-callee-saved)
 (define al  "%al")  ## low-byte of eax
+
+## edx:eax = long-long accumulater
+## ebx:ecx = long-long argument
+## edi     = 
 
 (define frame ebp)
 (define bos   esi)
@@ -274,6 +281,44 @@
                (drop count))
          (call function))))
 
+(define (compile-load-acc node)
+   (lea node edi)
+   (mov (indirect edi) eax)
+   (mov (offset edi 4) edx))
+
+(define (compile-add-acc node)
+   (lea node edi)
+   (mov (indirect edi) ecx)
+   (mov (offset edi 4) ebx)
+   (add ecx eax)
+   (adc ebx edx))
+
+(define (compile-sub-acc node)
+   (lea node edi)
+   (mov (indirect edi) ecx)
+   (mov (offset edi 4) ebx)
+   (sub ecx eax)
+   (sbb ebx edx))
+
+(define (compile-mul-acc node)
+   (lea node edi)
+   (mov (indirect edi) ecx)
+   (mov (offset edi 4) ebx)
+   (push bos)
+   (mov  ebx esi)
+   (imul eax esi) ## high-l * low-r
+   (mov  edx edi)
+   (imul ecx edi) ## low-l * high-r
+   (add  edi esi)
+   (mul  ecx)
+   (add  edi esi)
+   (mov  esi edx)
+   (pop bos))
+
+(define (compile-store-acc node)
+   (lea node edi)
+   (mov eax (indirect edi))
+   (mov ebx (offset edi 4)))
    
 
 

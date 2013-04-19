@@ -146,7 +146,7 @@ struct gc_treadmill {
     } __attribute__((__packed__));
 };
 
-extern Space _zero_space;
+extern Space    _zero_space;
 extern unsigned __alloc_cycle;
 extern unsigned __scan_cycle;
 

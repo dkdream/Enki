@@ -16,51 +16,50 @@
 #include "text_buffer.h"
 
 struct symbol {
+    HashCode      hashcode;
     // size in char
     unsigned int  size;
-    HashCode      hashcode;
     unsigned long value[1];
 };
 
 extern Symbol _empty_symbol;
+extern Symbol s_symbol;
 extern Symbol s_dot;
-extern Symbol s_global;
-extern Symbol s_current;
-extern Symbol s_nil;
-extern Symbol s_quasiquote;
-extern Symbol s_quote;
-extern Symbol s_set;
-extern Symbol s_t;
-extern Symbol s_true;
-extern Symbol s_unquote;
-extern Symbol s_unquote_splicing;
-
-// syntax type names
 extern Symbol s_comma;
 extern Symbol s_colon;
 extern Symbol s_semi;
-extern Symbol s_block;
 
-// raw type names
-extern Symbol s_symbol;
-
-// the type system
-extern Symbol s_base;
-extern Symbol s_type;
-extern Symbol s_sort;
 extern Symbol s_axiom;
-extern Symbol s_rule;
-extern Symbol s_name;
-
-// c-library type names
-extern Symbol s_opaque;
-
-//
-extern Symbol s_pointer;
-extern Symbol s_word;
+extern Symbol s_base;
+extern Symbol s_block;
+extern Symbol s_clink;
+extern Symbol s_current;
+extern Symbol s_global;
+extern Symbol s_hashcode;
 extern Symbol s_header;
+extern Symbol s_integer;
 extern Symbol s_kind;
+extern Symbol s_name;
+extern Symbol s_nil;
 extern Symbol s_node;
+extern Symbol s_opaque;
+extern Symbol s_pair;
+extern Symbol s_pointer;
+extern Symbol s_quasiquote;
+extern Symbol s_quote;
+extern Symbol s_rule;
+extern Symbol s_set;
+extern Symbol s_sort;
+extern Symbol s_t;
+extern Symbol s_target;
+extern Symbol s_text;
+extern Symbol s_true;
+extern Symbol s_tuple;
+extern Symbol s_type;
+extern Symbol s_unquote;
+extern Symbol s_unquote_splicing;
+extern Symbol s_unsigned;
+extern Symbol s_word;
 
 extern bool symbol_Create(TextBuffer value, Symbol*);
 extern bool symbol_Convert(const char* value, Symbol*);

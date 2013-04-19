@@ -11,9 +11,9 @@
 
 /* */
 struct text {
+    HashCode hashcode;
     // size in chars
     unsigned int  size;
-    HashCode      hashcode;
     unsigned long value[1];
 };
 
