@@ -3,7 +3,7 @@
 
 ## (alloc_gc atom size type)
 
-(define (alloc_gc)
+(define (alloc_gc_1)
    (compile-function "alloc_gc" 3 1
                      (lambda () 
                         (mov (const 0) (lcl 0)) ## init ret
@@ -25,5 +25,26 @@
                            (pop eax)
                            (label exit)))))
 
+(define (alloc_gc_2)
+   (compile-function "alloc_gc" 3 1
+                     (lambda () 
+                        (mov (const 0) (lcl 0)) ## init ret
+                        (lea (lcl 0) eax)       ## hold address of result
+                        (compile-c-call "node_Allocate"
+                                        "_zero_space"
+                                        (arg 0)
+                                        (arg 1)
+                                        eax)
+                        (let ((pass (new-label))
+                              (exit (new-label)))
+                           (xor (const 1) eax)  ## mask result
+                           (test al al)         ## test result
+                           (jzero pass)         ##
+                           (mov (const 0) eax)
+                           (jmp exit)
+                           (label pass)
+                           (pop eax)
+                           (label exit)))))
 
-(alloc_gc)
+
+(alloc_gc_2)

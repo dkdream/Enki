@@ -33,7 +33,8 @@ TAILFLAGS += -fif-conversion
 TAILFLAGS += -fif-conversion2
 TAILFLAGS += -fdelete-null-pointer-checks
 TAILFLAGS += -Wformat-security
-TAILFLAGS += -fconserve-stack
+
+##TAILFLAGS += -fconserve-stack
 
 RUNFLAGS := 
 
@@ -92,7 +93,7 @@ scrub ::
 	@rm -rf .depends
 
 enki.vm : .objects/enki_main_32.o libEnki_32.a 
-	$(GCC) $(CFLAGS) -o $@ $^ $(LIBFLAGS)
+	$(GCC) $(CFLAGS) -m32 -o $@ $^ $(LIBFLAGS)
 
 test :: link_main.x
 	./link_main.x
@@ -174,10 +175,10 @@ enki_ver.h : FORCE
 	$(GCC) $(CFLAGS) -m32 -o $@ $+ libEnki_32.a
 
 .dumps/%_32.s : .objects/%_32.o | .dumps 
-	objdump --disassemble-all -x $< >$@
+	@objdump --disassemble-all -x $< >$@
 
 .objects/%_32.o : .assembly/%_32.s | .objects
-	$(AS) $(ASFLAGS) --32 -o $@ $< 
+	@$(AS) $(ASFLAGS) --32 -o $@ $< 
 
 .assembly/%_32.s : %.c | .assembly
 	$(GCC) $(SFLAGS) -S -m32 -fverbose-asm -o $@ $<
@@ -192,10 +193,10 @@ enki_ver.h : FORCE
 .PRECIOUS :: .dumps/%_atom.s .objects/%_atom.o .assembly/%_atom.s
 
 .dumps/%_atom.s : .objects/%_atom.o | .dumps
-	objdump --disassemble-all -x $< >$@
+	@objdump --disassemble-all -x $< >$@
 
 .objects/%_atom.o : .assembly/%_atom.s | .objects
-	$(AS) $(ASFLAGS) --32 -o $@ $< 	
+	@$(AS) $(ASFLAGS) --32 -o $@ $< 	
 
 .assembly/%_atom.s : ./buildins/%.c | .assembly
 	$(GCC) $(SFLAGS) -S -m32 -fverbose-asm -o $@ $<

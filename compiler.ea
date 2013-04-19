@@ -84,7 +84,7 @@
 (define movzbl  (twoarg "movzbl")) ## move  8bit->32bit (zero-extended)
 (define lea     (twoarg "lea"))    ## compute address of
 (define add     (twoarg "add"))    ## arth-add    (AF CF OF PF SF ZF)
-(define add     (twoarg "adc"))    ## arth-add+CF (AF CF OF PF SF ZF)
+(define adc     (twoarg "adc"))    ## arth-add+CF (AF CF OF PF SF ZF)
 (define sub     (twoarg "sub"))    ## arth-sub    (AF CF OF PF SF ZF)
 (define sub     (twoarg "sbb"))    ## arth-sub-CF (AF CF OF PF SF ZF)
 (define xchg    (twoarg "xchg"))   ## exchange
@@ -171,6 +171,10 @@
 (define (offset x offset) (list offset (indirect x)))
 (define (absolute x)      (list "*" x))
 
+## Use this one inside of "indirect" or "offset".
+(define (index-register base index size)
+   (list base "," index "," size))
+
 (define (arg index) 
    (offset frame (* -4 (++ index))))
 
@@ -180,10 +184,6 @@
 (define (drop count)
    (let ((size (* 4 count)))
       (add (const size) tos)))
-
-## Use this one inside of "indirect" or "offset".
-(define (index-register base index size)
-   (list base "," index "," size))
 
 (define (syscall) (int (const "0x80")))
 
@@ -259,7 +259,22 @@
    (compile-function-epilogue)
    (insn ".size " bodylabel ", .-" bodylabel)) ## may not be needed
 
-(define (compile-c-call function nargs))
+(define (compile-c-call function . args)
+   (let ((count  (length args))
+         (pushit))
+      (set pushit (lambda (list)
+                     (if (pair? list)
+                           (begin 
+                              (pushit (cdr list))
+                              (push (car list))))))
+      (if count
+            (begin 
+               (pushit args)
+               (call function)
+               (drop count))
+         (call function))))
+
+   
 
 
 

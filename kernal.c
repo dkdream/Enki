@@ -297,7 +297,6 @@ extern SUBR(or)
     GC_End();
 }
 
-#if 0
 extern SUBR(while)
 { //Fixed
     Node tst  = NIL;
@@ -315,7 +314,6 @@ extern SUBR(while)
         eval_begin(body, env, result);
     }
 }
-#endif
 
 extern SUBR(set)
 { //Fixed
@@ -2111,6 +2109,23 @@ extern SUBR(scan_cycle) {
     __scan_cycle = value.integer->value;
 }
 
+extern SUBR(length) {
+    Node     list;
+    unsigned count  = 0;
+    bool     dotted = false;
+
+    forceArgs(args, &list, 0);
+
+    ASSIGN(result, NIL);
+
+    if (isType(list, t_pair)) {
+        unsigned count  = 0;
+        bool     dotted = false;
+        list_State(list.pair, &count, &dotted);
+        integer_Create(count, result.integer);
+    }
+}
+
 /***************************************************************
  ***************************************************************
  ***************************************************************
@@ -2274,6 +2289,8 @@ void startEnkiLibrary() {
     MK_FXD(set);
     MK_FXD(delay);
 
+    MK_FXD(while);
+
     MK_EFXD(let,encode_let);
     MK_EFXD(lambda,encode_lambda);
 
@@ -2281,6 +2298,8 @@ void startEnkiLibrary() {
     MK_OPR(%and,and);
     MK_OPR(%or,or);
     MK_OPR(%set,set);
+
+    MK_OPR(%while,while);
 
     MK_OPR(%let,let);
     MK_OPR(%lambda,lambda);
@@ -2379,6 +2398,7 @@ void startEnkiLibrary() {
     MK_OPR(symbol?,symbol_q);
     MK_OPR(alloc-cycle,alloc_cycle);
     MK_OPR(scan-cycle,scan_cycle);
+    MK_PRM(length);
 
     clock_t cend = clock();
 
