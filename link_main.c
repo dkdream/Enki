@@ -21,7 +21,7 @@ void enki_test(void* atom, void* type, void* size) {
         : "m" (atom), "m" (size), "m" (type)
         : "%eax", "%ebx", "%ecx", "%esi", "edi");
 
-    printf("results %p\n", holding);
+    printf("results %p type %p\n", holding, getType(holding).reference);
 }
 
 int main(int argc, char** argv) {

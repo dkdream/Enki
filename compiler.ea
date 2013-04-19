@@ -215,7 +215,7 @@
 (define (rodatum labelname)
    (rodata)
    (comment "align pointers so they end in binary 00")
-   (insn ".align 4")
+   (insn ".align " (sizeof 'pointer))
    (label labelname))
 
 ## index is zero-based
@@ -249,7 +249,7 @@
 
 (define (compile-function bodylabel nargs nlcls body)
    (text)
-   (insn ".align 4")
+   (insn ".align " (sizeof 'pointer))
    (insn ".type " bodylabel ", @function")  ## may not be needed
    (global-label bodylabel)
    (compile-function-prologue)
