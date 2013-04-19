@@ -33,10 +33,7 @@ TAILFLAGS += -fif-conversion
 TAILFLAGS += -fif-conversion2
 TAILFLAGS += -fdelete-null-pointer-checks
 TAILFLAGS += -Wformat-security
-
-ifneq ($(MACHINE),x86_64)
 TAILFLAGS += -fconserve-stack
-endif
 
 RUNFLAGS := 
 
@@ -55,7 +52,7 @@ H_SOURCES := $(filter-out enki.h, $(notdir $(wildcard *.h)))
 GCC_SRCS  := $(notdir $(wildcard *.gcc))
 BUILDINS  := $(wildcard ./buildins/*.c)
 
-OBJS    := $(C_SOURCES:%.c=.objects/%_n.o)
+OBJS    := $(C_SOURCES:%.c=.objects/%_32.o)
 TSTS    := $(notdir $(wildcard test_*.ea))
 RUNS    := $(TSTS:test_%.ea=.run/test_%.log)
 
@@ -64,22 +61,13 @@ DEPENDS += $(MAINS:%.c=.depends/%.d)
 
 UNIT_TESTS := test_reader.gcc test_sizes.gcc
 
-all   :: enki test asm buildins
-
+all   :: enki test asm atoms
 enki  :: enki.vm | lib
-
-lib ::  libEnki.a
-lib ::  libEnki_32.a
-lib ::  libEnki_64.a
-
+lib   :: libEnki_32.a
 test  :: $(RUNS)
-
 asm   :: $(FOOS:%.c=.dumps/%_32.s)
-asm   :: $(FOOS:%.c=.dumps/%_64.s)
-
 units :: $(UNIT_TESTS:%.gcc=%.x)
-
-buildins :: $(BUILDINS:./buildins/%.c=.dumps/%_atom.s)
+atoms :: $(BUILDINS:./buildins/%.c=.dumps/%_atom.s)
 
 install : install.bin install.inc install.lib
 
@@ -103,14 +91,13 @@ scrub ::
 	@make clean
 	@rm -rf .depends
 
-enki.vm : .objects/enki_main_n.o libEnki.a 
+enki.vm : .objects/enki_main_32.o libEnki_32.a 
 	$(GCC) $(CFLAGS) -o $@ $^ $(LIBFLAGS)
 
 test :: link_main.x
 	./link_main.x
 
 test :: $(FOOS:%.c=.dumps/%_32.s)
-test :: $(FOOS:%.c=.dumps/%_64.s)
 
 link_main.x : .objects/link_main_32.o .objects/foo_32.o libEnki_32.a
 	$(GCC) $(CFLAGS) -m32 -o $@ .objects/link_main_32.o .objects/foo_32.o -L. -lEnki_32
@@ -118,13 +105,7 @@ link_main.x : .objects/link_main_32.o .objects/foo_32.o libEnki_32.a
 foo_32.s : foo.ea | enki.vm
 	./enki.vm ./foo.ea >foo_32.s
 
-$(UNIT_TESTS:%.gcc=%.x) : libEnki.a
-
-libEnki.a : $(OBJS) $(ASMS)
-	-$(RM) $@
-	$(AR) $(ARFLAGS) $@ $(OBJS)
-	$(RANLIB) $@
-	@touch $@
+$(UNIT_TESTS:%.gcc=%.x) : libEnki_32.a
 
 libEnki_32.a : $(OBJS:%_n.o=%_32.o)
 	-$(RM) $@
@@ -132,14 +113,8 @@ libEnki_32.a : $(OBJS:%_n.o=%_32.o)
 	$(RANLIB) $@
 	@touch $@
 
-libEnki_64.a : $(OBJS:%_n.o=%_64.o)
-	-$(RM) $@
-	$(AR) $(ARFLAGS) $@ $(OBJS:%_n.o=%_64.o)
-	$(RANLIB) $@
-	@touch $@
-
 obj :: $(OBJS)
-obj :: $(MAINS:%.c=.objects/%.o)
+obj :: $(MAINS:%.c=.objects/%_32.o)
 
 $(BINDIR) : ; [ -d $@ ] || mkdir -p $@
 $(INCDIR) : ; [ -d $@ ] || mkdir -p $@
@@ -191,20 +166,6 @@ enki_ver.h : FORCE
 .run/%.log : %.ea | .run
 	@./run.it $(ENKI.test) "$(RUNFLAGS)" $< $@
 
-## === native c-compile ===
-
-.PRECIOUS :: .objects/%_n.o .assembly/%_n.s
-
-%_n.x : .objects/%_n.o
-	$(GCC) $(CFLAGS) -o $@ $+ libEnki.a
-
-.objects/%_n.o : .assembly/%_n.s | .objects
-	$(AS) $(ASFLAGS) -o $@ $< 
-
-.assembly/%_n.s : %.c | .assembly
-	@echo $(GCC) $(DBFLAGS) -c -o $@ $<
-	@$(GCC) $(CFLAGS) -ggdb -S -fverbose-asm -o $@ $<
-
 ## === m32 c-compile ===
 
 .PRECIOUS :: .dumps/%_32.s .objects/%_32.o .assembly/%_32.s
@@ -221,31 +182,10 @@ enki_ver.h : FORCE
 .assembly/%_32.s : %.c | .assembly
 	$(GCC) $(SFLAGS) -S -m32 -fverbose-asm -o $@ $<
 
-## === m64 c-compile ===
-
-.PRECIOUS :: .dumps/%_64.s .objects/%_64.o .assembly/%_64.s
-
-%_64.x : .objects/%_64.o
-	$(GCC) $(CFLAGS) -o $@ $+ libEnki_64.a
-
-.dumps/%_64.s : .objects/%_64.o | .dumps
-	objdump --disassemble-all -x $< >$@
-
-.objects/%_64.o : .assembly/%_64.s | .objects
-	$(AS) $(ASFLAGS) --64 -o $@ $< 
-
-.assembly/%_64.s : %.c | .assembly
-	$(GCC) $(SFLAGS) -S -m64 -fverbose-asm -o $@ $<
-
 ## ## ## ##
 
 .objects/%_32.o : %_32.s | .objects
 	$(AS) $(ASFLAGS) --32 -o $@ $< 
-
-## ## ## ##
-
-.objects/%_64.o : %_64.s | .objects
-	$(AS) $(ASFLAGS) --64 -o $@ $< 
 
 ## ## ## ##
 
