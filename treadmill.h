@@ -88,6 +88,7 @@ struct gc_clink {
     Clink*   after;
     unsigned max;
     unsigned index;
+    Target*  slots;
 };
 
 enum gc_color {
@@ -166,20 +167,19 @@ extern void space_Scan(const Space, unsigned int);
      space_Flip(_zero_space); \
      fprintf(stderr, "end\n")
 
-extern void clink_Init(Clink *link, unsigned max)    __attribute__((nonnull));
+extern void clink_Init(Clink *link, Target* slots, unsigned max) __attribute__((nonnull (1,2)));
 extern void clink_Manage(Clink *link, Target slot)   __attribute__((nonnull));
 extern void clink_UnManage(Clink *link, Target slot) __attribute__((nonnull));
 extern void clink_Final(Clink *link)                 __attribute__((nonnull));
 
 #define GC_Begin(MAX) \
-    struct { Clink link__; Target array[MAX];} __LOCAL_GC;    \
-    clink_Init((Clink*)(& __LOCAL_GC), MAX)
+    struct { Clink link; Target array[MAX];} __LOCAL_GC; \
+    clink_Init((Clink*)(& __LOCAL_GC), __LOCAL_GC.array, MAX)
 
 #define GC_Protect(NAME) \
    clink_Manage((Clink*)(& __LOCAL_GC), &(NAME))
 
-#define GC_UnProtect(NAME) \
-   clink_UnManage((Clink*)(& __LOCAL_GC), &(NAME))
+#define GC_Inline_Protect(NAME) ({  __LOCAL_GC.link.slots[__LOCAL_GC.link.index++] = (Target) &(NAME); })
 
 #define GC_End() \
     clink_Final((Clink*)(& __LOCAL_GC))
@@ -231,9 +231,9 @@ extern inline Header asHeader(const Node value) {
 
 extern inline Kind asKind(const Node value) __attribute__((always_inline));
 extern inline Kind asKind(const Node value) {
-    Header header = asHeader(value);
-    if (!header) return (Kind)0;
-    return &(header->kind);
+    if (!boxed_Tag(value)) return (Kind)0;
+    if (!value.reference) return (Kind)0;
+    return (((Kind)value.reference) - 1);
 }
 
 
@@ -293,8 +293,7 @@ extern inline unsigned long toSize(unsigned long size_in_pointers) {
 }
 
 extern inline Reference init_atom(Header, unsigned long) __attribute__((nonnull always_inline));
-extern inline Reference init_atom(Header header,
-                                  unsigned long size_in_chars)
+extern inline Reference init_atom(Header header, unsigned long size_in_chars)
 {
     unsigned long fullcount = toCount(size_in_chars);
     memset(header, 0, sizeof(struct gc_header));

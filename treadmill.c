@@ -84,7 +84,7 @@ static inline void fast_unlock(int *address) {
 }
 
 static Target *clink_Slots(Clink *link) {
-    return (Target *)(link + 1);
+    return link->slots;
 }
 
 extern inline const char* colorName(enum gc_color value) __attribute__((always_inline));
@@ -299,9 +299,9 @@ static void scan_ForDead__(const Header root, const Header top) {
 
         int inx;
         for (inx = 0; inx < cursor->kind.count; ++inx) {
-            const Header header = asHeader(slot[inx]);
-            if (!header) continue;
-            if (!header->kind.live) {
+            const Kind kind = asKind(slot[inx]);
+            if (!kind) continue;
+            if (!kind->live) {
                 fatal("ForDead");
             }
         }
@@ -504,13 +504,19 @@ extern void check_Node(const Node node) {
 
      if (!boxed_Tag(node)) return;
 
+     const Kind   kind   = asKind(node);
      const Header header = asHeader(node);
-     const Space  space  = header->space;
 
-     if (space) {
-         if (!header->kind.inside) {
-             BOOM();
-         }
+     if (&(header->kind) != kind) {
+         BOOM();
+     }
+
+     if (!kind->inside) return;
+
+     const Space space  = header->space;
+
+     if (!space) {
+         BOOM();
      }
 
      if (!header->kind.live) {
@@ -611,14 +617,22 @@ extern bool node_Allocate(const Space space,
         }
     }
 
-    const Header header = fresh_tuple(inside, size_in_char);
+    const Header  header = fresh_tuple(inside, size_in_char);
+    const Reference node = asReference(header);
+    const Kind      kind = asKind(node);
 
-    header->kind.atom = (atom ? 1 : 0);
+    if (&(header->kind) != kind) {
+        VM_ERROR("header pointer error:  kind %p header.kind %p",
+                 kind,
+                 &(header->kind));
+    }
+
+    kind->atom = (atom ? 1 : 0);
 
     if (!inside) return true;
 
-    header->kind.color = space->visiable;
-    header->space      = space;
+    kind->color   = space->visiable;
+    header->space = space;
 
     space->count += 1;
 
@@ -626,12 +640,12 @@ extern bool node_Allocate(const Space space,
              "allocating node %p (%s,%s,%s,%s)[%u]"
              " (header %p)"
              " (space %p visiable %s scan %p top %p count %u)",
-             asReference(header),
-             colorName(header->kind.color),
-             (header->kind.atom ? "atom" : "compound"),
-             (header->kind.live ? "live" : "dead"),
-             (header->kind.inside ? "in" : "out"),
-             (unsigned) header->kind.count,
+             node,
+             colorName(kind->color),
+             (kind->atom ? "atom" : "compound"),
+             (kind->live ? "live" : "dead"),
+             (kind->inside ? "in" : "out"),
+             (unsigned) kind->count,
              (void*) header,
              space,
              colorName(space->visiable),
@@ -642,17 +656,18 @@ extern bool node_Allocate(const Space space,
     // insert into the black chain
     if (!insert_Before(space->free, header)) {
         VM_ERROR("unable to add to node %p to black list of %p",
-                 asReference(header),
+                 node,
                  space);
         return false;
     }
 
-    target.reference[0] = asReference(header);
+    target.reference[0] = node;
 
-    if (!boxed_Tag(target.reference[0])) {
+    if (!boxed_Tag(node)) {
         VM_ERROR("unable to allocate a boxed node %p to black list of %p",
-                 asReference(header),
+                 node,
                  space);
+
         return false;
     }
 
@@ -709,7 +724,9 @@ extern void space_Init(const Space space) {
     // black chain empty   (scan == free.before)
     // gray chain one node (scan == root)
 
-    clink_Init(&space->start_clinks, ROOT_COUNT);
+    clink_Init(&space->start_clinks,
+               space->array,
+               ROOT_COUNT);
 }
 
 extern void space_Scan(const Space space, unsigned int upto) {
@@ -931,15 +948,15 @@ extern void space_Flip(const Space space) {
     (void)release_Header;
 }
 
-extern void clink_Init(Clink *link, unsigned max) {
-    if (!link) return;
+extern void clink_Init(Clink *link, Target* slots, unsigned max) {
+    if (!link)  return;
+    if (!slots) return;
 
-    link->before = link;
-    link->after  = link;
-    link->max    = max;
-    link->index  = 0;
     link->before = 0;
     link->after  = 0;
+    link->max    = max;
+    link->index  = 0;
+    link->slots  = slots;
 
     const Space space = _zero_space;
 

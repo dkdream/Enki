@@ -567,12 +567,12 @@
 ## - a global variable.
 
 ## First, some basic set arithmetic.
-(define (set-subtract a b) (filter (lambda (x) (not (memq x b))) a))
-(define (set-equal a b) (eq? (set-subtract a b) (set-subtract b a)))
+(define (set-subtract a b)           (filter (lambda (x) (not (memq x b))) a))
+(define (set-equal a b)              (eq? (set-subtract a b) (set-subtract b a)))
 (define (add-if-not-present obj set) (if (memq obj set) set (cons obj set)))
-(define (set-union a b) (reduce add-if-not-present a b))
-(define (set-intersect a b) (filter (lambda (x) (memq x b)) a))
-(define (set-union-all sets) (reduce set-union sets nil))
+(define (set-union a b)              (reduce add-if-not-present a b))
+(define (set-intersect a b)          (filter (lambda (x) (memq x b)) a))
+(define (set-union-all sets)         (reduce set-union sets nil))
 
 (assert (set-equal nil nil) "empty set equality")
 (assert (set-equal '(a) '(a)) "set equality with one item")
@@ -597,12 +597,14 @@
 ## Returns vars captured by some lambda inside expr, i.e. vars that
 ## occurs free inside a lambda inside expr.
 (define (captured-vars expr) (set-union-all (map free-vars (lambdas expr))))
+
 (define (lambdas expr)
    (cond ((not (pair? expr)) nil)       #  non-lists and empty lists
          ## We don't want the deeper-nested lambdas, just the top-level
          ## ones.
          ((eq? (car expr) 'lambda) (list expr))
          (else (reduce append (map lambdas expr) nil))))
+
 (define (all-captured-vars expr) (set-union-all (map captured-vars expr)))
 
 ## Returns a list of the vars that are bound by a particular lambda arg list.
@@ -938,6 +940,7 @@
    (comment "inlined car")
    (ensure-cons)
    (mov (offset tos 4) tos))
+
 (define (inline-cdr nargs)
    (assert-equal 1 nargs)
    (comment "inlined cdr")
