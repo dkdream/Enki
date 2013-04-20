@@ -528,18 +528,26 @@ extern SUBR(member)
 
 extern SUBR(find)
 {
-    Node tst = NIL;
-    Node lst = NIL;
+    GC_Begin(5);
+    GC_Add(args);
+
+    Node tst;
+    Node lst;
+    Node check;
+
+    GC_Protect(tst);
+    GC_Protect(lst);
+    GC_Protect(check);
 
     forceArgs(args, &tst, &lst, 0);
 
     while (isType(lst, t_pair)) {
-        Node elm   = NIL;
-        Node check = NIL;
+        Node elm = NIL;
 
         pair_GetCar(lst.pair, &elm);
         pair_Create(elm, NIL, &(args.pair));
 
+        check = NIL;
         apply(tst, args, env, &check);
 
         if (!isNil(check)) {
@@ -549,12 +557,24 @@ extern SUBR(find)
 
         pair_GetCdr(lst.pair, &lst);
     }
+
+    GC_End();
 }
 
 extern void call_with(const Node function, const Node value, const Node env, Target target) {
+    GC_Begin(5);
+    GC_Add(function);
+    GC_Add(value);
+    GC_Add(env);
+
     Pair args;
+
+    GC_Protect(args);
+
     pair_Create(value, NIL, &args);
     apply(function, args, env, target);
+
+    GC_End();
 }
 
 extern SUBR(map) {
@@ -2295,7 +2315,7 @@ void startEnkiLibrary() {
 
     VM_DEBUG(1, "startEnkiLibrary enki_globals %p", &enki_globals);
 
-    clink_Manage(&(enki_zero_space.start_clinks), &enki_globals);
+    clink_Manage(&(enki_zero_space.start_clinks), &enki_globals, true);
 
     VM_DEBUG(1, "startEnkiLibrary init symbol table");
 

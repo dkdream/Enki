@@ -982,7 +982,7 @@ extern void clink_Init(Clink *link, Target* slots, unsigned max) {
     /* CLINK_UNLOCK */
 }
 
-extern void clink_Manage(Clink *link, Target slot) {
+extern void clink_Manage(Clink *link, Target slot, bool zero) {
     if (!link)           goto error;
     if (!slot.reference) goto error;
     if (!link->before)   goto error;
@@ -990,7 +990,9 @@ extern void clink_Manage(Clink *link, Target slot) {
 
     Target *array = clink_Slots(link);
 
-    ASSIGN(slot, NIL);
+    if (zero) {
+        ASSIGN(slot, NIL);
+    }
 
     array[link->index] = slot;
 

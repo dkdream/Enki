@@ -257,6 +257,11 @@ extern void eval(const Node expr, const Node env, Target result)
 
 extern void apply(Node fun, Node args, const Node env, Target result)
 {
+    GC_Begin(3);
+
+    GC_Add(fun);
+    GC_Add(args);
+
     VM_ON_DEBUG(5, {
             fprintf(stderr, "apply: ");
             prettyPrint(stderr, fun);
@@ -300,6 +305,8 @@ extern void apply(Node fun, Node args, const Node env, Target result)
             prettyPrint(stderr, *result.reference);
             fprintf(stderr, "\n");
         });
+
+    GC_End();
 
     return;
 }

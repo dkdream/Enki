@@ -168,16 +168,19 @@ extern void space_Scan(const Space, unsigned int);
      fprintf(stderr, "end\n")
 
 extern void clink_Init(Clink *link, Target* slots, unsigned max) __attribute__((nonnull (1,2)));
-extern void clink_Manage(Clink *link, Target slot)   __attribute__((nonnull));
-extern void clink_UnManage(Clink *link, Target slot) __attribute__((nonnull));
-extern void clink_Final(Clink *link)                 __attribute__((nonnull));
+extern void clink_Manage(Clink *link, Target slot, bool zero)    __attribute__((nonnull));
+extern void clink_UnManage(Clink *link, Target slot)             __attribute__((nonnull));
+extern void clink_Final(Clink *link)                             __attribute__((nonnull));
 
 #define GC_Begin(MAX) \
     struct { Clink link; Target array[MAX];} __LOCAL_GC; \
     clink_Init((Clink*)(& __LOCAL_GC), __LOCAL_GC.array, MAX)
 
 #define GC_Protect(NAME) \
-   clink_Manage((Clink*)(& __LOCAL_GC), &(NAME))
+    clink_Manage((Clink*)(& __LOCAL_GC), &(NAME), true)
+
+#define GC_Add(NAME) \
+    clink_Manage((Clink*)(& __LOCAL_GC), &(NAME), false)
 
 #define GC_Inline_Protect(NAME) ({  __LOCAL_GC.link.slots[__LOCAL_GC.link.index++] = (Target) &(NAME); })
 
