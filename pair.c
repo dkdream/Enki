@@ -33,7 +33,6 @@ extern bool pair_Create(const Node car, const Node cdr, Pair* target) {
 extern bool pair_SetCar(Pair pair, const Node car) {
     if (!pair) return false;
 
-    darken_Node(pair);
     darken_Node(car);
 
     pair->car = car;
@@ -44,7 +43,6 @@ extern bool pair_SetCar(Pair pair, const Node car) {
 extern bool pair_SetCdr(Pair pair, const Node cdr) {
     if (!pair) return false;
 
-    darken_Node(pair);
     darken_Node(cdr);
 
     pair->cdr = cdr;
@@ -63,8 +61,6 @@ extern bool pair_GetCar(Pair pair, Target car) {
 extern bool pair_GetCdr(Pair pair, Target cdr) {
     if (!pair) return false;
 
-    darken_Node(pair);
-
     ASSIGN(cdr, pair->cdr);
 
     return true;
@@ -72,8 +68,6 @@ extern bool pair_GetCdr(Pair pair, Target cdr) {
 
 extern bool list_State(Pair pair, unsigned *count, bool *dotted) {
     if (!pair) return false;
-
-    darken_Node(pair);
 
     unsigned at = 0;
     for (; pair ; ++at) {
@@ -83,7 +77,6 @@ extern bool list_State(Pair pair, unsigned *count, bool *dotted) {
             return true;
         }
         pair = pair->cdr.pair;
-        darken_Node(pair);
     }
 
     *count  = at;
@@ -94,12 +87,9 @@ extern bool list_State(Pair pair, unsigned *count, bool *dotted) {
 extern bool list_UnDot(Pair pair) {
     if (!pair) return false;
 
-    darken_Node(pair);
-
     for (; pair ;) {
         if (isType(pair->cdr, t_pair)) {
             pair = pair->cdr.pair;
-            darken_Node(pair);
             continue;
         }
 
@@ -113,12 +103,9 @@ extern bool list_UnDot(Pair pair) {
 extern bool list_SetItem(Pair pair, unsigned index, const Node value) {
     if (!pair) return false;
 
-    darken_Node(pair);
-
      for (; isType(pair, t_pair) ; --index) {
          if (0 < index) {
              pair = pair->cdr.pair;
-             darken_Node(pair);
              continue;
          }
 
@@ -139,11 +126,8 @@ extern bool list_GetItem(Pair pair, unsigned index, Target value) {
      for (; isType(pair, t_pair) ; --index) {
          if (0 < index) {
              pair = pair->cdr.pair;
-             darken_Node(pair);
              continue;
          }
-
-         darken_Node(pair->car);
 
          ASSIGN(value, pair->car);
          return true;
@@ -158,7 +142,6 @@ extern bool list_SetTail(Pair pair, unsigned index, const Node value) {
      for (; isType(pair, t_pair) ; --index) {
          if (0 < index) {
              pair = pair->cdr.pair;
-             darken_Node(pair);
              continue;
          }
 
@@ -179,11 +162,8 @@ extern bool list_GetTail(Pair pair, unsigned index, Target value) {
      for (; isType(pair, t_pair) ; --index) {
          if (0 < index) {
              pair = pair->cdr.pair;
-             darken_Node(pair);
              continue;
          }
-
-         darken_Node(pair->cdr);
 
          ASSIGN(value, pair->cdr);
          return true;
@@ -200,7 +180,6 @@ extern bool list_SetEnd(Pair pair, const Node value) {
      for (; isType(pair, t_pair) ;) {
          if (isType(pair->cdr, t_pair)) {
              pair = pair->cdr.pair;
-             darken_Node(pair);
              continue;
          }
 
@@ -221,11 +200,8 @@ extern bool list_GetEnd(Pair pair, Target value) {
      for (; isType(pair, t_pair) ;) {
          if (isType(pair->cdr, t_pair)) {
              pair = pair->cdr.pair;
-             darken_Node(pair);
              continue;
          }
-
-         darken_Node(pair->cdr);
 
          ASSIGN(value, pair->cdr);
          return true;
@@ -240,7 +216,6 @@ extern bool alist_Entry(Pair pair, const Node label, Pair* value) {
     for (; isType(pair, t_pair) ;) {
         if (!isType(pair->car, t_pair)) {
             pair = pair->cdr.pair;
-            darken_Node(pair);
             continue;
         }
 
@@ -248,11 +223,8 @@ extern bool alist_Entry(Pair pair, const Node label, Pair* value) {
 
         if (!isIdentical(label, entry->car)) {
             pair = pair->cdr.pair;
-            darken_Node(pair);
             continue;
         }
-
-        darken_Node(entry);
 
         ASSIGN(value, entry);
         return true;
@@ -268,7 +240,6 @@ extern bool alist_Get(Pair pair, const Node label, Target value) {
     for (; isType(pair, t_pair) ;) {
         if (!isType(pair->car, t_pair)) {
             pair = pair->cdr.pair;
-            darken_Node(pair);
             continue;
         }
 
@@ -276,11 +247,8 @@ extern bool alist_Get(Pair pair, const Node label, Target value) {
 
         if (!isIdentical(label, entry->car)) {
             pair = pair->cdr.pair;
-            darken_Node(pair);
             continue;
         }
-
-        darken_Node(entry->cdr);
 
         ASSIGN(value, entry->cdr);
         return true;
@@ -295,7 +263,6 @@ extern bool alist_Set(Pair pair, const Node label, const Node value) {
     for (; isType(pair, t_pair) ;) {
         if (!isType(pair->car, t_pair)) {
             pair = pair->cdr.pair;
-            darken_Node(pair);
             continue;
         }
 
@@ -303,7 +270,6 @@ extern bool alist_Set(Pair pair, const Node label, const Node value) {
 
         if (!isIdentical(label, entry->car)) {
             pair = pair->cdr.pair;
-            darken_Node(pair);
             continue;
         }
 
@@ -317,16 +283,21 @@ extern bool alist_Set(Pair pair, const Node label, const Node value) {
 }
 
 extern bool alist_Add(Pair pair, const Node label, const Node value, Pair* target) {
-    Pair entry = 0;
+    GC_Begin(2);
 
-    darken_Node(pair);
-    darken_Node(label);
-    darken_Node(value);
+    Pair entry;
 
-    if (!pair_Create(label, value, &entry)) return false;
-    if (!pair_Create(entry, pair, target)) return false;
+    GC_Protect(entry);
 
+    if (!pair_Create(label, value, &entry)) goto error;
+    if (!pair_Create(entry, pair, target)) goto error;
+
+    GC_End();
     return true;
+
+ error:
+    GC_End();
+    return false;
 }
 
 extern bool list_Map(Operator func, Pair pair, const Node env, Target target) {
@@ -340,54 +311,43 @@ extern bool list_Map(Operator func, Pair pair, const Node env, Target target) {
         return false;
     }
 
-    darken_Node(pair);
-    darken_Node(env);
-
-#if 0
-    printf("list_Map: %p", func);
-    printf(" to ");
-    prettyPrint(stdout, pair);
-    printf("\n");
-#endif
-
     if (!isType(pair, t_pair)) {
         func(pair, env, target);
         return true;
     }
 
-    Node first  = NIL;
-    Pair last   = 0;
-    Node input  = NIL;
-    Node output = NIL;
+    GC_Begin(7);
 
-    input  = pair->car;
-    output = NIL;
+    Node first;
+    Pair last;
+    Node input;
+    Node output;
+    Pair hold;
 
-    darken_Node(input);
+    GC_Protect(first);
+    GC_Protect(last);
+    GC_Protect(input);
+    GC_Protect(output);
+    GC_Protect(hold);
+
+    input = pair->car;
 
     func(input, env, &output);
 
-    darken_Node(output);
-
-    if (!pair_Create(output,NIL, &first.pair)) return false;
+    if (!pair_Create(output,NIL, &first.pair)) goto error;
 
     last = first.pair;
 
     for (; isType(pair->cdr.pair, t_pair) ;) {
-        Pair hold = 0;
-
+        hold   = 0;
         pair   = pair->cdr.pair;
         input  = pair->car;
         output = NIL;
 
-        darken_Node(input);
-
         func(input, env, &output);
 
-        darken_Node(output);
-
-        if (!pair_Create(output,NIL, &hold)) return false;
-        if (!pair_SetCdr(last, hold))        return false;
+        if (!pair_Create(output,NIL, &hold)) goto error;
+        if (!pair_SetCdr(last, hold))        goto error;
 
         last = hold;
     }
@@ -396,22 +356,17 @@ extern bool list_Map(Operator func, Pair pair, const Node env, Target target) {
         input  = pair->cdr;
         output = NIL;
 
-        darken_Node(input);
-
         func(input, env, &output);
 
-        darken_Node(output);
-
-        if (!pair_SetCdr(last, output)) return false;
+        if (!pair_SetCdr(last, output)) goto error;
     }
-
-#if 0
-    printf("list_Map => ");
-    prettyPrint(stdout, first);
-    printf("\n");
-#endif
 
     ASSIGN(target, first);
 
+    GC_End();
     return true;
+
+ error:
+    GC_End();
+    return false;
 }

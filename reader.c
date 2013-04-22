@@ -335,12 +335,20 @@ static bool list2type(Pair list, Symbol type) {
 // (...)
 static bool readList(FILE *fp, int delim, Target result)
 {
+    GC_Begin(7);
+
     const char *error = 0;
-    Pair  head    = 0;
-    Pair  tail    = 0;
-    Pair  segment = 0;
-    Pair  list    = 0;
-    Node  hold    = NIL;
+    Pair  head;
+    Pair  tail;
+    Pair  segment;
+    Pair  list;
+    Node  hold;
+
+    GC_Protect(head);
+    GC_Protect(tail);
+    GC_Protect(segment);
+    GC_Protect(list);
+    GC_Protect(hold);
 
     if (!readExpr(fp, &(hold.reference))) {
         ASSIGN(result, NIL);
@@ -398,19 +406,24 @@ static bool readList(FILE *fp, int delim, Target result)
         goto failure;
     }
 
-    if (!segment) return true;
+    if (!segment) goto done;
 
     if (!pair_GetCdr(segment, &list)) goto failure;
-    if (isNil(list)) return true;
+
+    if (isNil(list)) goto done;
+
     if (!list2type(list, s_comma)) goto failure;
 
+ done:
+    GC_End();
     return true;
 
  failure:
     if (!error) {
-      fatal("%s", error);
+        fatal("%s", error);
     }
 
+    GC_End();
     return false;
 }
 
@@ -723,7 +736,7 @@ static void enki_sigint(int signo)
 
 extern void readFile(FILE *stream)
 {
-    GC_Begin(4);
+    GC_Begin(2);
 
     Node obj = NIL;
 
@@ -749,33 +762,11 @@ extern void readFile(FILE *stream)
                 fflush(stderr);
             });
 
-//        clock_t cstart = clock();
-
-        check_SymbolTable__(__FILE__, __LINE__);
-
         expand(obj, NIL, &obj);
-
-//        clock_t cexpand = clock();
-
-        check_SymbolTable__(__FILE__, __LINE__);
 
         encode(obj, NIL, &obj);
 
-//        clock_t cencode = clock();
-
-        check_SymbolTable__(__FILE__, __LINE__);
-
         eval(obj, NIL, &obj);
-
-//        clock_t ceval = clock();
-
-        check_SymbolTable__(__FILE__, __LINE__);
-
-#if 0
-        fprintf(stderr, "expand %.3f cpu sec; ", ((double)cexpand - (double)cstart)* 1.0e-6);
-        fprintf(stderr, "encode %.3f cpu sec; ", ((double)cencode - (double)cexpand)* 1.0e-6);
-        fprintf(stderr, "eval   %.3f cpu sec\n", ((double)ceval   - (double)cencode)* 1.0e-6);
-#endif
 
         VM_DEBUG(1, " result ");
 
@@ -795,7 +786,10 @@ extern void readFile(FILE *stream)
         }
     }
 
-    if (stream == stdin) return;
+    if (stream == stdin) {
+        GC_End();
+        return;
+    }
 
     int c = getc(stream);
 

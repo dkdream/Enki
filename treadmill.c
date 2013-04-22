@@ -433,10 +433,7 @@ extern bool darken_Node(const Node node) {
     const Space   space = header->space;
 
     if (!header->kind.live) {
-        fprintf(stderr, "found in space %p a dead ", space);
-        dump(stderr, node);
-        fprintf(stderr, "\n");
-        fatal("GC BOOM");
+        fatal("BOOM: darkenning a dead node");
     }
 
     if (!header->kind.inside) return true;

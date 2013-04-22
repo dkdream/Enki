@@ -315,6 +315,11 @@ extern SUBR(while)
     }
 }
 
+extern SUBR(begin)
+{ //Fixed
+    eval_begin(args, env, result);
+}
+
 extern SUBR(set)
 { //Fixed
     Node symbol = NIL;
@@ -399,12 +404,19 @@ extern void environ_Let(Node local, Node env, Target result)
 }
 
 extern SUBR(encode_let) {
-    Node locals; Node lenv;
+    GC_Begin(4);
+
+    Node locals;
+    Node lenv;
+
+    GC_Protect(locals);
+    GC_Protect(lenv);
 
     pair_GetCar(args.pair, &locals);
 
     if (!isType(locals, t_pair)) {
         encode(args, env, result);
+        GC_End();
         return;
     }
 
@@ -420,16 +432,21 @@ extern SUBR(encode_let) {
     list_Map(environ_Let, locals.pair, env, &lenv);
     list_SetEnd(lenv.pair, env);
 
-    //list_Map(encode, args.pair, lenv, result);
-
     encode(args, lenv, result);
+
+    GC_End();
 }
 
 extern SUBR(let)
 { //Fixed
-    Node env2     = NIL;
-    Node bindings = NIL;
-    Node body     = NIL;
+    GC_Begin(4);
+    Node env2;
+    Node bindings;
+    Node body;
+
+    GC_Protect(env2);
+    GC_Protect(bindings);
+    GC_Protect(body);
 
     pair_GetCar(args.pair, &bindings);
     pair_GetCdr(args.pair, &body);
@@ -443,6 +460,8 @@ extern SUBR(let)
 
         eval_begin(body, env2, result);
     }
+
+    GC_End();
 }
 
 extern void environ_Lambda(Node symbol, Node env, Target result)
@@ -451,7 +470,14 @@ extern void environ_Lambda(Node symbol, Node env, Target result)
 }
 
 extern SUBR(encode_lambda) {
-    Node formals; Node body; Node lenv;
+    GC_Begin(4);
+    Node formals;
+    Node body;
+    Node lenv;
+
+    GC_Protect(formals);
+    GC_Protect(body);
+    GC_Protect(lenv);
 
     pair_GetCar(args.pair, &formals);
     pair_GetCdr(args.pair, &body);
@@ -467,9 +493,12 @@ extern SUBR(encode_lambda) {
 
     list_Map(environ_Lambda, formals.pair, env, &lenv);
     list_SetEnd(lenv.pair, env);
+
     encode(body, lenv, &(body.pair));
 
     pair_Create(formals, body, result.pair);
+
+    GC_End();
 }
 
 extern SUBR(lambda)
@@ -489,6 +518,7 @@ extern SUBR(delay)
     tuple_SetItem(tuple, 1, expr);
     tuple_SetItem(tuple, 2, env);
     setType(tuple, t_delay);
+
     ASSIGN(result, tuple);
 }
 
@@ -561,7 +591,7 @@ extern SUBR(find)
     GC_End();
 }
 
-extern void call_with(const Node function, const Node value, const Node env, Target target) {
+extern void call_with(Node function, Node value, Node env, Target target) {
     GC_Begin(5);
     GC_Add(function);
     GC_Add(value);
@@ -2350,6 +2380,7 @@ void startEnkiLibrary() {
     MK_FXD(delay);
 
     MK_FXD(while);
+    MK_FXD(begin);
 
     MK_EFXD(let,encode_let);
     MK_EFXD(lambda,encode_lambda);
@@ -2360,6 +2391,7 @@ void startEnkiLibrary() {
     MK_OPR(%set,set);
 
     MK_OPR(%while,while);
+    MK_OPR(%begin,begin);
 
     MK_OPR(%let,let);
     MK_OPR(%lambda,lambda);
@@ -2469,7 +2501,7 @@ void startEnkiLibrary() {
 
     csegment = clock();
 
-    __alloc_cycle = 100;
+    __alloc_cycle = 1000;
     __scan_cycle  = 10;
 
     while (!space_CanFlip(_zero_space)) {

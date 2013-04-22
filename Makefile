@@ -62,13 +62,14 @@ DEPENDS += $(MAINS:%.c=.depends/%.d)
 
 UNIT_TESTS := test_reader.gcc test_sizes.gcc
 
-all   :: enki test asm atoms
+all   :: enki test asm
 enki  :: enki.vm | lib
 lib   :: libEnki_32.a
 test  :: $(RUNS)
 asm   :: $(FOOS:%.c=.dumps/%_32.s)
 units :: $(UNIT_TESTS:%.gcc=%.x)
 atoms :: $(BUILDINS:./buildins/%.c=.dumps/%_atom.s)
+	@echo finished atoms
 
 install : install.bin install.inc install.lib
 
@@ -103,7 +104,7 @@ test :: $(FOOS:%.c=.dumps/%_32.s)
 link_main.x : .objects/link_main_32.o .objects/foo_32.o libEnki_32.a
 	$(GCC) $(CFLAGS) -m32 -o $@ .objects/link_main_32.o .objects/foo_32.o -L. -lEnki_32
 
-foo_32.s : foo.ea | enki.vm
+foo_32.s : foo.ea compiler.ea | enki.vm
 	./enki.vm ./foo.ea >foo_32.s
 
 $(UNIT_TESTS:%.gcc=%.x) : libEnki_32.a
@@ -134,6 +135,8 @@ $(LIBDIR)/libEnki.a : $(LIBDIR) libEnki.a
 enki_ver.h : FORCE
 	@./Version.gen ENKI_VERSION enki_ver.h
 
+echo_begin :: ; @echo begin atoms
+
 # --
 
 .PHONY :: all
@@ -153,6 +156,7 @@ enki_ver.h : FORCE
 .PHONY :: test
 .PHONY :: units
 .PHONY :: FORCE
+.PHONY :: echo_begin
 
 ##
 ## rules
@@ -199,7 +203,7 @@ enki_ver.h : FORCE
 	@$(AS) $(ASFLAGS) --32 -o $@ $< 	
 
 .assembly/%_atom.s : ./buildins/%.c | .assembly
-	$(GCC) $(SFLAGS) -S -m32 -fverbose-asm -o $@ $<
+	@$(GCC) $(SFLAGS) -S -m32 -fverbose-asm -o $@ $<
 
 ## ## ## ##
 

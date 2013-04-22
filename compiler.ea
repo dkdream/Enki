@@ -42,7 +42,7 @@
             (if (integer? stuff)
                   (bprint buf (format "@{s}" stuff))
                (dumpln stuff)
-               (error 'flattening "xx"))))))
+               (errore 'flattening "xx"))))))
 
 
 ## Assembly Optimization Tips http://mark.masmcode.com/
@@ -97,19 +97,19 @@
 
 (define test (twoarg "test"))
 # tmp = (argS & argD)
-# CF = 0
-# OF = 0
-# SF = MSB(tmp)
-# ZF = (tmp == 0)
-# PF = 
+# CF  = 0
+# OF  = 0
+# SF  = MSBit(tmp)
+# ZF  = (tmp == 0)
+# PF  = even(bit-count(tmp))
 
-(define cmp     (twoarg "cmp"))
+(define cmp (twoarg "cmp"))
 # tmp = (argD - argS)
-# CF = 0
-# OF = 0
-# SF = 
-# ZF = (tmp == 0)
-# PF = 
+# CF  = bit-count(argD - argS) > bit-count(tmp)
+# OF  = MSBit(argD) != MSBit(tmp)
+# SF  = MSBit(tmp)
+# ZF  = (tmp == 0)
+# PF  = even(bit-count(tmp))
 
 (define jmp        (onearg "jmp"))
 (define jnoverflow (onearg "jno")) ## OF = 0
@@ -246,6 +246,9 @@
    (mov eax frame) ## set new frame
    (mov tos bos))  ## set new  bottom-of-stack
 
+(define (compile-tail label count))
+(define (compile-call label count))
+
 (define (compile-function-epilogue)
    (mov frame scr)  ## mov the frame(old-tos) to scr
    (mov bos tos)    ## clear stack/locals
@@ -321,7 +324,65 @@
    (mov ebx (offset edi 4)))
 
 
+### (code from Sicp/ch5-compiler.scm)
 
+(define (self-evaluating? exp) nil)
+(define (quoted? exp) nil)
+(define (variable? exp) nil)
+(define (assignment? exp) nil)
+(define (definition? exp) nil)
+(define (definition? exp) nil)
+(define (if? exp) nil)
+(define (lambda? exp) nil)
+(define (begin? exp) nil)
+(define (cond? exp) nil)
+(define (application? exp) nil)
+
+##
+## analyze is modelled after eval
+##
+
+(define (analyze exp)
+   (cond ((self-evaluating? exp) (analyze-self-evaluating exp))
+         ((quoted? exp)          (analyze-quoted exp))
+         ((variable? exp)        (analyze-variable exp))
+         ((assignment? exp)      (analyze-assignment exp))
+         ((definition? exp)      (analyze-definition exp))
+         ((if? exp)              (analyze-if exp))
+         ((lambda? exp)          (analyze-lambda exp))
+         ((let? exp)             (analyze-let exp))
+         ((begin? exp)           (analyze-sequence (begin-actions exp)))
+         ((application? exp)      (analyze-application exp))
+         (else
+          (error 'unknown "Unknown expression type -- ANALYZE" exp))))
+
+## (compile <expression>
+##          <target-location>
+##          <linkage-descriptor 'continue 'return '(jump <label>) '(call <label> <count>) '(tail <label> <count>)>
+##          <free-registers>)
+##
+## compile is modelled after eval
+##
+## example:
+##    (compile 5 (register 'eax) 'continue '(eax))  == (mov (cont 5) eax)
+##    (compile 5 (register 'result) 'return '(eax)) == (begin (mov (cont 5) eax) (compile-function-epilogue))
+##    (compile 5 (local 1) '(jump endif5) '(eax))   == (begin (mov (cont 5) eax) (mv eax (local 1)) (jmp 'endif5))
+##    (compile 5 'push '(call add 2) '(eax))        == (begin (mov (cont 5) eax) (push eax) (compile-call 'add 3))
+##    (compile 5 'push '(call add 2) '(eax))        == (begin (mov (cont 5) eax) (push eax) (compile-tail 'add 3))
+
+(define (compile exp target linkage free)
+   (cond ((self-evaluating? exp) (compile-self-evaluating exp target linkage free))
+         ((quoted? exp)          (compile-quoted exp target linkage free))
+         ((variable? exp)        (compile-variable exp target linkage free))
+         ((assignment? exp)      (compile-assignment exp target linkage free))
+         ((definition? exp)      (compile-definition exp target linkage free))
+         ((if? exp)              (compile-if exp target linkage free))
+         ((lambda? exp)          (compile-lambda exp target linkage free))
+         ((let? exp)          (compile-let exp target linkage free))
+         ((begin? exp)           (compile-sequence (begin-actions exp) target linkage free))
+         ((application? exp)     (compile-application exp target linkage free))
+         (else
+          (error 'unknown "Unknown expression type -- COMPILE" exp))))
 
 
 
