@@ -438,7 +438,6 @@ static bool readTuple(FILE *fp, Node type, int delim, Target result)
     Pair  tail = 0;
     Node  hold = NIL;
 
-
     if (!readExpr(fp, &(hold.reference))) goto eof;
 
     if (!pair_Create(hold, NIL, &head)) goto failure;
@@ -764,14 +763,29 @@ extern void readFile(FILE *stream)
 
         expand(obj, NIL, &obj);
 
+        VM_DEBUG(1, " expanded ");
+
+        VM_ON_DEBUG(1, {
+                prettyPrint(stderr, obj);
+                fprintf(stderr,"\n");
+                fflush(stderr);
+            });
+
         encode(obj, NIL, &obj);
+
+        VM_DEBUG(1, " encoded ");
+
+        VM_ON_DEBUG(1, {
+                prettyPrint(stderr, obj);
+                fprintf(stderr,"\n");
+                fflush(stderr);
+            });
 
         eval(obj, NIL, &obj);
 
-        VM_DEBUG(1, " result ");
+        VM_DEBUG(1, " evaluated ");
 
         VM_ON_DEBUG(1, {
-                fprintf(stderr, "result ");
                 prettyPrint(stderr, obj);
                 fprintf(stderr,"\n\n\n");
                 fflush(stderr);

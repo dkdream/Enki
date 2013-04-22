@@ -188,24 +188,6 @@ extern void fetchArgs(Node args, ...)
     va_end(ap);
 }
 
-extern void eval_binding(Node binding, Node env, Target entry)
-{
-    GC_Begin(2);
-    Node symbol, expr, value;
-
-    GC_Protect(expr);
-    GC_Protect(value);
-
-    list_GetItem(binding.pair, 0, &symbol);
-    list_GetItem(binding.pair, 1, &expr);
-
-    eval(expr, env, &value);
-
-    pair_Create(symbol, value, entry.pair);
-
-    GC_End();
-}
-
 extern void eval_begin(Node body, Node env, Target last)
 {
     GC_Begin(2);
@@ -399,7 +381,15 @@ extern SUBR(type)
 extern void environ_Let(Node local, Node env, Target result)
 {
     Node symbol;
-    pair_GetCar(local.pair, &symbol);
+
+    if (isType(local, s_symbol)) {
+        symbol = local;
+    } else if (isType(local, t_pair)) {
+        pair_GetCar(local.pair, &symbol);
+    } else if (isType(local, t_tuple)) {
+        tuple_GetItem(local.tuple, 0, &symbol);
+    }
+
     pair_Create(symbol, NIL, result.pair);
 }
 
@@ -420,19 +410,42 @@ extern SUBR(encode_let) {
         return;
     }
 
-    /*
-    ** given args=(locals . body)
-    **
-    ** (set locals (car body))
-    ** (set lenv (map (lambda (binding) (box (car binding))) locals))
-    ** (set-end lenv env)
-    **
-    ** result=(encode args lenv)
-    */
     list_Map(environ_Let, locals.pair, env, &lenv);
     list_SetEnd(lenv.pair, env);
 
     encode(args, lenv, result);
+
+    GC_End();
+}
+
+extern void eval_binding(Node local, Node env, Target result)
+{
+    GC_Begin(2);
+    Node symbol;
+    Node expr;
+    Node value;
+
+    GC_Protect(expr);
+    GC_Protect(value);
+
+    if (isType(local, s_symbol)) {
+        symbol = local;
+        expr   = NIL;
+    } else if (isType(local, t_pair)) {
+        list_GetItem(local.pair, 0, &symbol);
+        list_GetItem(local.pair, 1, &expr);
+    } else if (isType(local, t_tuple)) {
+        tuple_GetItem(local.tuple, 0, &symbol);
+        tuple_GetItem(local.tuple, 1, &expr);
+    }
+
+    if (!isNil(expr)) {
+        eval(expr, env, &value);
+    } else {
+        value = NIL;
+    }
+
+    pair_Create(symbol, value, result.pair);
 
     GC_End();
 }

@@ -352,7 +352,7 @@
          ((lambda? exp)          (analyze-lambda exp))
          ((let? exp)             (analyze-let exp))
          ((begin? exp)           (analyze-sequence (begin-actions exp)))
-         ((application? exp)      (analyze-application exp))
+         ((application? exp)     (analyze-application exp))
          (else
           (error 'unknown "Unknown expression type -- ANALYZE" exp))))
 

@@ -62,7 +62,7 @@
  **     if we are working with a node it must be black or gray.
  **   end
  ***/
-#define debug_THIS
+//#define debug_THIS
 
 #include "treadmill.h"
 #include "all_types.inc"
