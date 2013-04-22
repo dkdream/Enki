@@ -31,6 +31,9 @@ struct type {
 extern Sort zero_s;
 
 extern Type t_any;
+extern Type t_block;
+extern Type t_buffer;
+extern Type t_comma;
 extern Type t_delay;
 extern Type t_fixed;
 extern Type t_forced;
@@ -42,10 +45,10 @@ extern Type t_opaque;
 extern Type t_outfile;
 extern Type t_pair;
 extern Type t_primitive;
+extern Type t_semi;
 extern Type t_text;
 extern Type t_true;
 extern Type t_tuple;
-extern Type t_buffer;
 
 extern bool sort_Create(Symbol,Sort*);                /* each sort has a unique name */
 extern bool type_Create(Symbol,Sort,Type*);           /* each basetype in a sort has a unique name */

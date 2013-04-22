@@ -270,11 +270,27 @@ extern inline bool isAtomic(const Node value) {
     return false;
 }
 
+extern inline bool isInside(const Node value) __attribute__((always_inline));
+extern inline bool isInside(const Node value) {
+    Kind kind = asKind(value);
+    if (!kind) return false;
+    if (kind->inside) return true;
+    return false;
+}
+
 extern inline unsigned long getCount(const Node value) __attribute__((always_inline));
 extern inline unsigned long getCount(const Node value) {
     Kind kind = asKind(value);
     if (!kind) return 0;
     return (unsigned long)(kind->count);
+}
+
+extern inline Space getSpace(const Node value) __attribute__((always_inline));
+extern inline Space getSpace(const Node value) {
+    if (!isInside(value)) return 0;
+    Header header = asHeader(value);
+    if (!header) return 0;
+    return header->space;
 }
 
 extern inline unsigned long asSize(unsigned base_sizeof, unsigned extend_sizeof)  __attribute__((always_inline));

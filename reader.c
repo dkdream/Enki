@@ -303,7 +303,7 @@ static bool readSymbol(FILE *fp, int first, Target result);
 static bool skipBlock(FILE *fp, const int delim);
 static bool skipComment(FILE *fp);
 
-static bool list2type(Pair list, Symbol type) {
+static bool list2type(Pair list, Node type) {
     Tuple tuple;
     unsigned size;
     bool     dotted;
@@ -384,7 +384,7 @@ static bool readList(FILE *fp, int delim, Target result)
                 if (!pair_GetCdr(segment, &list)) goto failure;
             }
 
-            if (!list2type(list, s_comma)) goto failure;
+            if (!list2type(list, t_comma)) goto failure;
 
             if (!segment) {
                 segment = head;
@@ -412,7 +412,7 @@ static bool readList(FILE *fp, int delim, Target result)
 
     if (isNil(list)) goto done;
 
-    if (!list2type(list, s_comma)) goto failure;
+    if (!list2type(list, t_comma)) goto failure;
 
  done:
     GC_End();
@@ -431,14 +431,32 @@ static bool readList(FILE *fp, int delim, Target result)
 // {...} - block
 static bool readTuple(FILE *fp, Node type, int delim, Target result)
 {
+    GC_Begin(7);
+
     const char *error = 0;
     unsigned size;
     bool     dotted;
-    Pair  head = 0;
-    Pair  tail = 0;
-    Node  hold = NIL;
 
-    if (!readExpr(fp, &(hold.reference))) goto eof;
+    Pair  head;
+    Pair  tail;
+    Pair  segment;
+    Pair  list;
+    Node  hold;
+
+    GC_Protect(head);
+    GC_Protect(tail);
+    GC_Protect(segment);
+    GC_Protect(list);
+    GC_Protect(hold);
+
+    if (!readExpr(fp, &(hold.reference))) {
+        ASSIGN(result, NIL);
+        if (!matchChar(fp, delim)) {
+            error = "EOF while reading list";
+            goto failure;
+        }
+        goto done;
+    }
 
     if (!pair_Create(hold, NIL, &head)) goto failure;
 
@@ -446,15 +464,42 @@ static bool readTuple(FILE *fp, Node type, int delim, Target result)
 
     for (;;) {
         if (!readExpr(fp, &(hold.reference))) goto eof;
+
+        if (isIdentical(hold.symbol, s_semi)) {
+            if (!segment) {
+                list = head;
+            } else {
+                if (!pair_GetCdr(segment, &list)) goto failure;
+            }
+
+            if (!list2type(list, t_semi)) goto failure;
+
+            if (!segment) {
+                segment = head;
+            } else {
+                segment = list;
+            }
+            tail = segment;
+            continue;
+        }
+
         if (!pair_Create(hold, NIL, &(hold.pair))) goto failure;
         if (!pair_SetCdr(tail, hold)) goto failure;
         tail = hold.pair;
     }
 
-    eof:
+ eof:
     if (!matchChar(fp, delim)) {
         error = "EOF while reading list";
         goto failure;
+    }
+
+    if (segment) {
+        if (!pair_GetCdr(segment, &list)) goto failure;
+
+        if (!isNil(list)) {
+            if (!list2type(list, t_semi)) goto failure;
+        }
     }
 
     if (!list_State(head, &size, &dotted)) goto failure;
@@ -462,13 +507,16 @@ static bool readTuple(FILE *fp, Node type, int delim, Target result)
     if (!tuple_Fill(*result.tuple, head))  goto failure;
     if (!setType(*result.tuple, type))     goto failure;
 
+ done:
+    GC_End();
     return true;
 
-    failure:
+ failure:
     if (!error) {
         fatal("%s", error);
     }
 
+    GC_End();
     return false;
 }
 
@@ -666,7 +714,7 @@ extern bool readExpr(FILE *fp, Target result)
             return readTuple(fp, t_tuple, ']', result);
 
         case '{':
-            return readTuple(fp, s_block, '}', result);
+            return readTuple(fp, t_block, '}', result);
 
         case ',':
             ASSIGN(result, s_comma);

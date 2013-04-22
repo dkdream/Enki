@@ -21,7 +21,11 @@ void enki_test(void* atom, void* type, void* size) {
         : "m" (atom), "m" (size), "m" (type)
         : "%eax", "%ebx", "%ecx", "%esi", "edi");
 
-    printf("results %p type %p\n", holding, getType(holding).reference);
+    printf("results %p count %u type %p space %p\n",
+           holding,
+           (unsigned)getCount(holding),
+           getType(holding).reference,
+           getSpace(holding));
 }
 
 int main(int argc, char** argv) {
@@ -32,10 +36,10 @@ int main(int argc, char** argv) {
     ea_global_debug = 1;
     __scan_cycle = 0;
 
-    printf("_zero_space %p count %u type %p\n",
-           _zero_space,
+    printf("count %u type %p _zero_space %p \n",
            sizeof(struct pair)/sizeof(void*),
-           t_pair);
+           t_pair,
+           _zero_space);
 
     enki_test((void*)0, (void*)t_pair, (void*)(sizeof(struct pair)));
 

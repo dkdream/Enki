@@ -49,6 +49,9 @@ static struct _internal_Table *_global_typetable = 0;
 Sort zero_s = 0;
 
 Type t_any = 0;
+Type t_block = 0;
+Type t_buffer = 0;
+Type t_comma = 0;
 Type t_delay = 0;
 Type t_fixed = 0;
 Type t_forced = 0;
@@ -60,10 +63,10 @@ Type t_opaque = 0;
 Type t_outfile = 0;
 Type t_pair = 0;
 Type t_primitive = 0;
+Type t_semi = 0;
 Type t_text = 0;
 Type t_true = 0;
 Type t_tuple = 0;
-Type t_buffer = 0;
 
 static void make_sort(const char* value, Sort* target) {
     Symbol symbol = 0;
@@ -101,6 +104,9 @@ extern void init_global_typetable() {
     make_sort("Zero", &zero_s);
 
     MK_BTYPE(any);
+    MK_BTYPE(block);
+    MK_BTYPE(buffer);
+    MK_BTYPE(comma);
     MK_BTYPE(delay);
     MK_BTYPE(fixed);
     MK_BTYPE(forced);
@@ -112,10 +118,10 @@ extern void init_global_typetable() {
     MK_BTYPE(outfile);
     MK_BTYPE(pair);
     MK_BTYPE(primitive);
+    MK_BTYPE(semi);
     MK_BTYPE(text);
     MK_BTYPE(true);
     MK_BTYPE(tuple);
-    MK_BTYPE(buffer);
 }
 
 extern void final_global_typetable() {
