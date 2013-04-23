@@ -65,14 +65,6 @@
          (let ((head (function (car alist) (car blist) a)))
             (cons head (map2-with function (cdr alist) (cdr blist) a)))))
 
-### let*
-(define (expand-let* bindings body)
-   (if (pair? (cdr bindings))
-         `(let (\(car bindings)) \(expand-let* (cdr bindings) body))
-   `(let \bindings \@body)))
-
-(macro (let* bindings . body)
-   (expand-let* bindings body))
 
 ### base.txt
 

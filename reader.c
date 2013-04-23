@@ -74,7 +74,7 @@ static unsigned short chartab[]= {
     /*  27  '  */   0,
     /*  28  (  */   0,
     /*  29  )  */   0,
-    /*  2a  *  */   CHAR_LETTER,
+    /*  2a  *  */   CHAR_PREFIX,
     /*  2b  +  */   CHAR_PREFIX,
     /*  2c  ,  */   0,
     /*  2d  -  */   CHAR_LETTER,
