@@ -403,8 +403,7 @@
 ##
 ## evaluator modelled after (apply.c:eval)
 ##
-(define (application action args env) nil)
-      
+(define (application action args env))
 
 (define (analyze exp) nil)
 
