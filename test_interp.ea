@@ -1,0 +1,4 @@
+(require "interpreter.ea")
+
+(dumpln (expander '(define (fooness bar) bar) nil))
+

@@ -1,5 +1,8 @@
 (require "boot.ea")
 
+##
+## find-value modelled after (kernal.c:eval_symbol)
+##
 (define (find-value symbol context)
    (let (match entry)
       (set match (lambda (binding) (== (element binding 0) symbol)))
@@ -8,11 +11,16 @@
             (find-value symbol (environment))
          (element entry 1))))
 
+##
+## make-bindings modelled after (kernal.c:apply_lambda)
+##
 (define (make-bindings formals args closure)
-   (if (pair? formals)
-         (cons (cons (car formals) (car args))
-               (make-bindings (cdr formals) (cdr args) closure))
-      (cons (cons formals args) closure)))
+   (if (nil? formals) 
+         closure
+      (if (pair? formals)
+            (cons (cons (car formals) (car args))
+                  (make-bindings (cdr formals) (cdr args) closure))
+         (cons (cons formals args) closure))))
 
 ##
 ## expander modelled after (apply.c:expand)
