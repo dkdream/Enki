@@ -8,11 +8,11 @@
             (find-value symbol (environment))
          (element entry 1))))
 
-(define (make-bindings formals args)
+(define (make-bindings formals args closure)
    (if (pair? formals)
          (cons (cons (car formals) (car args))
-               (make-bindings (cdr formals) (cdr args)))
-      (cons (cons formals args) nil)))
+               (make-bindings (cdr formals) (cdr args) closure))
+      (cons (cons formals args) closure)))
 
 ##
 ## expander modelled after (apply.c:expand)
@@ -34,11 +34,11 @@
                                                (cons head (map do-expand tail)))))
                        (else (cons head (map do-expand tail)))))))
       (set apply-form
-           (lambda (form tail)
+           (lambda (form args)
               (let ((action (form-action form)))
                  (if (nil? action)
-                       (map do-expand tail)
-                    (application action tail env)))))
+                       (map do-expand args)
+                    (application action args env)))))
       (cond ((pair? exp) (expand-list exp))
             (else        exp))))
 
@@ -86,7 +86,7 @@
                                     ((delay? head) (evaluator (cons (force head) tail) env))
                                     (else (application head (map do-eval tail) env)))))
             (else exp))))
-
+            
 ##
 ## evaluator modelled after (apply.c:eval)
 ##
@@ -103,5 +103,5 @@
                                        (closure (element action 1)))
                                     (let ((formals (element defn 0))
                                           (body    (element defn 1)))
-                                       (eval-begin body (make-bindings formals args))))))))
+                                       (eval-begin body (make-bindings formals args closure))))))))
                                     
