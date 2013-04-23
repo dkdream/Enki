@@ -65,21 +65,21 @@ static unsigned short chartab[]= {
     /*  1e rs  */   0,
     /*  1f us  */   0,
     /*  20 sp  */   CHAR_BLANK,
-    /*  21  !  */   CHAR_LETTER,
+    /*  21  !  */   CHAR_PREFIX,
     /*  22  "  */   0,
     /*  23  #  */   0,
-    /*  24  $  */   0,
-    /*  25  %  */   CHAR_LETTER,
-    /*  26  &  */   CHAR_LETTER,
+    /*  24  $  */   CHAR_PREFIX,
+    /*  25  %  */   CHAR_PREFIX,
+    /*  26  &  */   CHAR_PREFIX,
     /*  27  '  */   0,
     /*  28  (  */   0,
     /*  29  )  */   0,
     /*  2a  *  */   CHAR_LETTER,
-    /*  2b  +  */   CHAR_LETTER,
+    /*  2b  +  */   CHAR_PREFIX,
     /*  2c  ,  */   0,
     /*  2d  -  */   CHAR_LETTER,
     /*  2e  .  */   CHAR_PREFIX,
-    /*  2f  /  */   CHAR_LETTER,
+    /*  2f  /  */   CHAR_PREFIX,
     /*  30  0  */   CHAR_DIGIT10 | CHAR_DIGIT16,
     /*  31  1  */   CHAR_DIGIT10 | CHAR_DIGIT16,
     /*  32  2  */   CHAR_DIGIT10 | CHAR_DIGIT16,
@@ -126,7 +126,7 @@ static unsigned short chartab[]= {
     /*  5b  [  */   0,
     /*  5c  \  */   0,
     /*  5d  ]  */   0,
-    /*  5e  ^  */   CHAR_LETTER,
+    /*  5e  ^  */   CHAR_PREFIX,
     /*  5f  _  */   CHAR_LETTER,
     /*  60  `  */   0,
     /*  61  a  */   CHAR_LETTER | CHAR_ALPHA | CHAR_DIGIT16,
@@ -156,28 +156,39 @@ static unsigned short chartab[]= {
     /*  79  y  */   CHAR_LETTER | CHAR_ALPHA,
     /*  7a  z  */   CHAR_LETTER | CHAR_ALPHA,
     /*  7b  {  */   0,
-    /*  7c  | */    CHAR_LETTER,
+    /*  7c  | */    CHAR_PREFIX,
     /*  7d  }  */   0,
-    /*  7e  ~  */   CHAR_LETTER,
+    /*  7e  ~  */   CHAR_PREFIX,
     /*  7f del */   0,
 };
 
-/* syntax: " # $ ' ( ) , : ; [ \ ] ` { } */
-/* "  -> string
+/* syntax: ! " # $ % & ' ( ) * + , . / : ; < = > [ \ ] ^ ` { } | ^ */
+/*
+** !  -> PREFIX
+** "  -> string
 ** #  -> comment
-** $  -> ......
+** $  -> PREFIX
+** %  -> PREFIX
+** &  -> PREFIX
 ** '  -> quote
 ** (  -> list ')'
+** +  -> PREFIX
 ** ,  -> s_comma
+** .  -> PREFIX
+** /  -> PREFIX
 ** :  -> type
 ** ;  -> s_semi
+** <  -> PREFIX
+** =  -> PREFIX
+** >  -> PREFIX
 ** [  -> tuple ']'
-** \  -> unquote
-** \@ -> unquote_splicing
+** \  -> unquote ** \@ -> unquote_splicing
+** ^  -> PREFIX
 ** `  -> quasiqute
 ** {  -> block '}'
-
-**/
+** |  -> PREFIX
+** ^  -> PREFIX
+*/
 
 static inline int isPrint(int c)   { return 0x20 <= c && c <= 0x7e; }
 static inline int isAlpha(int c)   { return 0 <= c && c <= 127 && (CHAR_ALPHA    & chartab[c]); }
