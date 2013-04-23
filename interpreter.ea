@@ -1,13 +1,24 @@
 (require "boot.ea")
 
+(define (find-value symbol context)
+   (let (match entry)
+      (set match (lambda (binding) (== (element binding 0) symbol)))
+      (set entry (find match context))
+      (if (nil? entry)
+            (find-value symbol (environment))
+         (element entry 1))))
+
+(define (make-bindings formals args)
+   (if (pair? formals)
+         (cons (cons (car formals) (car args))
+               (make-bindings (cdr formals) (cdr args)))
+      (cons (cons formals args) nil)))
+
 ##
 ## expander modelled after (apply.c:expand)
 ##
 (define (expander exp env)
-   (let (form? symbol? expand-list do-expand apply-form)
-      (set form? 
-           (lambda (exp)
-              (isA? exp :form)))
+   (let (expand-list do-expand apply-form)
       (set do-expand 
            (lambda (item)
               (expander item env)))
@@ -17,10 +28,10 @@
                     (tail (cdr exp)))
                  (cond ((== head 'quote) (cons head tail))
                        ((== head 'type)  (cons head tail))
-                       ((symbol? head)   (let ((value (find-value head env))
-                                               (if (form? value)
-                                                     (apply-form value tail env)
-                                                  (cons head (map do-expand tail))))))
+                       ((symbol? head)   (let ((value (find-value head env)))
+                                            (if (form? value)
+                                                  (apply-form value tail)
+                                               (cons head (map do-expand tail)))))
                        (else (cons head (map do-expand tail)))))))
       (set apply-form
            (lambda (form tail)
@@ -28,7 +39,7 @@
                  (if (nil? action)
                        (map do-expand tail)
                     (application action tail env)))))
-      (cond ((pair? exp) (expand-list exp env))
+      (cond ((pair? exp) (expand-list exp))
             (else        exp))))
 
 ##
@@ -44,7 +55,7 @@
                        (let ((value (find-value head env)))
                           (cond ((primitive? value) (cons value (map do-encode tail)))
                                 ((fixed? value)     (cons value (apply-encoder value tail)))
-                                (else               (cons head (map do-encode tail)))))
+                                (else               (cons head  (map do-encode tail)))))
                     (cons head (map do-encode tail))))))
       (set do-encode
            (lambda (item)
@@ -90,8 +101,7 @@
       (cond ((primitive? action) (apply action args env))
             ((lambda? action)    (let ((defn    (element action 0))
                                        (closure (element action 1)))
-                                    (let ((formals (defn (element defn 0)))
-                                          (body    (defn (element defn 1)))
-                                          (bindings (make-bindings formals args)))
-                                       (eval-begin body bindings)))))))
+                                    (let ((formals (element defn 0))
+                                          (body    (element defn 1)))
+                                       (eval-begin body (make-bindings formals args))))))))
                                     

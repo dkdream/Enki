@@ -2350,6 +2350,18 @@ extern SUBR(lambda_q) {
     }
 }
 
+extern SUBR(form_q) {
+    Node value;
+    checkArgs(args, "form?", 1, NIL);
+    pair_GetCar(args.pair, &value);
+
+    if (isType(value, t_form)) {
+        ASSIGN(result, true_v);
+    } else {
+        ASSIGN(result, NIL);
+    }
+}
+
 /***************************************************************
  ***************************************************************
  ***************************************************************
@@ -2633,11 +2645,35 @@ void startEnkiLibrary() {
     MK_OPR(primitive?,primitive_q);
     MK_OPR(delay?,delay_q);
     MK_OPR(lambda?,lambda_q);
+    MK_OPR(form?,form_q);
 
     MK_OPR(form-action,form_action);
     MK_OPR(fixed-encoder,fixed_encoder);
     MK_OPR(fixed-evaluator,fixed_evaluator);
     MK_OPR(forced-value,forced_value);
+
+    Reference std_in  = 0;
+    Reference std_out = 0;
+    Reference std_err = 0;
+
+    if (!opaque_Create(t_infile, sizeof(struct os_file), &std_in)) {
+        fatal("failed to allocate opaque object: stdin");
+    }
+    ((OSFile)(std_in))->file = stdin;
+    MK_CONST(stdin,std_in);
+
+
+    if (!opaque_Create(t_outfile, sizeof(struct os_file), &std_out)) {
+        fatal("failed to allocate opaque object: stdout");
+    }
+    ((OSFile)(std_out))->file = stdout;
+    MK_CONST(stdout,std_out);
+
+    if (!opaque_Create(t_outfile, sizeof(struct os_file), &std_err)) {
+        fatal("failed to allocate opaque object: stderr");
+    }
+    ((OSFile)(std_err))->file = stderr;
+    MK_CONST(stderr,std_err);
 
     clock_t cend = clock();
 
