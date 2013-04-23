@@ -731,12 +731,12 @@ extern bool readExpr(FILE *fp, Target result)
             ASSIGN(result, s_comma);
             return true;
 
-        case ':':
-            return readQuote(fp, s_type, result);
-            return true;
-
         case ';':
             ASSIGN(result, s_semi);
+            return true;
+
+        case ':':
+            return readQuote(fp, s_type, result);
             return true;
 
         case '0' ... '9':
