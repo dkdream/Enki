@@ -2338,6 +2338,18 @@ extern SUBR(delay_q) {
     }
 }
 
+extern SUBR(lambda_q) {
+    Node value;
+    checkArgs(args, "lambda?", 1, NIL);
+    pair_GetCar(args.pair, &value);
+
+    if (isType(value, t_lambda)) {
+        ASSIGN(result, true_v);
+    } else {
+        ASSIGN(result, NIL);
+    }
+}
+
 /***************************************************************
  ***************************************************************
  ***************************************************************
@@ -2620,6 +2632,7 @@ void startEnkiLibrary() {
     MK_OPR(fixed?,fixed_q);
     MK_OPR(primitive?,primitive_q);
     MK_OPR(delay?,delay_q);
+    MK_OPR(lambda?,lambda_q);
 
     MK_OPR(form-action,form_action);
     MK_OPR(fixed-encoder,fixed_encoder);

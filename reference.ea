@@ -1,0 +1,13 @@
+(require "boot.ea")
+
+## (let ([var val] ... ) exp ... ) -> ((lambda (var ... ) (begin exp ...)) val ... )
+(macro (alet binding . body) 
+   (let ((vars (map car binding))
+         (vals (map cdr binding)))
+      `((lambda vars \@body) \@vals)))
+
+## (let label ([var val] ... ) exp ... ) -> ((Y (lambda (label var ... ) (begin exp ... ))) val ... )
+(macro (ilet label binding . body)
+   (let ((vars (map car binding))
+         (vals (map cdr binding)))
+      `((Y (lambda (\label \@vars) \@body)) \@vals)))
