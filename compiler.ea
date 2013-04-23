@@ -324,25 +324,14 @@
    (mov ebx (offset edi 4)))
 
 
-### (code from Sicp/ch5-compiler.scm)
-
-(define (self-evaluating? exp) nil)
-(define (quoted? exp) nil)
-(define (variable? exp) nil)
-(define (assignment? exp) nil)
-(define (definition? exp) nil)
-(define (definition? exp) nil)
-(define (if? exp) nil)
-(define (lambda? exp) nil)
-(define (begin? exp) nil)
-(define (cond? exp) nil)
-(define (application? exp) nil)
-
 ##
 ## expander modelled after (apply.c:expand)
 ##
 (define (expander exp env)
-   (let (expand-list do-expand)
+   (let (form? symbol? expand-list do-expand apply-form)
+      (set form? 
+           (lambda (exp)
+              (isA? exp :form)))
       (set do-expand 
            (lambda (item)
               (expander item env)))
@@ -350,18 +339,76 @@
            (lambda (exp)
               (let ((head (expander (car exp) env))
                     (tail (cdr exp)))
-                 (cond ((== head 'quote)            (cons head tail))
-                       ((== head 'type)             (cons head tail))
-                       ((isA head 'symbol) (let ((value (find-value head env))
-                                              (if (isA value (type form))
-                                                    (apply-form value tail env)
-                                                 (cons head (map do-expand tail))))))
+                 (cond ((== head 'quote) (cons head tail))
+                       ((== head 'type)  (cons head tail))
+                       ((symbol? head)   (let ((value (find-value head env))
+                                               (if (form? value)
+                                                     (apply-form value tail env)
+                                                  (cons head (map do-expand tail))))))
                        (else (cons head (map do-expand tail)))))))
+      (set apply-form
+           (lambda (form tail)
+              (let ((action (form-action form)))
+                 (if (nil? action)
+                       (map do-expand tail)
+                    (apply action tail env)))))
       (cond ((pair? exp) (expand-list exp env))
+            (else        exp))))
+
+##
+## encoder modelled after (apply.c:encode)
+##
+(define (encoder exp env)
+   (let (encode-list do-encode apply-encoder)
+      (set encode-list
+           (lambda (exp)
+              (let ((head (encoder (car exp) env))
+                    (tail (cdr exp)))
+                 (if (symbol? head)
+                       (let ((value (find-value head env)))
+                          (cond ((primitive? value) (cons value (map do-encode tail)))
+                                ((fixed? value)     (cons value (apply-encoder value tail)))
+                                (else               (cons head (map do-encode tail)))))
+                    (cons head (map do-encode tail))))))
+      (set do-encode
+           (lambda (item)
+              (encoder item env)))
+      (set apply-encoder 
+           (lambda (fixed tail)
+              (let ((action (fixed-encoder fixed)))
+                 (if (nil? action)
+                       (map do-encode tail)
+                    (apply action tail env)))))
+      (cond ((pair? exp) (encode-list exp env))
+            (else        exp))))
+
+##
+## evaluator modelled after (apply.c:eval)
+##
+(define (evaluator exp env)
+   (let (do-eval)
+      (set do-eval
+           (lambda (item)
+              (evaluator item env)))
+      (cond ((forced? exp) (forced-value exp))
+            ((symbol? exp) (find-value exp env))
+            ((pair? exp)   (let ((head (evaluator (car exp) env))
+                                 (tail (cdr exp)))
+                              (cond ((fixed? head) (let ((action (fixed-evaluator head)))
+                                                      (apply action tail env)))
+                                    ((delay? head) (evaluator (cons (force head) tail) env))
+                                    (else (apply head (map do-eval tail) env)))))
             (else exp))))
 
-(define (encoder exp) nil)
+##
+## evaluator modelled after (apply.c:eval)
+##
+(define (application action args env) nil)
+      
+
 (define (analyze exp) nil)
+
+### (code from Sicp/ch5-compiler.scm)
 
 ## (compile <expression>
 ##          <target-location>
@@ -376,6 +423,17 @@
 ##    (compile 5 (local 1) '(jump endif5) '(eax))   == (begin (mov (cont 5) eax) (mv eax (local 1)) (jmp 'endif5))
 ##    (compile 5 'push '(call add 2) '(eax))        == (begin (mov (cont 5) eax) (push eax) (compile-call 'add 3))
 ##    (compile 5 'push '(call add 2) '(eax))        == (begin (mov (cont 5) eax) (push eax) (compile-tail 'add 3))
+(define (self-evaluating? exp) nil)
+(define (quoted? exp) nil)
+(define (variable? exp) nil)
+(define (assignment? exp) nil)
+(define (definition? exp) nil)
+(define (definition? exp) nil)
+(define (if? exp) nil)
+(define (lambda? exp) nil)
+(define (begin? exp) nil)
+(define (cond? exp) nil)
+(define (application? exp) nil)
 
 (define (compile exp target linkage free)
    (cond ((self-evaluating? exp) (compile-self-evaluating exp target linkage free))

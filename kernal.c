@@ -371,6 +371,8 @@ extern SUBR(type)
     pair_GetCar(args.pair, &symbol);
 
     if (!isType(symbol, s_symbol)) {
+        // this needs to handle complex types
+        // right now its is just like quote
         ASSIGN(result, symbol);
         return;
     }
@@ -852,6 +854,7 @@ extern SUBR(apply_form)
 
     pair_GetCar(args.pair, &form);
     pair_GetCdr(args.pair, &cargs);
+
     pair_GetCar(form.pair, &func);
 
     apply(func, cargs, env, result);
@@ -985,12 +988,12 @@ extern SUBR(fixed)
   if (1 < count) {
       forceArgs(args, &func, &enc, 0);
       tuple_Create(2, &tuple);
-      tuple_SetItem(tuple, 0, func);
-      tuple_SetItem(tuple, 1, enc);
+      tuple_SetItem(tuple, fxd_eval, func);
+      tuple_SetItem(tuple, fxd_encode, enc);
   } else {
       forceArgs(args, &func, 0);
       tuple_Create(1, &tuple);
-      tuple_SetItem(tuple, 0, func);
+      tuple_SetItem(tuple, fxd_eval, func);
   }
 
   setType(tuple, t_fixed);
@@ -1006,11 +1009,25 @@ extern SUBR(type_of)
     ASSIGN(result,NIL);
 
     if (1 < count) {
-        forceArgs(args, &value, &type, 0);
+        fetchArgs(args, &value, &type, 0);
+        node_TypeOf(value, result);
         setType(value, type);
     } else {
         pair_GetCar(args.pair, &value);
         node_TypeOf(value, result);
+    }
+}
+
+extern SUBR(isA)
+{
+    Node value, type;
+    checkArgs(args, "isA?", 2, NIL, NIL);
+    fetchArgs(args, &value, &type, 0);
+
+    ASSIGN(result,NIL);
+
+    if (isType(value, type)) {
+        ASSIGN(result, true_v);
     }
 }
 
@@ -2166,6 +2183,18 @@ extern SUBR(text_q) {
     }
 }
 
+extern SUBR(forced_q) {
+    Node value;
+    checkArgs(args, "forced?", 1, NIL);
+    pair_GetCar(args.pair, &value);
+
+    if (isType(value, t_forced)) {
+        ASSIGN(result, true_v);
+    } else {
+        ASSIGN(result, NIL);
+    }
+}
+
 extern SUBR(symbol_q) {
     Node value;
     checkArgs(args, "symbol?", 1, NIL);
@@ -2226,6 +2255,86 @@ extern SUBR(length) {
         bool     dotted = false;
         list_State(list.pair, &count, &dotted);
         integer_Create(count, result.integer);
+    }
+}
+
+extern SUBR(fixed_encoder) {
+    Tuple fixed;
+
+    checkArgs(args, "fixed-encoder", 1, t_fixed);
+    fetchArgs(args, &fixed, 0);
+
+    if (!tuple_GetItem(fixed, fxd_encode, result)) {
+        ASSIGN(result, NIL);
+    }
+}
+
+extern SUBR(fixed_evaluator) {
+    Tuple fixed;
+
+    checkArgs(args, "fixed-evaluator", 1, t_fixed);
+    fetchArgs(args, &fixed, 0);
+
+    if (!tuple_GetItem(fixed, fxd_eval, result)) {
+        ASSIGN(result, NIL);
+    }
+}
+
+extern SUBR(form_action) {
+    Tuple form;
+
+    checkArgs(args, "form-action", 1, t_form);
+    fetchArgs(args, &form, 0);
+
+    if (!tuple_GetItem(form, 0, result)) {
+        ASSIGN(result, NIL);
+    }
+}
+
+extern SUBR(forced_value) {
+    Tuple forced;
+
+    checkArgs(args, "forced-value", 1, t_forced);
+    fetchArgs(args, &forced, 0);
+
+    if (!tuple_GetItem(forced, 0, result)) {
+        ASSIGN(result, NIL);
+    }
+}
+
+extern SUBR(fixed_q) {
+    Node value;
+    checkArgs(args, "fixed?", 1, NIL);
+    pair_GetCar(args.pair, &value);
+
+    if (isType(value, t_fixed)) {
+        ASSIGN(result, true_v);
+    } else {
+        ASSIGN(result, NIL);
+    }
+}
+
+extern SUBR(primitive_q) {
+    Node value;
+    checkArgs(args, "primitive?", 1, NIL);
+    pair_GetCar(args.pair, &value);
+
+    if (isType(value, t_primitive)) {
+        ASSIGN(result, true_v);
+    } else {
+        ASSIGN(result, NIL);
+    }
+}
+
+extern SUBR(delay_q) {
+    Node value;
+    checkArgs(args, "delay?", 1, NIL);
+    pair_GetCar(args.pair, &value);
+
+    if (isType(value, t_delay)) {
+        ASSIGN(result, true_v);
+    } else {
+        ASSIGN(result, NIL);
     }
 }
 
@@ -2482,28 +2591,40 @@ void startEnkiLibrary() {
 
     MK_PRM(fprint);
     MK_OPR(read-line,read_line);
-    MK_OPR(eof-in,eof_in);
     MK_OPR(read-sexpr,read_sexpr);
     MK_PRM(inode);
     MK_PRM(sizeof);
     MK_PRM(car);
     MK_PRM(cdr);
-    MK_OPR(pair?,pair_q);
-    MK_OPR(integer?,integer_q);
     MK_OPR(gc-scan,gc_scan);
     MK_PRM(box);
     MK_OPR(set-end,set_end);
     MK_PRM(the);
-    MK_OPR(nil?,nil_q);
     MK_PRM(not);
     MK_OPR(open-buffer,open_buffer);
     MK_PRM(bprint);
     MK_OPR(close-buffer,close_buffer);
-    MK_OPR(text?,text_q);
-    MK_OPR(symbol?,symbol_q);
     MK_OPR(alloc-cycle,alloc_cycle);
     MK_OPR(scan-cycle,scan_cycle);
     MK_PRM(length);
+
+    MK_OPR(eof-in,eof_in);
+
+    MK_OPR(integer?,integer_q);
+    MK_OPR(isA?, isA);
+    MK_OPR(nil?,nil_q);
+    MK_OPR(pair?,pair_q);
+    MK_OPR(symbol?,symbol_q);
+    MK_OPR(text?,text_q);
+    MK_OPR(forced?,forced_q);
+    MK_OPR(fixed?,fixed_q);
+    MK_OPR(primitive?,primitive_q);
+    MK_OPR(delay?,delay_q);
+
+    MK_OPR(form-action,form_action);
+    MK_OPR(fixed-encoder,fixed_encoder);
+    MK_OPR(fixed-evaluator,fixed_evaluator);
+    MK_OPR(forced-value,forced_value);
 
     clock_t cend = clock();
 

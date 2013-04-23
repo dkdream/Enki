@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
     ea_global_debug = 1;
     __scan_cycle = 0;
 
-    printf("count %u type %p _zero_space %p \n",
+    printf("                  count %u type %p space %p\n",
            sizeof(struct pair)/sizeof(void*),
            t_pair,
            _zero_space);
