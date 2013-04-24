@@ -51,6 +51,15 @@ extern HashCode node_HashCode(Node node)
 
 bool node_Match(Node left, Node right)
 {
+#if 0
+    fprintf(stderr, "match: (%p,%p) ",
+            left.reference, right.reference);
+    print(stderr, left);
+    fprintf(stderr, " to: ");
+    print(stderr, right);
+    fprintf(stderr, "\n");
+#endif
+
     if (left.reference == right.reference) return true;
     if (0 == left.reference)  return false;
     if (0 == right.reference) return false;

@@ -1,6 +1,12 @@
 (require "boot.ea")
 
 ##
+## Fixed Operators
+##  define, quote, type, if, and, or, set, delay, while, begin, let, lambda
+##
+
+
+##
 ## find-value modelled after (kernal.c:eval_symbol)
 ##
 (define (find-value symbol context)

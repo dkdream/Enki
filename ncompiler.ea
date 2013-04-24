@@ -1,0 +1,474 @@
+(require "boot.ea")
+
+##
+##
+##
+
+(define (make-iseq inputs modified statements)
+   (let ((result (tuple inputs modified statements)))
+      (type-of result :iseq)
+      result))
+
+##  registers-needed
+(define (iseq-inputs iseq)
+   (if (isA? iseq :iseq)
+         (element iseq 0)
+      nil))
+
+##  registers-changed
+(define (iseq-modified iseq)
+   (if (isA? iseq :iseq)
+         (element iseq 1)
+      nil))
+
+## assembler instructions
+(define (iseq-code iseq)
+   (if (isA? iseq :iseq)
+         (element iseq 2)
+      nil))
+
+(define (needs?   reg iseq))
+(define (changes? reg iseq))
+
+(define (empty-iseq)
+   (make-iseq nil nil nil))
+
+(define (label-iseq name)
+   (make-iseq nil nil `((label \name))))
+
+(define (caller-save) '(ebx ecx edx edi))
+
+(define (call-label name)
+   (make-iseq (caller-save) nil `((call \name))))
+
+(define (call-indirect register)
+   (make-iseq (caller-save) (list register) `((call (indirect \name)))))
+
+(define (jump-label name)
+   (make-iseq '() '() `((jmp \name))))
+
+(define (delta left right)
+   (if (nil? right)
+         left
+      (if (nil? left)
+            nil
+         (if (member (car left) right)
+               (delta (cdr left) right)
+            (cons (car left) 
+                  (delta (cdr left) right))))))
+
+(define (union left right)
+   (if (nil? right)
+         left
+      (if (nil? left)
+            right
+         (if (member (car left) right)
+               (union (cdr left) right)
+            (cons (car left) 
+                  (union (cdr left) right))))))
+
+(define (append left right)
+   (if (nil? right)
+         left
+      (if (nil? left)
+            right
+         (cons (car left) 
+               (append (cdr left) right)))))
+
+##
+## preserve the regs across the first if need by the second
+##
+(define (append-preserving regs first second)
+   (if (nil? regs) 
+         (append-sequence first second)
+      (let ((first-reg (car regs)))
+         (if (and (needs?   first-reg seq2)
+                  (changes? first-reg seq1))
+               (preserving (cdr regs)
+                           (make-iseq (union (list first-reg)
+                                             (iseq-inputs seq1))
+                                      (delta (iseq-modified seq1)
+                                             (list first-reg))
+                            (append `((save \first-reg))
+                                    (iseq-code seq1)
+                                    `((restore \first-reg))))
+                           seq2)
+            (preserving (cdr regs) seq1 seq2)))))
+
+##
+## simple append 
+##
+(define (append-sequence . seqs)
+   (let (append-pair append-list)
+      (set append-pair (lambda (head tail)
+                          (make-iseq (union (iseq-inputs head)
+                                            (delta (iseq-inputs tail)
+                                                   (iseq-modified head)))
+                                     (union (iseq-modified head)
+                                            (iseq-modified tail))
+                                     (append (iseq-code head) (iseq-code tail)))))
+      (set append-list (lambda (list)
+                          (if (nil? list)
+                                (empty-iseq)
+                             (append-pair (car list) (append-list (cdr list))))))
+      (append-list seqs)))
+
+##
+## used to by compile-if
+##
+(define (fork-sequence left right)
+   (make-iseq (union (iseq-inputs left)
+                     (iseq-inputs right))
+              (union (iseq-modified left)
+                     (iseq-modifed right))
+              (append (iseq-code left)
+                      (iseq-code right))))
+
+##
+## used to construct a lambda
+##
+(define (tack-sequence action thunk)
+   (make-iseq (iseq-inputs action)
+              (iseq-modifed action)
+              (append (iseq-code action)
+                      (iseq-code thunk))))
+
+(define (double val)    (+ val val))
+(define (quadruple val) (double (double val)))
+
+(define (++ x) (+ x 1))
+(define (-- x) (- x 1))
+
+(define (reverse list)
+   (reverse-inner list nil))
+
+(define (reverse-inner input output)
+   (if (pair? input)
+         (reverse-inner (cdr input) (cons (car input) output))
+      output))
+
+###  Basic Assembly Language Emission
+
+## emit: output a line of assembly by concatenating the strings in an
+## arbitrarily nested list structure
+
+(define (asm-display stuff)
+   (print stuff))
+
+(define (emit . stuff)
+   (asm-display (asm-flatten (cons stuff "\n"))))
+
+(define (asm-flatten stuff)
+   (let ((buf (open-buffer)))
+      (asm-flatten-inner buf stuff)
+      (close-buffer buf)))
+
+(define (asm-flatten-inner buf stuff)
+   (if (nil? stuff)
+         ""
+      (if (pair? stuff)
+            (let ()
+               (asm-flatten-inner buf (car stuff))
+               (asm-flatten-inner buf (cdr stuff)))
+         (if (text? stuff)
+               (bprint buf stuff)
+            (if (integer? stuff)
+                  (bprint buf (format "@{s}" stuff))
+               (dumpln stuff)
+               (errore 'flattening "xx"))))))
+
+
+## Assembly Optimization Tips http://mark.masmcode.com/
+## 80x86 instruction set
+##      http://www.penguin.cz/~literakl/intel/intel.html
+##      http://courses.engr.illinois.edu/ece390/books/labmanual/index.html
+
+## http://www.unixwiz.net/techtips/x86-jumps.html
+## AF = adjust flag
+## CF = carry flag 
+## PF = parity flag 
+## ZF = zero flag
+## SF = sign flag
+## OF = overflow flag
+##------
+## IF = Interrupt flag
+## TF = Trap flag
+##------
+## DF = Direction flag (used in string ops)
+
+## Emit an indented instruction
+(define (insn . insn)
+   (emit (cons "        " insn)))
+
+(define (comment . comment)
+   (insn "# " comment))
+
+## Emit a two-argument instruction
+(define (twoarg mnemonic)
+   (lambda (src dest)
+      (insn mnemonic " " src ", " dest)))
+
+(define (onearg mnemonic)
+   (lambda (rand)
+      (insn mnemonic " " rand)))
+
+(define mov     (twoarg "movl"))   ## move 32bit->32bit
+(define movb    (twoarg "movb"))   ## move  8bit-> 8bit
+(define movzbl  (twoarg "movzbl")) ## move  8bit->32bit (zero-extended)
+(define lea     (twoarg "lea"))    ## compute address of
+(define add     (twoarg "add"))    ## arth-add    (AF CF OF PF SF ZF)
+(define adc     (twoarg "adc"))    ## arth-add+CF (AF CF OF PF SF ZF)
+(define sub     (twoarg "sub"))    ## arth-sub    (AF CF OF PF SF ZF)
+(define sub     (twoarg "sbb"))    ## arth-sub-CF (AF CF OF PF SF ZF)
+(define xchg    (twoarg "xchg"))   ## exchange
+(define asm-and (twoarg "and"))    ## bitwize and (CF OF PF SF ZF)
+(define xor     (twoarg "xor"))    ## bitwize or  (CF OF PF SF ZF)
+(define imul    (twoarg "imul"))
+
+(define push (onearg "push"))
+(define pop  (onearg "pop"))
+
+(define test (twoarg "test"))
+# tmp = (argS & argD)
+# CF  = 0
+# OF  = 0
+# SF  = MSBit(tmp)
+# ZF  = (tmp == 0)
+# PF  = even(bit-count(tmp))
+
+(define cmp (twoarg "cmp"))
+# tmp = (argD - argS)
+# CF  = bit-count(argD - argS) > bit-count(tmp)
+# OF  = MSBit(argD) != MSBit(tmp)
+# SF  = MSBit(tmp)
+# ZF  = (tmp == 0)
+# PF  = even(bit-count(tmp))
+
+(define jmp        (onearg "jmp"))
+(define jnoverflow (onearg "jno")) ## OF = 0
+(define joverflow  (onearg "jo"))  ## OF = 1
+(define jnsign     (onearg "jns")) ## SF = 0
+(define jsign      (onearg "js"))  ## SF = 1
+(define jnzero     (onearg "jnz")) ## ZF = 0
+(define jzero      (onearg "jz"))  ## ZF = 1
+(define jncarry    (onearg "jnc")) ## CF = 0
+(define jcarry     (onearg "jc"))  ## CF = 1
+(define jnparity   (onearg "jnp")) ## PF = 0
+(define jparity    (onearg "jp"))  ## PF = 1
+(define jnabove    (onearg "jna")) ## CF = 1 or ZF = 1
+(define jabove     (onearg "ja"))  ## CF = 0 or ZF = 0
+(define jnless     (onearg "jnl")) ## SF == OF 
+(define jless      (onearg "jl"))  ## SF != OF 
+(define jngreater  (onearg "jng")) ## ZF = 1 or SF != OF
+(define jgreater   (onearg "jg"))  ## ZF = 1 or SF == OF
+
+(define call (onearg "call"))
+
+(define inc  (onearg "inc"))  ## ++
+(define dec  (onearg "dec"))  ## --
+(define idiv (onearg "idiv")) ## long divide (EDX:EAX)/xxx (signed)
+(define int  (onearg "int"))  ## software interrupt
+(define mul  (onearg "mull")) ##
+
+
+## These have two-arg forms too, but I'm not using them.
+(define sal (onearg "sal")) ## shift-arth-left  (CF OF PF SF ZF) (   CF <- b[n] <- <- b[0] <- 0  )
+(define sar (onearg "sar")) ## shift-arth-right (CF OF PF SF ZF) ( b[n] -> b[n] -> -> b[0] -> CF )
+(define sar (onearg "shr")) ## shift-log-right  (CF OF PF SF ZF) (    0 -> b[n] -> -> b[0] -> CF )
+
+## Currently only using three zero-argument instructions:
+(define (ret)        (insn "ret"))
+
+(define (rep-stosb)  (insn "rep stosb"))  ## Repeat STOS byte (??)
+(define (repe-cmpsb) (insn "repe cmpsb")) ## Repeat CMPS byte (??)
+
+(define (save)       (insn "pusha")) ## push all registers 
+(define (restore)    (insn "popa"))  ## pop all registers
+
+## Registers:
+(define eax "%eax") ## scratch    (bottom-of-frame|return-value)
+(define ebx "%ebx") ## scratch                             (gcc-callee-saved)
+(define ecx "%ecx") ## scratch
+(define edx "%edx") ## scratch
+(define ebp "%ebp") ## frame-pointer   (enki-callee-saved) (gcc-callee-saved)
+(define esp "%esp") ## top of stack    (enki-callee-saved) (gcc-callee-saved)
+(define esi "%esi") ## bottom of stack (enki-callee-saved) (gcc-callee-saved)
+(define edi "%edi") ## scratch                             (gcc-callee-saved)
+(define al  "%al")  ## low-byte of eax
+
+## edx:eax = long-long accumulater
+## ebx:ecx = long-long argument
+## edi     = 
+
+(define frame ebp)
+(define bos   esi)
+(define tos   esp)
+(define scr   edi)
+
+## x86 addressing modes:
+(define (const x)         (list "$" x))
+(define (indirect x)      (list "(" x ")"))
+(define (offset x offset) (list offset (indirect x)))
+(define (absolute x)      (list "*" x))
+
+## Use this one inside of "indirect" or "offset".
+(define (index-register base index size)
+   (list base "," index "," size))
+
+(define (arg index) 
+   (offset frame (* -4 (++ index))))
+
+(define (lcl index) 
+   (offset bos (* -4 (++ index))))
+
+(define (drop count)
+   (let ((size (* 4 count)))
+      (add (const size) tos)))
+
+(define (syscall) (int (const "0x80")))
+
+## Other stuff for basic asm emission.
+(define (section name) (insn ".section " name))
+(define (rodata)       (section ".rodata"))
+(define (text)         (insn ".text"))
+(define (label label)  (emit label ":"))
+
+## define a .globl label
+(define (global-label lbl)
+   (insn ".globl " lbl)
+   (label lbl))
+
+(define label-index-counter 0)
+(define label-prefix        "K")
+(define (new-label)
+   (define label-index-counter (++ label-index-counter))
+   (list label-prefix "_" (format "@{s}" label-index-counter)))
+
+#thom# string need to be converted to a c-string
+(define (asm-represent-string string) 
+   (list "\"" string "\""))
+
+(define (ascii string) 
+   (insn ".ascii " (asm-represent-string string)))
+
+## emit a prologue for a datum to be assembled into .rodata
+(define (rodatum labelname)
+   (rodata)
+   (comment "align pointers so they end in binary 00")
+   (insn ".align " (sizeof 'pointer))
+   (label labelname))
+
+## index is zero-based
+(define (get-function-arg index reg)
+   (mov (offset frame (quadruple (++index))) reg))
+
+## index is zero-based
+(define (set-function-arg index reg)
+   (mov reg (offset frame (quadruple (++index)))))
+
+(define (compile-word contents) 
+   (insn ".long " contents))
+
+(define (compile-apply      nargs)) 
+(define (compile-tail-apply nargs))
+
+(define (compile-function-prologue)
+   (xchg eax tos)  ## exchange top-of-stack and bottom-of-frame
+   (push frame)    ## push old frame
+   (push bos)      ## push old bottom-of-stack
+   (mov eax frame) ## set new frame
+   (mov tos bos))  ## set new  bottom-of-stack
+
+(define (compile-tail label count))
+(define (compile-call label count))
+
+(define (compile-function-epilogue)
+   (mov frame scr)  ## mov the frame(old-tos) to scr
+   (mov bos tos)    ## clear stack/locals
+   (pop bos)        ## pop the old bottom-of-stack
+   (pop frame)      ## pop the old frame
+   (mov scr tos)    ## set old top-of-stack
+   (ret))
+
+(define (compile-function bodylabel nargs nlcls body)
+   (text)
+   (insn ".align " (sizeof 'pointer))
+   (insn ".type " bodylabel ", @function")  ## may not be needed
+   (global-label bodylabel)
+   (compile-function-prologue)
+   (if (< 0 nlcls)
+         (sub (const (* 4 nlcls)) tos))
+   (body)
+   (compile-function-epilogue)
+   (insn ".size " bodylabel ", .-" bodylabel)) ## may not be needed
+
+(define (compile-c-call function . args)
+   (let ((count  (length args))
+         (pushit))
+      (set pushit (lambda (list)
+                     (if (pair? list)
+                           (begin 
+                              (pushit (cdr list))
+                              (push (car list))))))
+      (if count
+            (begin 
+               (pushit args)
+               (call function)
+               (drop count))
+         (call function))))
+
+(define (compile-load-acc node)
+   (lea node edi)
+   (mov (indirect edi) eax)
+   (mov (offset edi 4) edx))
+
+(define (compile-add-acc node)
+   (lea node edi)
+   (mov (indirect edi) ecx)
+   (mov (offset edi 4) ebx)
+   (add ecx eax)
+   (adc ebx edx))
+
+(define (compile-sub-acc node)
+   (lea node edi)
+   (mov (indirect edi) ecx)
+   (mov (offset edi 4) ebx)
+   (sub ecx eax)
+   (sbb ebx edx))
+
+(define (compile-mul-acc node)
+   (lea node edi)
+   (mov (indirect edi) ecx)
+   (mov (offset edi 4) ebx)
+   (push bos)
+   (mov  ebx esi)
+   (imul eax esi) ## high-l * low-r
+   (mov  edx edi)
+   (imul ecx edi) ## low-l * high-r
+   (add  edi esi)
+   (mul  ecx)
+   (add  edi esi)
+   (mov  esi edx)
+   (pop bos))
+
+(define (compile-store-acc node)
+   (lea node edi)
+   (mov eax (indirect edi))
+   (mov ebx (offset edi 4)))
+
+## (compile <expression>
+##          <target-location>
+##          <linkage-descriptor 'continue 'return '(jump <label>) '(call <label> <count>) '(tail <label> <count>)>
+##          <free-registers>)
+##
+## compile is modelled after eval
+##
+## example:
+##    (compile 5 (register 'eax) 'continue '(eax))  == (mov (cont 5) eax)
+##    (compile 5 (register 'result) 'return '(eax)) == (begin (mov (cont 5) eax) (compile-function-epilogue))
+##    (compile 5 (local 1) '(jump endif5) '(eax))   == (begin (mov (cont 5) eax) (mv eax (local 1)) (jmp 'endif5))
+##    (compile 5 'push '(call add 2) '(eax))        == (begin (mov (cont 5) eax) (push eax) (compile-call 'add 3))
+##    (compile 5 'push '(call add 2) '(eax))        == (begin (mov (cont 5) eax) (push eax) (compile-tail 'add 3))
+
+
+
