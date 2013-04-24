@@ -10,12 +10,17 @@ dump
 (dumpln nil)
 (dumpln (type-of [1 2 3 4]))
 
+(define ttest [1 2 3 4])
+
 (assert (iso 10 :integer (type-of 1)))
 (assert (iso 10 :text    (type-of "1")))
 (assert (iso 10 'symbol  (type-of 'val)))
 (assert (iso 10 nil      (type-of nil)) "nil is not type nil")
 (assert (iso 10 :primitive (type-of println)))
 (assert (iso 10 :fixed    (type-of let)))
+(assert (iso 10 :tuple    (type-of ttest :iseq)))
+(assert (iso 10 :iseq     (type-of ttest)))
+
 
 (define fooness 'fooness)
 (define barness (lambda (ok)

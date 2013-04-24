@@ -323,10 +323,114 @@
    (mov eax (indirect edi))
    (mov ebx (offset edi 4)))
 
+##
+##
+##
 
-(define (analyze exp) nil)
+(define (make-iseq inputs modified statements)
+   (let ((result (tuple inputs modified statements)))
+      (type-of result :iseq)
+      result))
 
-### (code from Sicp/ch5-compiler.scm)
+##  registers-needed
+(define (iseq-inputs iseq)
+   (if (isA? iseq :iseq)
+         (element iseq 0)
+      nil))
+
+##  registers-changed
+(define (iseq-modified iseq)
+   (if (isA? iseq :iseq)
+         (element iseq 1)
+      nil))
+
+## assembler instructions
+(define (iseq-code iseq)
+   (if (isA? iseq :iseq)
+         (element iseq 2)
+      nil))
+
+(define (needs?   reg iseq))
+(define (changes? reg iseq))
+
+(define (empty-iseq)
+   (make-iseq nil nil nil))
+
+(define (label-iseq name)
+   (make-iseq nil nil `((label \name))))
+
+(define (caller-save) '(ebx ecx edx edi))
+
+(define (call-label name)
+   (make-iseq (caller-save) nil `((call \name))))
+
+(define (call-indirect register)
+   (make-iseq (caller-save) (list register) `((call (indirect \name)))))
+
+(define (jump-label name)
+   (make-iseq '() '() `((jmp \name))))
+
+
+(define (union set set))
+(define (delta set set))
+
+##
+## preserve the regs across the first if need by the second
+##
+(define (append-preserving regs first second)
+   (if (nil? regs) 
+         (append-sequence first second)
+      (let ((first-reg (car regs)))
+         (if (and (needs?   first-reg seq2)
+                  (changes? first-reg seq1))
+               (preserving (cdr regs)
+                           (make-iseq (union (list first-reg)
+                                             (iseq-inputs seq1))
+                                      (delta (iseq-modified seq1)
+                                             (list first-reg))
+                            (append `((save \first-reg))
+                                    (iseq-code seq1)
+                                    `((restore \first-reg))))
+                           seq2)
+            (preserving (cdr regs) seq1 seq2)))))
+
+##
+## simple append 
+##
+(define (append-sequence . seqs)
+   (let (append-pair append-list)
+      (set append-pair (lambda (head tail)
+                          (make-iseq (union (iseq-inputs head)
+                                            (delta (iseq-inputs tail)
+                                                   (iseq-modified head)))
+                                     (union (iseq-modified head)
+                                            (iseq-modified tail))
+                                     (append (iseq-code head) (iseq-code tail)))))
+      (set append-list (lambda (list)
+                          (if (nil? list)
+                                (empty-iseq)
+                             (append-pair (car list) (append-list (cdr list))))))
+      (append-list seqs)))
+
+##
+## used to by compile-if
+##
+(define (fork-sequence left right)
+   (make-iseq (union (iseq-inputs left)
+                     (iseq-inputs right))
+              (union (iseq-modified left)
+                     (iseq-modifed right))
+              (append (iseq-code left)
+                      (iseq-code right))))
+
+##
+## used to construct a lambda
+##
+(define (tack-sequence action thunk)
+   (make-iseq (iseq-inputs action)
+              (iseq-modifed action)
+              (append (iseq-code action)
+                      (iseq-code thunk))))
 
 ## (compile <expression>
 ##          <target-location>
@@ -341,30 +445,6 @@
 ##    (compile 5 (local 1) '(jump endif5) '(eax))   == (begin (mov (cont 5) eax) (mv eax (local 1)) (jmp 'endif5))
 ##    (compile 5 'push '(call add 2) '(eax))        == (begin (mov (cont 5) eax) (push eax) (compile-call 'add 3))
 ##    (compile 5 'push '(call add 2) '(eax))        == (begin (mov (cont 5) eax) (push eax) (compile-tail 'add 3))
-(define (application? exp) nil)
-(define (assignment? exp) nil)
-(define (begin? exp) nil)
-(define (cond? exp) nil)
-(define (definition? exp) nil)
-(define (if? exp) nil)
-(define (lambda? exp) nil)
-(define (quoted? exp) nil)
-(define (self-evaluating? exp) nil)
-(define (variable? exp) nil)
-
-(define (compile exp target linkage free)
-   (cond ((self-evaluating? exp) (compile-self-evaluating exp target linkage free))
-         ((quoted? exp)          (compile-quoted exp target linkage free))
-         ((variable? exp)        (compile-variable exp target linkage free))
-         ((assignment? exp)      (compile-assignment exp target linkage free))
-         ((definition? exp)      (compile-definition exp target linkage free))
-         ((if? exp)              (compile-if exp target linkage free))
-         ((lambda? exp)          (compile-lambda exp target linkage free))
-         ((let? exp)          (compile-let exp target linkage free))
-         ((begin? exp)           (compile-sequence (begin-actions exp) target linkage free))
-         ((application? exp)     (compile-application exp target linkage free))
-         (else
-          (error 'unknown "Unknown expression type -- COMPILE" exp))))
 
 
 
