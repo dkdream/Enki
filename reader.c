@@ -760,17 +760,10 @@ extern bool readExpr(FILE *fp, Target result)
             }
 
         case '-':
-            {
-              int dhr = getc(fp); ungetc(dhr, fp);
-              if (isDigit10(dhr)) return readInteger(fp, chr, result);
-              else return readSymbol(fp, chr, result);
-            }
-
         case '+':
             {
               int dhr = getc(fp); ungetc(dhr, fp);
               if (isDigit10(dhr)) return readInteger(fp, chr, result);
-              else return readSymbol(fp, chr, result);
             }
 
         default:
@@ -780,6 +773,8 @@ extern bool readExpr(FILE *fp, Target result)
               bool rtn = readSymbol(fp, chr, result);
               if (isType(*(result.reference), t_pair)) {
                   if (!list_UnDot(*(result.pair))) return false;
+                  if (!tuple_Convert(*(result.pair), result.tuple)) return false;
+                  setType(*(result.tuple), t_path);
               }
               return rtn;
             }

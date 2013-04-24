@@ -116,11 +116,4 @@
    (print 2)
    (println 3))
 
-(define expand-let* (lambda (bindings body)
-                       (if (pair? (cdr bindings))
-                             `(let (\(car bindings)) \(expand-let* (cdr bindings) body))
-   `(let \bindings \@body))))
-
-(dumpln (apply expand-let* '(((x 1)(y 2)(z 3)) (do-it))))
-
 (dumpln "End")

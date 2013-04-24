@@ -28,6 +28,13 @@
                   (make-bindings (cdr formals) (cdr args) closure))
          (cons (cons formals args) closure))))
 
+(define (update-bindings symbol value env)
+   (let ((binding (car env)))
+      (if (== symbol (car binding))
+            (cdr binding value)
+         (update-bindings symbol value (cdr env)))))
+         
+
 ##
 ## expander modelled after (apply.c:expand)
 ##
@@ -86,13 +93,13 @@
                        (if (nil? action)
                              (cons fixed (map do-encode tail))
                           (cons fixed (application action tail env))))
-                 (cond ((== 'define fixed) (map do-encode tail))
+                 (cond ((== 'define fixed) (cons (car tail) (map do-encode (cdr tail))))
                        ((== 'quote  fixed) tail)
                        ((== 'type   fixed) tail)
                        ((== 'if     fixed) (map do-encode tail))
                        ((== 'and    fixed) (map do-encode tail))
                        ((== 'or     fixed) (map do-encode tail))
-                       ((== 'set    fixed) (map do-encode tail))
+                       ((== 'set    fixed) (cons (car tail) (map do-encode (cdr tail))))
                        ((== 'delay  fixed) (map do-encode tail))
                        ((== 'begin  fixed) (map do-encode tail))
                        ((== 'let    fixed) (let ((nenv (make-bindings

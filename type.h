@@ -44,6 +44,7 @@ extern Type t_lambda;
 extern Type t_opaque;
 extern Type t_outfile;
 extern Type t_pair;
+extern Type t_path;
 extern Type t_primitive;
 extern Type t_semi;
 extern Type t_text;

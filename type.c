@@ -62,6 +62,7 @@ Type t_lambda = 0;
 Type t_opaque = 0;
 Type t_outfile = 0;
 Type t_pair = 0;
+Type t_path = 0;
 Type t_primitive = 0;
 Type t_semi = 0;
 Type t_text = 0;
@@ -117,6 +118,7 @@ extern void init_global_typetable() {
     MK_BTYPE(opaque);
     MK_BTYPE(outfile);
     MK_BTYPE(pair);
+    MK_BTYPE(path);
     MK_BTYPE(primitive);
     MK_BTYPE(semi);
     MK_BTYPE(text);

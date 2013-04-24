@@ -1984,19 +1984,34 @@ extern SUBR(sizeof) {
 
 extern SUBR(car) {
     Pair pair;
-    checkArgs(args, "car", 1, t_pair);
-    forceArgs(args, &pair, 0);
+    unsigned count = checkArgs(args, "car", 1, t_pair);
 
-    pair_GetCar(pair, result);
+    ASSIGN(result,NIL);
+
+    if (1 < count) {
+        Node value;
+        forceArgs(args, &pair, &value, 0);
+        pair_SetCar(pair, value);
+    } else {
+        forceArgs(args, &pair, 0);
+        pair_GetCar(pair, result);
+    }
 }
 
 extern SUBR(cdr) {
     Pair pair;
+    unsigned count = checkArgs(args, "cdr", 1, t_pair);
 
-    checkArgs(args, "car", 1, t_pair);
-    forceArgs(args, &pair, 0);
+    ASSIGN(result,NIL);
 
-    pair_GetCdr(pair, result);
+    if (1 < count) {
+        Node value;
+        forceArgs(args, &pair, &value, 0);
+        pair_SetCdr(pair, value);
+    } else {
+        forceArgs(args, &pair, 0);
+        pair_GetCdr(pair, result);
+    }
 }
 
 extern SUBR(pair_q) {

@@ -94,3 +94,23 @@ extern bool tuple_Fill(Tuple tuple, Pair list) {
 
     return true;
 }
+
+extern bool tuple_Convert(Pair list, Tuple* target) {
+    if (!list) return false;
+
+    unsigned count  = 0;
+    bool     dotted = false;
+
+    if (!list_State(list, &count, &dotted)) return false;
+
+    if (1 > count) return false;
+
+    Tuple result;
+
+    if (!tuple_Create(count,&result)) return false;
+    if (!tuple_Fill(result,list)) return false;
+
+    *target = result;
+
+    return true;
+}
