@@ -1018,7 +1018,7 @@ extern SUBR(type_of)
     }
 }
 
-extern SUBR(isA)
+extern SUBR(isA_q)
 {
     Node value, type;
     checkArgs(args, "isA?", 2, NIL, NIL);
@@ -2362,6 +2362,18 @@ extern SUBR(form_q) {
     }
 }
 
+extern SUBR(tuple_q) {
+    Node value;
+    checkArgs(args, "tuple?", 1, NIL);
+    pair_GetCar(args.pair, &value);
+
+    if (isType(value, t_tuple)) {
+        ASSIGN(result, true_v);
+    } else {
+        ASSIGN(result, NIL);
+    }
+}
+
 /***************************************************************
  ***************************************************************
  ***************************************************************
@@ -2635,7 +2647,7 @@ void startEnkiLibrary() {
     MK_OPR(eof-in,eof_in);
 
     MK_OPR(integer?,integer_q);
-    MK_OPR(isA?, isA);
+    MK_OPR(isA?, isA_q);
     MK_OPR(nil?,nil_q);
     MK_OPR(pair?,pair_q);
     MK_OPR(symbol?,symbol_q);
@@ -2646,6 +2658,7 @@ void startEnkiLibrary() {
     MK_OPR(delay?,delay_q);
     MK_OPR(lambda?,lambda_q);
     MK_OPR(form?,form_q);
+    MK_OPR(tuple?,tuple_q);
 
     MK_OPR(form-action,form_action);
     MK_OPR(fixed-encoder,fixed_encoder);

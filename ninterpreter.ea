@@ -1,0 +1,192 @@
+(require "boot.ea")
+
+##
+## Fixed Operators
+##  define, quote, type, if, and, or, set, delay, while, begin, let, lambda
+##
+
+
+##
+## find-value modelled after (kernal.c:eval_symbol)
+##
+(define (find-value symbol context)
+   (let (match entry)
+      (set match (lambda (binding) (== (element binding 0) symbol)))
+      (set entry (find match context))
+      (if (nil? entry)
+            (find-value symbol (environment))
+         (element entry 1))))
+
+##
+## make-bindings modelled after (kernal.c:apply_lambda)
+##
+(define (make-bindings formals args closure)
+   (if (nil? formals) 
+         closure
+      (if (pair? formals)
+            (cons (cons (car formals) (car args))
+                  (make-bindings (cdr formals) (cdr args) closure))
+         (cons (cons formals args) closure))))
+
+##
+## expander modelled after (apply.c:expand)
+##
+(define (expander exp env)
+   (let (expand-list do-expand apply-form)
+      (set do-expand 
+           (lambda (item)
+              (expander item env)))
+      (set expand-list
+           (lambda (exp)
+              (let ((head (expander (car exp) env))
+                    (tail (cdr exp)))
+                 (cond ((== head 'quote) (cons head tail))
+                       ((== head 'type)  (cons head tail))
+                       ((symbol? head)   (let ((value (find-value head env)))
+                                            (if (form? value)
+                                                  (apply-form value tail)
+                                               (cons head (map do-expand tail)))))
+                       (else (cons head (map do-expand tail)))))))
+      (set apply-form
+           (lambda (form args)
+              (let ((action (form-action form)))
+                 (if (nil? action)
+                       (map do-expand args)
+                    (application action args env)))))
+      (cond ((pair? exp) (expand-list exp))
+            (else        exp))))
+
+##
+## encoder modelled after (apply.c:encode)
+##
+(define (encoder exp env)
+   (let (encode-list do-encode apply-encoder)
+      (set encode-list
+           (lambda (exp)
+              (let ((head (encoder (car exp) env))
+                    (tail (cdr exp)))
+                 (if (symbol? head)
+                       (let ((value (find-value head env)))
+                          (cond ((primitive? value) (cons value (map do-encode tail)))
+                                ((fixed? value)     (cons value (fixed-encoder head tail)))
+                                (else               (cons head  (map do-encode tail)))))
+                    (cons head (map do-encode tail))))))
+      (set do-encode
+           (lambda (item)
+              (encoder item env)))
+      (set let-binding
+           (lambda (entry)
+              (cond ((symbol? entry) entry)
+                    ((pair?   entry) (car entry))
+                    ((tuple?  entry) (element entry 0)))))
+      (set fixed-encoder 
+           (lambda (fixed tail)
+              (if (fixed? fixed)                    
+                    (let ((action (fixed-encoder fixed)))
+                       (if (nil? action)
+                             (cons fixed (map do-encode tail))
+                          (cons fixed (application action tail env))))
+                 (cond ((== 'define fixed) (map do-encode tail))
+                       ((== 'quote  fixed) tail)
+                       ((== 'type   fixed) tail)
+                       ((== 'if     fixed) (map do-encode tail))
+                       ((== 'and    fixed) (map do-encode tail))
+                       ((== 'or     fixed) (map do-encode tail))
+                       ((== 'set    fixed) (map do-encode tail))
+                       ((== 'delay  fixed) (map do-encode tail))
+                       ((== 'begin  fixed) (map do-encode tail))
+                       ((== 'let    fixed) (let ((nenv (make-bindings
+                                                        (map let-binding (car tail)) nil env)))
+                                              (map (lambda (item)
+                                                      (encoder item nenv))
+                                                   tail)))
+                       ((== 'lambda fixed) (let ((nenv (make-bindings
+                                                        (map let-binding (car tail)) nil env)))
+                                              (cons (car tail) (map (lambda (item)
+                                                                       (encoder item nenv))
+                                                                    (cdr tail)))))
+                       ))))
+      (cond ((pair? exp) (encode-list exp env))
+            (else        exp))))
+
+##
+## evaluator modelled after (apply.c:eval)
+##
+(define (evaluator exp env)
+   (let (do-eval make-let-bindings fixed-evaluator)
+      (set do-eval
+           (lambda (item)
+              (evaluator item env)))
+      (set make-let-bindings
+           (lambda (bindings)
+              nil))
+      (set fixed-evaluator
+           (lambda (fixed args)
+              (if (fixed? fixed)
+                    (let ((action (fixed-evaluator fixed)))
+                       (application action tail env))
+                 (cond ((== 'define fixed) (let ((symbol (car args))
+                                                 (value (car (cdr args))))
+                                              (global-add symbol (evaluator value env))))
+                       ((== 'quote  fixed) (car args))
+                       ((== 'type   fixed) (type args))
+                       ((== 'if     fixed) (let ((test     (car args))
+                                                 (on_true  (car (cdr args)))
+                                                 (on_false (cdr (cdr args))))
+                                              (if (evaluator exp env)
+                                                    (evaluator on_true env)
+                                                 (fixed-evaluator 'begin on_false))))
+                       ((== 'and fixed) (if (nil? args)
+                                              true
+                                           (if (nil? (evaluator (car args) env))
+                                                 nil
+                                              (fixed-evaluator 'and (cdr args)))))
+                       ((== 'or fixed) (if (nil? args)
+                                             nil
+                                           (if (nil? (evaluator (car args) env))
+                                              (fixed-evaluator 'or (cdr args))
+                                              nil)))
+                       ((== 'set fixed) (let ((symbol (car args))
+                                              (value  (evaluator (car (cdr args)) env)))
+                                           (update-bindings symbol value env)))
+                       ((== 'delay fixed) (let ((value (tuple nil (car args) env)))
+                                             (type-of value :delay)
+                                             value))
+                       ((== 'begin fixed) (if (nil? (cdr args))
+                                                (evaluator (car args) env)
+                                             (evaluator (car args) env)
+                                             (fixed-evaluator 'begin (cdr args))))
+                       ((== 'let    fixed) (let ((nenv (make-let-bindings (car args))))
+                                              (fixed-evaluator 'begin (cdr args))))
+                       ((== 'lambda fixed) (let ((value (cons args env)))
+                                              (type-of value :lambda)
+                                              value))
+                                                
+                       ))))
+      (cond ((forced? exp) (forced-value exp))
+            ((symbol? exp) (find-value exp env))
+            ((pair? exp)   (let ((head (evaluator (car exp) env))
+                                 (tail (cdr exp)))
+                              (cond ((fixed? head) (fixed-evaluator head tail))
+                                    ((delay? head) (evaluator (cons (force head) tail) env))
+                                    (else (application head (map do-eval tail) env)))))
+            (else exp))))
+            
+##
+##  application modelled after (apply.c:apply)
+##
+(define (application action args env)
+   (let (eval-begin)
+      (set eval-begin 
+           (lambda (body context)
+              (if (nil? (cdr body))
+                    (evaluator (car body) context)
+                 (evaluator (car body) context)
+                 (eval-begin (cdr body) context))))
+      (cond ((primitive? action) (apply action args env))
+            ((lambda? action)    (let ((defn    (element action 0))
+                                       (closure (element action 1)))
+                                    (let ((formals (element defn 0))
+                                          (body    (element defn 1)))
+                                       (eval-begin body (make-bindings formals args closure))))))))
+                                    
