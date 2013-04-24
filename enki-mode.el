@@ -7,7 +7,10 @@
      (list 
       (concat
        "(" (regexp-opt
-            '("define" "macro" "lambda"
+            '(
+              "define"
+              "lambda"
+              "macro"
               ) t)
        "\\>")
       '(1 font-lock-keyword-face))
@@ -21,25 +24,26 @@
       ;; Control structures.
       (cons (concat
 	     "(" (regexp-opt
-		  '("if"
-                    "let"
-                    "let*"
-                    "letrec"
+		  '(
                     "and"
+                    "begin"
+                    "cond"
+                    "if"
+                    "let"
                     "or"
-                    "begin") t)
+                    ) t)
 	     "\\>")
 	    1)
       ;;
       ;; Control structures
       (cons (concat
 	     "(" (regexp-opt
-		  '("when"
-                    "unless"
+		  '(
 		    "loop"
                     "do"
-                    "do*"
                     "require"
+                    "unless"
+                    "when"
                     ) t)
 	     "\\>")
 	    1)
@@ -48,7 +52,12 @@
       (list
        (concat
         "(" (regexp-opt
-             '( "catch" "throw" "featurep" "provide") t)
+             '(
+               "catch"
+               "featurep"
+               "provide"
+               "throw"
+               ) t)
         "\\>"
         "[ \t']*\\(\\sw+\\)?")
        '(1 font-lock-keyword-face)
@@ -58,7 +67,12 @@
       (list
        (concat
         "(" (regexp-opt
-             '("abort" "assert" "error" "signal") t)
+             '(
+               "abort" 
+               "assert" 
+               "error"
+               "signal"
+               ) t)
         "\\>")
        1 font-lock-warning-face)
       ;;

@@ -96,7 +96,7 @@
             (else exp))))
             
 ##
-## evaluator modelled after (apply.c:eval)
+##  application modelled after (apply.c:apply)
 ##
 (define (application action args env)
    (let (eval-begin)
