@@ -978,6 +978,7 @@ extern SUBR(form)
 extern SUBR(fixed)
 {
   Tuple tuple;
+  Node  name = NIL;
   Node  func = NIL;
   Node  enc = NIL;
 
@@ -985,15 +986,20 @@ extern SUBR(fixed)
 
   ASSIGN(result,NIL);
 
-  if (1 < count) {
-      forceArgs(args, &func, &enc, 0);
-      tuple_Create(2, &tuple);
+  if (2 < count) {
+      forceArgs(args, &name, &func, &enc, 0);
+      tuple_Create(3, &tuple);
+      tuple_SetItem(tuple, fxd_name, name);
       tuple_SetItem(tuple, fxd_eval, func);
       tuple_SetItem(tuple, fxd_encode, enc);
-  } else {
-      forceArgs(args, &func, 0);
-      tuple_Create(1, &tuple);
+  } else if (1 < count) {
+      forceArgs(args, &name, &func, 0);
+      tuple_Create(2, &tuple);
+      tuple_SetItem(tuple, fxd_name, name);
       tuple_SetItem(tuple, fxd_eval, func);
+  } else {
+      ASSIGN(result, NIL);
+      return;
   }
 
   setType(tuple, t_fixed);
@@ -2439,9 +2445,10 @@ static Node defineFixed(const char* name, Operator eval)
     symbol_Convert(name, &label);
     primitive_Create(label, eval, &prim);
 
-    tuple_Create(1, &fixed);
+    tuple_Create(2, &fixed);
     setType(fixed, t_fixed);
 
+    tuple_SetItem(fixed, fxd_name, label);
     tuple_SetItem(fixed, fxd_eval, prim);
 
     defineValue(label, fixed);
@@ -2462,7 +2469,7 @@ static Node defineEFixed(const char* neval,  Operator oeval,
     GC_Protect(label);
     GC_Protect(prim);
 
-    tuple_Create(2, &fixed);
+    tuple_Create(3, &fixed);
     setType(fixed, t_fixed);
 
     if (nencode) {
@@ -2472,6 +2479,8 @@ static Node defineEFixed(const char* neval,  Operator oeval,
     }
 
     symbol_Convert(neval, &label);
+    tuple_SetItem(fixed, fxd_name, label);
+
     primitive_Create(label, oeval, &prim);
     tuple_SetItem(fixed, fxd_eval, prim);
 

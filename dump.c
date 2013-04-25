@@ -108,9 +108,8 @@ extern bool print(FILE* output, Node node) {
     }
 
     if (isIdentical(type, t_primitive)) {
-        fprintf(output, "%s(%p)",
-                (const char *) node.primitive->label->value,
-                node.reference);
+        fprintf(output, "@%s",
+                (const char *) node.primitive->label->value);
         return true;
     }
 
@@ -142,6 +141,15 @@ extern bool print(FILE* output, Node node) {
                 node.reference,
                 (unsigned) asKind(node.reference)->count);
         return true;
+    }
+
+    if (isIdentical(type, t_fixed)) {
+        const unsigned max = asKind(node)->count;
+        unsigned inx = 0;
+        fprintf(output, "{");
+        print(output, node.tuple->item[0]);
+        fprintf(output, "}");
+        return;
     }
 
     if (isType(type, s_symbol)) {
@@ -219,8 +227,7 @@ extern bool dump(FILE* output, Node node) {
     }
 
     if (isIdentical(type, t_primitive)) {
-        fprintf(output, "primitive(%p %s)",
-                node.reference,
+        fprintf(output, "@%s",
                 (const char*)(node.primitive->label->value));
         return true;
     }
@@ -253,6 +260,15 @@ extern bool dump(FILE* output, Node node) {
                 node.reference,
                 (unsigned) asKind(node)->count);
         return true;
+    }
+
+    if (isIdentical(type, t_fixed)) {
+        const unsigned max = asKind(node)->count;
+        unsigned inx = 0;
+        fprintf(output, "{");
+        dump(output, node.tuple->item[0]);
+        fprintf(output, "}");
+        return;
     }
 
     if (isType(type, s_symbol)) {
@@ -375,8 +391,7 @@ extern void prettyPrint(FILE* output, Node node) {
 
         if (isIdentical(type, t_primitive)) {
             offset += 20;
-            fprintf(output, "primitive(%p %s)",
-                    node.reference,
+            fprintf(output, "@%s",
                     (const char*)(node.primitive->label->value));
             return;
         }
@@ -426,6 +441,15 @@ extern void prettyPrint(FILE* output, Node node) {
                 prettyPrint_intern(node.tuple->item[inx], level+1);
             }
             fprintf(output, "]");
+            return;
+        }
+
+        if (isIdentical(type, t_fixed)) {
+            const unsigned max = asKind(node)->count;
+            unsigned inx = 0;
+            fprintf(output, "{");
+            prettyPrint_intern(node.tuple->item[0], level+1);
+            fprintf(output, "}");
             return;
         }
 
