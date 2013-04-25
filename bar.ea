@@ -1,0 +1,11 @@
+(require "boot.ea")
+
+
+(dumpln (expand '(let (one two three)
+                    (set (one xx)
+                         (+ 1 xx))
+                    (set (two xx)
+                         (one (one xx)))
+                    (set (three xx)
+                         (one (two xx)))
+                    (dumpln (three 4)))))
