@@ -38,7 +38,8 @@
 
 ##
 ## expander modelled after (apply.c:expand)
-##
+## syntax-tree -> syntax-tree
+## 
 (define (expander exp env)
    (let (expand-list do-expand apply-form)
       (set do-expand 
@@ -66,6 +67,7 @@
 
 ##
 ## encoder modelled after (apply.c:encode)
+## syntax-tree -> control-tree (global control/primitives)
 ##
 (define (encoder exp env)
    (let (do-encode encode-list apply-encoder)
@@ -110,9 +112,13 @@
 
 ##
 ## evaluator modelled after (apply.c:eval)
-##
+## control-tree -> value
+## 
 (define (evaluator exp env)
    (let (do-eval make-let-bindings control-evaluator)
+      ## do-eval           - convert an control-tree argument into a value
+      ## make-let-bindings - create and extended enviroment
+      ## control-evaluator - convert a control-tree structure into a value
       (set (do-eval item) (evaluator item env))
       (set (make-let-bindings bindings) 
            (if (nil? bindings)
@@ -133,58 +139,75 @@
               (cond ((check 'define) (let ((symbol (car args))
                                            (value (car (cdr args))))
                                         (global-add symbol (evaluator value env))))
-                    ((check 'quote) (car args))
-                    ((check 'type)  (type args))
-                    ((check 'if)    (let ((test     (car args))
-                                          (on_true  (car (cdr args)))
-                                          (on_false (cdr (cdr args))))
-                                       (if (evaluator exp env)
-                                             (evaluator on_true env)
-                                          (control-evaluator 'begin on_false))))
-                    ((check 'and)   (if (nil? args)
-                                          true
-                                       (if (nil? (evaluator (car args) env))
-                                             nil
-                                          (control-evaluator 'and (cdr args)))))
-                    ((check 'or)    (if (nil? args)
-                                          nil
-                                       (if (nil? (evaluator (car args) env))
-                                             (control-evaluator 'or (cdr args))
-                                          nil)))
-                    ((check 'set)   (let ((symbol (car args))
-                                          (value  (evaluator (car (cdr args)) env)))
-                                       (update-bindings symbol value env)))
-                    ((check 'delay) (let ((value (tuple nil (car args) env)))
-                                       (type-of value :delay)
-                                       value))
-                    ((check 'begin ) (if (nil? (cdr args))
+                    ((check 'quote)  (car args))
+                    ((check 'type)   (type args))
+                    ((check 'if)     (let ((test     (car args))
+                                           (on_true  (car (cdr args)))
+                                           (on_false (cdr (cdr args))))
+                                        (if (evaluator exp env)
+                                              (evaluator on_true env)
+                                           (control-evaluator 'begin on_false))))
+                    ((check 'and)    (if (nil? args)
+                                           true
+                                        (if (nil? (evaluator (car args) env))
+                                              nil
+                                           (control-evaluator 'and (cdr args)))))
+                    ((check 'or)     (if (nil? args)
+                                           nil
+                                        (if (nil? (evaluator (car args) env))
+                                              (control-evaluator 'or (cdr args))
+                                           nil)))
+                    ((check 'set)    (let ((symbol (car args))
+                                           (value  (evaluator (car (cdr args)) env)))
+                                        (update-bindings symbol value env)))
+                    ((check 'delay)  (let ((value (tuple nil (car args) env)))
+                                        (type-of value :delay)
+                                        value))
+                    ((check 'begin)  (if (nil? (cdr args))
                                            (evaluator (car args) env)
                                         (evaluator (car args) env)
                                         (control-evaluator 'begin (cdr args))))
-                    ((check 'let    ) (let ((nenv (make-let-bindings (car args))))
-                                         (control-evaluator 'begin (cdr args))))
-                    ((check 'lambda ) (let ((value (cons args env)))
-                                         (type-of value :lambda)
-                                         value))                    
+                    ((check 'let)    (let ((nenv (make-let-bindings (car args))))
+                                        (control-evaluator 'begin (cdr args))))
+                    ((check 'lambda) (let ((value (cons args env)))
+                                        (type-of value :lambda)
+                                        value))                    
                     )))
-      (cond ((forced? exp) (forced-value exp))
-            ((symbol? exp) (find-value exp env))
-            ((pair? exp)   (let ((head (evaluator (car exp) env))
-                                 (tail (cdr exp)))
-                              (cond ((control? head) (control-evaluator head tail))
-                                    ((delay? head)   (evaluator (cons (force head) tail) env))
-                                    (else (application head (map do-eval tail) env)))))
+      (cond ((primitive? exp) exp)
+            ((control?   exp) exp)
+            ((symbol?    exp) (let ((value (find-value exp env)))
+                                 (if (forced? value)
+                                       (forced-value value)
+                                    value)))
+            ((pair?      exp) (let ((head (do-eval (car exp)))
+                                    (tail (cdr exp)))
+                                 (cond ((control? head)   (control-evaluator head tail))
+                                       ((primitive? head) (application head (map do-eval tail) env))
+                                       ((symbol? head)    (evaluator (cons (find-value exp env) tail) env))
+                                       ((delay? head)     (evaluator (cons (force head) tail) env))
+                                       (else              (application head (map do-eval tail) env)))))
             (else exp))))
 
 ##
+## registers modelled after evaluator
+## control-tree -> set (escaping names)
 ##
-##
-(define (registers exp  env)
-   (cond ((forced? exp) nil)
-         ((symbol? exp) (if (global? exp) nil (cons exp nil)))
-         ((pair?   exp) (let ((head (registers (car exp) env))
-                              (tail (registers (cdr exp) env)))
-                           (union head tail)))
+(define (registers exp env)
+   (let (global? control-registers do-register fetch-entry)
+      ## global?           - check if a symbol is global in this envirment
+      ## control-registers - deal with control-tree structures
+      ## do-registers      - return the set of registers used by an argument
+      ## fetch-entry       - check if an value is a control or primitive
+      (cond ((primitive? exp) nil)
+            ((control?   exp) nil)
+            ((symbol?    exp) (if (global? exp) nil (cons exp nil)))
+            ((pair?      exp) (let ((head (fetch-entry (car exp)))
+                                    (tail (cdr exp)))
+                                 (cond ((control? head)   (control-registers head tail))
+                                       ((primitive? head) (union (map do-register tail) nil))
+                                       ((symbol? head)    (union (map do-register tail) (cons head nil)))
+                                       (else (error 'REGISTER "unknown operator " head)))))
+            (else nil))))
 ##
 ##  application modelled after (apply.c:apply)
 ##
