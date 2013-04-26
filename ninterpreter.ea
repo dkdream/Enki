@@ -7,6 +7,28 @@
 
 (define (control? val) (isA? val :control))
 
+## needed when we expand the syntax tree to include then
+(define (comma?   val) (isA? val :comma))
+(define (semi?    val) (isA? val :semi))
+(define (block?   val) (isA? val :block))
+
+(define (make-controls list)
+   (if (nil? list)
+         nil
+      (let (symbol value)
+         (set symbol (car list))
+         (set value (tuple symbol))
+         (type-of value :control)
+         (cons (cons symbol value) (make-controls (cdr list))))))
+
+(define globals  (cons 'globals nil))
+(define (global-add symbol value)
+   (dumpln "adding global " symbol " = " value)
+   (cdr globals (cons (cons symbol value) (cdr globals))))
+
+(define controls (make-controls '(define quote type if and or set delay while begin let lambda)))
+(define (control-name control) (car control))
+
 ##
 ## find-value modelled after (kernal.c:eval_symbol)
 ##
@@ -15,7 +37,14 @@
       (set match (lambda (binding) (== (element binding 0) symbol)))
       (set entry (find match context))
       (if (nil? entry)
-            (find-value symbol (environment))
+            (set entry (find match controls)))
+      (if (nil? entry)
+            (set entry (find match (cdr globals))))
+      (if (nil? entry)
+            (set entry (find match (environment))))
+      (if (nil? entry)
+            nil
+         (println symbol " = " (element entry 1))
          (element entry 1))))
 
 ##
@@ -34,7 +63,6 @@
       (if (== symbol (car binding))
             (cdr binding value)
          (update-bindings symbol value (cdr env)))))
-         
 
 ##
 ## expander modelled after (apply.c:expand)
@@ -42,35 +70,41 @@
 ## 
 (define (expander exp env)
    (let (expand-list do-expand apply-form)
-      (set do-expand 
-           (lambda (item)
-              (expander item env)))
-      (set expand-list
-           (lambda (exp)
-              (let ((head (expander (car exp) env))
-                    (tail (cdr exp)))
-                 (cond ((== head 'quote) (cons head tail))
-                       ((== head 'type)  (cons head tail))
-                       ((symbol? head)   (let ((value (find-value head env)))
-                                            (if (form? value)
-                                                  (apply-form value tail)
-                                               (cons head (map do-expand tail)))))
-                       (else (cons head (map do-expand tail)))))))
-      (set apply-form
-           (lambda (form args)
-              (let ((action (form-action form)))
-                 (if (nil? action)
-                       (map do-expand args)
-                    (application action args env)))))
+      (set (do-expand item)
+           (expander item env))
+      (set (expand-list exp)
+           (let ((head (expander (car exp) env))
+                 (tail (cdr exp)))
+              (cond ((== head 'quote) (cons head tail))
+                    ((== head 'type)  (cons head tail))
+                    ((symbol? head)   (let ((value (find-value head env)))
+                                         (if (form? value)
+                                               (apply-form value tail)
+                                            (cons head (map do-expand tail)))))
+                    (else (cons head (map do-expand tail))))))
+      (set (apply-form form args)
+           (let ((action (form-action form)))
+              (if (nil? action)
+                    (map do-expand args)
+                 (application action args env))))
       (cond ((pair? exp) (expand-list exp))
-            (else        exp))))
+            ((tuple?   exp) exp)
+            ((symbol?  exp) exp)
+            ((text?    exp) exp)
+            ((integer? exp) exp)
+            ((nil?     exp) exp)
+            ((comma?   exp) (error 'EXPANDER "comma not supported (yet)" exp))
+            ((semi?    exp) (error 'EXPANDER "semi not supported (yet)" exp))
+            ((block?   exp) (error 'EXPANDER "block not supported (yet)" exp))
+            (else  (error 'ENCODER "invalid type in a syntax-tree" exp))
+            )))
 
 ##
 ## encoder modelled after (apply.c:encode)
 ## syntax-tree -> control-tree (global control/primitives)
 ##
 (define (encoder exp env)
-   (let (do-encode encode-list apply-encoder)
+   (let (do-encode encode-list let-binding control-encoder apply-encoder)
       (set (do-encode item) (encoder item env))
       (set (encode-list exp)
            (let ((head (encoder (car exp) env))
@@ -107,8 +141,17 @@
                                                                  (encoder item nenv))
                                                               (cdr tail)))))
                     )))
-      (cond ((pair? exp) (encode-list exp env))
-            (else        exp))))
+      (cond ((pair?    exp) (encode-list exp))
+            ((tuple?   exp) exp)
+            ((symbol?  exp) exp)
+            ((text?    exp) exp)
+            ((integer? exp) exp)
+            ((nil?     exp) exp)
+            ((comma?   exp) (error 'ENCODER "comma not supported (yet)" exp))
+            ((semi?    exp) (error 'ENCODER "semi not supported (yet)" exp))
+            ((block?   exp) (error 'ENCODER "block not supported (yet)" exp))
+            (else  (error 'ENCODER "invalid type in a syntax-tree" exp))
+            )))
 
 ##
 ## evaluator modelled after (apply.c:eval)
@@ -135,6 +178,7 @@
       (set (control-evaluator control args)
            (let (check name)
               (set name (control-name control))
+              (dumpln "control-evaluator " name " args " args)
               (set (check symbol) (== symbol name))
               (cond ((check 'define) (let ((symbol (car args))
                                            (value (car (cdr args))))
@@ -186,6 +230,13 @@
                                        ((symbol? head)    (evaluator (cons (find-value exp env) tail) env))
                                        ((delay? head)     (evaluator (cons (force head) tail) env))
                                        (else              (application head (map do-eval tail) env)))))
+            ((tuple?   exp) exp)
+            ((text?    exp) exp)
+            ((integer? exp) exp)
+            ((nil?     exp) exp)
+            ((comma?   exp) (error 'EVALUATOR "comma not supported (yet)" exp))
+            ((semi?    exp) (error 'EVALUATOR "semi not supported (yet)" exp))
+            ((block?   exp) (error 'EVALUATOR "block not supported (yet)" exp))
             (else exp))))
 
 ##
@@ -212,14 +263,17 @@
 ##  application modelled after (apply.c:apply)
 ##
 (define (application action args env)
+   (dumpln "application " action " args " args)
    (let (eval-begin)
-      (set eval-begin 
-           (lambda (body context)
-              (if (nil? (cdr body))
-                    (evaluator (car body) context)
+      (set (eval-begin body context)
+           (dumpln "eval-begin " body)
+           (if (nil? (cdr body))
                  (evaluator (car body) context)
-                 (eval-begin (cdr body) context))))
-      (cond ((primitive? action) (apply action args env))
+              (evaluator (car body) context)
+              (eval-begin (cdr body) context)))
+      (cond ((primitive? action) (let ((output  (apply action args env)))
+                                    (dumpln action " args " args " -> " output)
+                                    output))
             ((lambda? action)    (let ((defn    (element action 0))
                                        (closure (element action 1)))
                                     (let ((formals (element defn 0))
