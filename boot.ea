@@ -58,7 +58,6 @@
 (define set    (form expand-set))
 (define macro  (form expand-macro))
 
-#{
 (define (map-with function list a)
    (let ((action (lambda (val) (function val a))))
       (map action list)))
@@ -89,7 +88,6 @@
 ## (record (var ... ) (val ...) exp ... ) -> (apply (lambda (var ... ) (begin exp ... )) val)
 (macro (record vars vals . body)
    `(apply (lambda \vars \@body) vals))
-}#
 
 (define (expand-cond clauses)
    (if (pair? clauses)
@@ -108,6 +106,7 @@
 
 (macro (cond . clauses)
    (expand-cond clauses))
+
 
 (define (expand-case key clauses)
    (let ((name (gensym)))

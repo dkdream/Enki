@@ -152,6 +152,7 @@ extern bool print(FILE* output, Node node) {
         return;
     }
 
+    fprintf(output, "[");
     if (isType(type, s_symbol)) {
         echo_string(output, (const char *)type.symbol->value);
     } else {
@@ -170,13 +171,13 @@ extern bool print(FILE* output, Node node) {
     }
 
     if (isAtomic(node)) {
-        fprintf(output, "(%p)",
+        fprintf(output, "|(%p)",
                 node.reference);
     } else {
-        fprintf(output, "(%p (size=%d))",
-                node.reference,
+        fprintf(output, "|(size=%d)",
                 (unsigned) asKind(node)->count);
     }
+    fprintf(output, "]");
     return true;
 }
 
@@ -268,9 +269,10 @@ extern bool dump(FILE* output, Node node) {
         fprintf(output, "{");
         dump(output, node.tuple->item[0]);
         fprintf(output, "}");
-        return;
+        return true;
     }
 
+    fprintf(output, "[");
     if (isType(type, s_symbol)) {
         echo_string(output, (const char *)type.symbol->value);
     } else {
@@ -289,13 +291,13 @@ extern bool dump(FILE* output, Node node) {
     }
 
     if (isAtomic(node)) {
-        fprintf(output, "(%p)",
+        fprintf(output, "|(%p)",
                 node.reference);
     } else {
-        fprintf(output, "(%p (size=%d))",
-                node.reference,
+        fprintf(output, "|(size=%d)",
                 (unsigned) asKind(node)->count);
     }
+    fprintf(output, "]");
 
     return true;
 }
@@ -453,6 +455,7 @@ extern void prettyPrint(FILE* output, Node node) {
             return;
         }
 
+        fprintf(output, "[");
         if (isType(type, s_symbol)) {
             offset += type.symbol->size + 1;
             echo_string(output, (const char *)type.symbol->value);
@@ -476,13 +479,17 @@ extern void prettyPrint(FILE* output, Node node) {
 
         if (isAtomic(node)) {
             offset += 10;
-            fprintf(output, "(%p)", node.reference);
+            fprintf(output, "|(%p)", node.reference);
         } else {
-            offset += 20;
-            fprintf(output, "(%p (size=%d))",
-                    node.reference,
-                    (unsigned) asKind(node)->count);
+            const unsigned max = asKind(node)->count;
+            unsigned inx = 0;
+            fprintf(output, "|");
+            for (; inx < max ;++inx) {
+                if (0 < inx) fprintf(output, " ");
+                prettyPrint_intern(node.tuple->item[inx], level+1);
+            }
         }
+        fprintf(output, "]");
         return;
     }
 
