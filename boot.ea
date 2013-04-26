@@ -8,7 +8,7 @@
                           y)))
 
 (define expand-quote
-   (let ((qq-list) (qq-element) (qq-object))
+   (let (qq-list qq-element qq-object)
       (set qq-list (lambda (l)
                       (if (pair? l)
                             (let ((obj (car l))
@@ -58,6 +58,7 @@
 (define set    (form expand-set))
 (define macro  (form expand-macro))
 
+#{
 (define (map-with function list a)
    (let ((action (lambda (val) (function val a))))
       (map action list)))
@@ -88,6 +89,7 @@
 ## (record (var ... ) (val ...) exp ... ) -> (apply (lambda (var ... ) (begin exp ... )) val)
 (macro (record vars vals . body)
    `(apply (lambda \vars \@body) vals))
+}#
 
 (define (expand-cond clauses)
    (if (pair? clauses)

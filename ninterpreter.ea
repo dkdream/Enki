@@ -23,7 +23,7 @@
 
 (define globals  (cons 'globals nil))
 (define (global-add symbol value)
-   (dumpln "adding global " symbol " = " value)
+   (println "store " symbol " = " value)
    (cdr globals (cons (cons symbol value) (cdr globals))))
 
 (define controls (make-controls '(define quote type if unless and or set delay while begin let lambda)))
@@ -44,7 +44,7 @@
             (set entry (find match (environment))))
       (if (nil? entry)
             nil
-         (println symbol " = " (element entry 1))
+         (println "recall "  symbol " = " (element entry 1))
          (element entry 1))))
 
 ##
@@ -179,7 +179,7 @@
       (set (control-evaluator control args)
            (let (check name)
               (set name (control-name control))
-              (dumpln "control-evaluator " name " args " args)
+##              (dumpln "control-evaluator " name " args " args)
               (set (check symbol) (== symbol name))
               (cond ((check 'define) (let ((symbol (car args))
                                            (value (car (cdr args))))
@@ -279,11 +279,27 @@
               (evaluator (car body) context)
               (eval-begin (cdr body) context)))
       (cond ((primitive? action) (let ((output  (apply action args env)))
-                                    (dumpln action " args " args " -> " output)
                                     output))
             ((lambda? action)    (let ((defn    (element action 0))
                                        (closure (element action 1)))
                                     (let ((formals (element defn 0))
                                           (body    (element defn 1)))
                                        (eval-begin body (make-bindings formals args closure))))))))
+
+
+
+(define (readFile in)
+   (if (eof-in in)
+         nil
+      (let ((value (read-sexpr in)))
+         (println)
+         (println)
+         (dumpln "read " value)
+         (set value (expander value nil))
+         (dumpln "expanded " value)
+         (set value (encoder value nil))
+         (dumpln "encoded " value)
+         (set value (evaluator value nil))
+         (dumpln "value " value))
+      (readFile in)))
 

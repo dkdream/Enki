@@ -1,0 +1,6 @@
+(require "ninterpreter.ea")
+(let ((boot (open-in "boot.ea")))
+   (readFile boot)
+   (close-in boot))
+
+(readFile stdin)
