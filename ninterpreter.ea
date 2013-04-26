@@ -23,11 +23,12 @@
 
 (define globals  (cons 'globals nil))
 (define (global-add symbol value)
-   (println "store " symbol " = " value)
+   (println "global " symbol " " value)
    (cdr globals (cons (cons symbol value) (cdr globals))))
 
 (define controls (make-controls '(define quote type if unless and or set delay while begin let lambda)))
 (define (control-name control) (car control))
+
 
 ##
 ## find-value modelled after (kernal.c:eval_symbol)
@@ -44,7 +45,7 @@
             (set entry (find match (environment))))
       (if (nil? entry)
             nil
-         (println "recall "  symbol " = " (element entry 1))
+#         (println "recall "  symbol " " (element entry 1))
          (element entry 1))))
 
 ##
@@ -54,15 +55,21 @@
    (if (nil? formals) 
          closure
       (if (pair? formals)
-            (cons (cons (car formals) (car args))
-                  (make-bindings (cdr formals) (cdr args) closure))
+            (let ((entry (cons (car formals) (car args))))
+               (println "add " (car entry) " " (cdr entry))
+               (cons entry
+                     (make-bindings (cdr formals) (cdr args) closure)))
          (cons (cons formals args) closure))))
 
 (define (update-bindings symbol value env)
-   (let ((binding (car env)))
-      (if (== symbol (car binding))
-            (cdr binding value)
-         (update-bindings symbol value (cdr env)))))
+   (let (match entry)
+      (set match (lambda (binding) (== (element binding 0) symbol)))
+      (set entry (find match env))
+      (if (nil? entry)
+            (println "unable to set local " symbol " in " env)
+         (begin
+            (cdr entry value)
+            (println  "set " (car entry) " " (cdr entry))))))
 
 ##
 ## expander modelled after (apply.c:expand)
@@ -159,12 +166,13 @@
 ## control-tree -> value
 ## 
 (define (evaluator exp env)
-   (let (do-eval make-let-bindings control-evaluator)
+   (let (do-eval make-let-bindings control-evaluator cbegin)
       ## do-eval           - convert an control-tree argument into a value
       ## make-let-bindings - create and extended enviroment
       ## control-evaluator - convert a control-tree structure into a value
+      (set cbegin (find-value 'begin controls))
       (set (do-eval item) (evaluator item env))
-      (set (make-let-bindings bindings) 
+      (set (make-let-bindings bindings)
            (if (nil? bindings)
                  env
               (let ((entry (car bindings))
@@ -179,7 +187,8 @@
       (set (control-evaluator control args)
            (let (check name)
               (set name (control-name control))
-##              (dumpln "control-evaluator " name " args " args)
+              (dumpln "control-evaluator " name " args " args)
+              (println)
               (set (check symbol) (== symbol name))
               (cond ((check 'define) (let ((symbol (car args))
                                            (value (car (cdr args))))
@@ -189,24 +198,24 @@
                     ((check 'if)     (let ((test     (car args))
                                            (on_true  (car (cdr args)))
                                            (on_false (cdr (cdr args))))
-                                        (if (evaluator exp env)
+                                        (if (evaluator test env)
                                               (evaluator on_true env)
-                                           (control-evaluator 'begin on_false))))
+                                           (control-evaluator cbegin on_false))))
                     ((check 'unless) (let ((test     (car args))
                                            (on_true  (car (cdr args)))
                                            (on_false (cdr (cdr args))))
                                         (if (evaluator exp env)
-                                              (control-evaluator 'begin on_false)
+                                              (control-evaluator cbegin on_false)
                                            (evaluator on_true env))))
                     ((check 'and)    (if (nil? args)
                                            true
                                         (if (nil? (evaluator (car args) env))
                                               nil
-                                           (control-evaluator 'and (cdr args)))))
+                                           (control-evaluator control (cdr args)))))
                     ((check 'or)     (if (nil? args)
                                            nil
                                         (if (nil? (evaluator (car args) env))
-                                              (control-evaluator 'or (cdr args))
+                                              (control-evaluator control (cdr args))
                                            nil)))
                     ((check 'set)    (let ((symbol (car args))
                                            (value  (evaluator (car (cdr args)) env)))
@@ -217,12 +226,12 @@
                     ((check 'begin)  (if (nil? (cdr args))
                                            (evaluator (car args) env)
                                         (evaluator (car args) env)
-                                        (control-evaluator 'begin (cdr args))))
+                                        (control-evaluator control (cdr args))))
                     ((check 'let)    (let ((nenv (make-let-bindings (car args))))
-                                        (control-evaluator 'begin (cdr args))))
+                                        (evaluator (cons cbegin (cdr args)) nenv)))
                     ((check 'lambda) (let ((value (cons args env)))
                                         (type-of value :lambda)
-                                        value))                    
+                                        value))
                     )))
       (cond ((primitive? exp) exp)
             ((control?   exp) exp)

@@ -809,7 +809,7 @@ extern void readFile(FILE *stream)
 
         VM_DEBUG(1, " read ");
 
-        VM_ON_DEBUG(1, {
+        VM_ON_DEBUG(9, {
                 prettyPrint(stderr, obj);
                 fprintf(stderr,"\n");
                 fflush(stderr);
@@ -817,9 +817,9 @@ extern void readFile(FILE *stream)
 
         expand(obj, NIL, &obj);
 
-        VM_DEBUG(1, " expanded ");
+        VM_DEBUG(9, " expanded ");
 
-        VM_ON_DEBUG(1, {
+        VM_ON_DEBUG(9, {
                 prettyPrint(stderr, obj);
                 fprintf(stderr,"\n");
                 fflush(stderr);
@@ -827,7 +827,7 @@ extern void readFile(FILE *stream)
 
         encode(obj, NIL, &obj);
 
-        VM_DEBUG(1, " encoded ");
+        VM_DEBUG(9, " encoded ");
 
         VM_ON_DEBUG(1, {
                 prettyPrint(stderr, obj);
@@ -837,9 +837,9 @@ extern void readFile(FILE *stream)
 
         eval(obj, NIL, &obj);
 
-        VM_DEBUG(1, " evaluated ");
+        VM_DEBUG(9, " evaluated ");
 
-        VM_ON_DEBUG(1, {
+        VM_ON_DEBUG(9, {
                 prettyPrint(stderr, obj);
                 fprintf(stderr,"\n\n\n");
                 fflush(stderr);
