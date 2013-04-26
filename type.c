@@ -188,7 +188,8 @@ extern bool sort_Create(Symbol symbol, Sort* target) {
 
     if (!entry) return false;
 
-    entry->kind.type = (Node)s_sort;
+    entry->kind.type     = (Node)s_sort;
+    entry->kind.constant = 1;
 
     Sort result = (Sort) asReference(entry);
 
@@ -231,7 +232,8 @@ extern bool type_Create(Symbol symbol, Sort sort, Type* target) {
 
     if (!entry) return false;
 
-    entry->kind.type = (Node) s_base;
+    entry->kind.type     = (Node) s_base;
+    entry->kind.constant = 1;
 
     Type result = (Type) asReference(entry);
 
@@ -288,7 +290,8 @@ extern bool rule_Create(Symbol symbol, Sort in, Sort out, Sort type, Rule* targe
 
     if (!entry) return false;
 
-    entry->kind.type = (Node)s_rule;
+    entry->kind.type     = (Node)s_rule;
+    entry->kind.constant = 1;
 
     Rule result = (Rule) asReference(entry);
 
@@ -316,7 +319,8 @@ extern bool name_Create(Sort sort, Name* target) {
 
     if (!entry) return false;
 
-    entry->kind.type = (Node)s_name;
+    entry->kind.type     = (Node)s_name;
+    entry->kind.constant = 1;
 
     Name result = (Name) asReference(entry);
 

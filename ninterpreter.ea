@@ -2,7 +2,7 @@
 
 ##
 ## Fixed Operators
-##  define, quote, type, if, and, or, set, delay, while, begin, let, lambda
+##  define, quote, type, if, unless, and, or, set, delay, while, begin, let, lambda
 ##
 
 (define (control? val) (isA? val :control))
@@ -26,7 +26,7 @@
    (dumpln "adding global " symbol " = " value)
    (cdr globals (cons (cons symbol value) (cdr globals))))
 
-(define controls (make-controls '(define quote type if and or set delay while begin let lambda)))
+(define controls (make-controls '(define quote type if unless and or set delay while begin let lambda)))
 (define (control-name control) (car control))
 
 ##
@@ -127,6 +127,7 @@
                     ((check 'quote)  tail)
                     ((check 'type)   tail)
                     ((check 'if)     (map do-encode tail))
+                    ((check 'unless) (map do-encode tail))
                     ((check 'and)    (map do-encode tail))
                     ((check 'or)     (map do-encode tail))
                     ((check 'set)    (cons (car tail) (map do-encode (cdr tail))))
@@ -191,6 +192,12 @@
                                         (if (evaluator exp env)
                                               (evaluator on_true env)
                                            (control-evaluator 'begin on_false))))
+                    ((check 'unless) (let ((test     (car args))
+                                           (on_true  (car (cdr args)))
+                                           (on_false (cdr (cdr args))))
+                                        (if (evaluator exp env)
+                                              (control-evaluator 'begin on_false)
+                                           (evaluator on_true env))))
                     ((check 'and)    (if (nil? args)
                                            true
                                         (if (nil? (evaluator (car args) env))

@@ -18,11 +18,22 @@ dump
 (assert (iso 10 nil      (type-of nil)) "nil is not type nil")
 (assert (iso 10 :primitive (type-of println)))
 (assert (iso 10 :fixed    (type-of let)))
-(assert (iso 10 :tuple    (type-of ttest :iseq)))
+(assert (iso 10 :tuple    (type-of ttest)))
+(assert (iso 10 nil       (type-of ttest :iseq)))
 (assert (iso 10 :iseq     (type-of ttest)))
 
-
 (define fooness 'fooness)
+
+(assert (iso 10 'symbol (type-of fooness)))
+(assert (iso 10 nil     (type-of fooness :fooness)))
+(assert (iso 10 'symbol (type-of fooness)))
+
+(define barness :barness)
+
+(assert (iso 10 'base (type-of barness)))
+(assert (iso 10 nil   (type-of barness :fooness)))
+(assert (iso 10 'base (type-of barness)))
+
 (define barness (lambda (ok)
                   (dumpln ok)
                   (println (type-of ok))

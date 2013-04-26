@@ -258,8 +258,9 @@ extern bool symbol_Create(TextBuffer value, Symbol *target) {
                  result);
     }
 
-    entry->kind.type = (Node)s_symbol;
-    entry->after     = _global_symboltable->row[row].first;
+    entry->kind.type     = (Node)s_symbol;
+    entry->kind.constant = 1;
+    entry->after         = _global_symboltable->row[row].first;
 
     result->size     = size;
     result->hashcode = hashcode;

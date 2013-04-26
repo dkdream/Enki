@@ -118,10 +118,11 @@ struct gc_kind {
     Node type;
     unsigned long count : BITS_PER_WORD - 8 __attribute__((__packed__));
     struct {
-        enum gc_color color  : 2;
-        unsigned int  atom   : 1; // is this a tuple of values
-        unsigned int  live   : 1; // is this alive
-        unsigned int  inside : 1; // is this inside a space (malloc/free by the treadmill)
+        enum gc_color   color : 2;
+        unsigned int     live : 1; // is this alive
+        unsigned int     atom : 1; // is this a tuple of values
+        unsigned int   inside : 1; // is this inside a space (malloc/free by the treadmill)
+        unsigned int constant : 1;
     } __attribute__((__packed__));
 };
 
@@ -239,20 +240,29 @@ extern inline Kind asKind(const Node value) {
     return (((Kind)value.reference) - 1);
 }
 
+extern inline bool setType(const Node value, const Node type) __attribute__((always_inline));
+extern inline bool setType(const Node value, const Node type) {
+    Kind kind = asKind(value);
+    if (!kind) return false;
+    if (kind->constant) return false;
+    kind->type = type;
+    return true;
+}
+
+extern inline bool setConstant(const Node value) __attribute__((always_inline));
+extern inline bool setConstant(const Node value) {
+    Kind kind = asKind(value);
+    if (!kind) return false;
+    if (kind->constant) return false;
+    kind->constant = 1;
+    return true;
+}
 
 extern inline Node getType(const Node value) __attribute__((always_inline));
 extern inline Node getType(const Node value) {
     Kind kind = asKind(value);
     if (!kind) return NIL;
     return kind->type;
-}
-
-extern inline bool setType(const Node value, const Node type) __attribute__((always_inline));
-extern inline bool setType(const Node value, const Node type) {
-    Kind kind = asKind(value);
-    if (!kind) return false;
-    kind->type = type;
-    return true;
 }
 
 extern inline bool isType(const Node value, const Node type) __attribute__((always_inline));
@@ -272,6 +282,14 @@ extern inline bool isAtomic(const Node value) {
 
 extern inline bool isInside(const Node value) __attribute__((always_inline));
 extern inline bool isInside(const Node value) {
+    Kind kind = asKind(value);
+    if (!kind) return false;
+    if (kind->inside) return true;
+    return false;
+}
+
+extern inline bool isConstant(const Node value) __attribute__((always_inline));
+extern inline bool isConstant(const Node value) {
     Kind kind = asKind(value);
     if (!kind) return false;
     if (kind->inside) return true;
@@ -317,11 +335,10 @@ extern inline Reference init_atom(Header header, unsigned long size_in_chars)
     unsigned long fullcount = toCount(size_in_chars);
     memset(header, 0, sizeof(struct gc_header));
 
-    header->kind.count  = fullcount;
-    header->kind.color  = nc_unknown;
-    header->kind.atom   = 1;
-    header->kind.live   = 1;
-    header->kind.inside = 0;
+    header->kind.count = fullcount;
+    header->kind.color = nc_unknown;
+    header->kind.atom  = 1;
+    header->kind.live  = 1;
 
     return asReference(header);
 }
@@ -333,11 +350,10 @@ extern inline Reference init_tuple(Header header, unsigned long size_in_pointers
 
     memset(header, 0, sizeof(struct gc_header));
 
-    header->kind.count  = fullcount;
-    header->kind.color  = nc_unknown;
-    header->kind.atom   = 1;
-    header->kind.live   = 1;
-    header->kind.inside = 0;
+    header->kind.count = fullcount;
+    header->kind.color = nc_unknown;
+    header->kind.atom  = 1;
+    header->kind.live  = 1;
 
     return asReference(header);
 }

@@ -75,9 +75,11 @@ extern bool opaque_Create(Node type, long size, Reference* target) {
 
     memset(result, 0, size);
 
+    if (isIdentical(type, s_symbol)) return true;
+
     setType(result, type);
 
-    return result;
+    return true;
 }
 
 extern unsigned checkArgs(Node args, const char* name, unsigned min, ...)
@@ -1016,7 +1018,7 @@ extern SUBR(type_of)
 
     if (1 < count) {
         fetchArgs(args, &value, &type, 0);
-        node_TypeOf(value, result);
+        if (isIdentical(type, s_symbol)) return;
         setType(value, type);
     } else {
         pair_GetCar(args.pair, &value);
@@ -1360,9 +1362,11 @@ extern SUBR(allocate) {
 
     tuple_Create(slots, &value);
 
-    setType(value, type.symbol);
-
     ASSIGN(result,value);
+
+    if (isIdentical(type, s_symbol)) return;
+
+    setType(value, type.symbol);
 }
 
 extern SUBR(force) {
