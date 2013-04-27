@@ -1,6 +1,12 @@
 (require "ninterpreter.ea")
+
 (let ((boot (open-in "boot.ea")))
    (readFile boot)
    (close-in boot))
 
-(readFile stdin)
+(dumpln (expander '(cond ((one one) (two one))
+                         ((one two) (two two))
+                         ((one three) (two three))
+                         ((one four) (two four))
+                         (else (two five)))
+                  nil))

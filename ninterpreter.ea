@@ -82,7 +82,7 @@
            (let ((action (form-action form)))
               (if (nil? action)
                     (map do-expand args)
-                 (application action args env))))
+                 (do-expand (application action args env)))))
       (set (expand-list exp)
            (let ((head (expander (car exp) env))
                  (tail (cdr exp)))
@@ -94,14 +94,16 @@
                                             (cons head (map do-expand tail)))))
                     (else (cons head (map do-expand tail))))))
       (cond ((pair? exp) (expand-list exp))
-            ((tuple?   exp) exp)
-            ((symbol?  exp) exp)
-            ((text?    exp) exp)
-            ((integer? exp) exp)
-            ((nil?     exp) exp)
-            ((comma?   exp) (error 'EXPANDER "comma not supported (yet)" exp))
-            ((semi?    exp) (error 'EXPANDER "semi not supported (yet)" exp))
-            ((block?   exp) (error 'EXPANDER "block not supported (yet)" exp))
+            ((tuple?     exp) exp)
+            ((symbol?    exp) exp)
+            ((text?      exp) exp)
+            ((integer?   exp) exp)
+            ((nil?       exp) exp)
+            ((primitive? exp) exp) ## added by a macro
+            ((control?   exp) exp) ## added by a macro
+            ((comma?     exp) (error 'EXPANDER "comma not supported (yet)" exp))
+            ((semi?      exp) (error 'EXPANDER "semi not supported (yet)" exp))
+            ((block?     exp) (error 'EXPANDER "block not supported (yet)" exp))
             (else (begin
                       (println "----------------------")
                       (dumpln exp)
@@ -300,7 +302,18 @@
                                            (body    (element defn 1)))
                                         (eval-begin body (make-bindings formals args closure))))))))
 
+(global-add 'expand expander)
+(global-add 'encode encoder)
+(global-add 'eval   evaluator)
+(global-add 'apply  application)
 
+(define (undefined name)
+   (global-add name (lambda args
+                       (error NAME "is not defined in this context"))))
+
+(undefined 'map)
+(undefined 'find)
+(undefined 'require)
 
 (define (readFile in)
    (if (eof-in in)

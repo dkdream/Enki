@@ -58,24 +58,9 @@
 (define set    (form expand-set))
 (define macro  (form expand-macro))
 
-(define (map-with function list a)
-   (let ((action (lambda (val) (function val a))))
-      (map action list)))
-
-(define (map2-with function alist blist a)
-   (if (pair? alist)
-         (let ((head (function (car alist) (car blist) a)))
-            (cons head (map2-with function (cdr alist) (cdr blist) a)))))
-
 ## (rec var exp) -> (let ([var '()]) (set! var exp))
 (macro (rec var exp)
    `(let ((\var '())) (set \var \exp)))
-
-## (recur f ([var init] ... ) exp ... ) -> ((rec f (lambda (var ... ) (begin exp ... ))) init ... )
-(macro (recur name bindings . body)
-   (let ((vars (map car binding))
-         (vals (map cdr binding)))
-      `((rec \name (lambda vars \@body)) \@vals)))
 
 ## (when test exp ... ) -> (if test (begin exp ... ) '())
 (macro (when test . body)
@@ -108,18 +93,10 @@
    (expand-cond clauses))
 
 
-(define (expand-case key clauses)
-   (let ((name (gensym)))
-      (let ((convert (lambda (pair)
-                        (if (pair? pair)
-                              (let ((list (car pair))
-                                    (body (cdr pair)))
-                                 (if (== member 'else)
-                                       `(else (begin \@body))
-                                    `((member \name '\list) (begin \@body))))))))
-         `(let ((\name \key))
-             (cond \@(map convert clauses))))))
-
-(macro (case key . clauses)
-   (expand-case key clauses))
-
+#{
+## (recur f ([var init] ... ) exp ... ) -> ((rec f (lambda (var ... ) (begin exp ... ))) init ... )
+(macro (recur name bindings . body)
+   (let ((vars (map car binding))
+         (vals (map cdr binding)))
+      `((rec \name (lambda vars \@body)) \@vals)))
+}#
