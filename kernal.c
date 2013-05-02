@@ -2399,6 +2399,28 @@ extern SUBR(tuple_q) {
     }
 }
 
+extern SUBR(all_q) {
+    Node list;
+    Node type;
+
+    checkArgs(args, "all?", 1, t_pair, nil);
+    forceArgs(args, &list, &type, 0);
+
+    while (isType(list, t_pair)) {
+        Node value = NIL;
+
+        pair_GetCar(list.pair, &value);
+        pair_GetCdr(list.pair, &list);
+
+        if (isType(value, type)) continue;
+
+        ASSIGN(result, NIL);
+        return;
+    }
+
+    ASSIGN(result, true_v);
+}
+
 /***************************************************************
  ***************************************************************
  ***************************************************************
@@ -2687,6 +2709,7 @@ void startEnkiLibrary() {
     MK_OPR(lambda?,lambda_q);
     MK_OPR(form?,form_q);
     MK_OPR(tuple?,tuple_q);
+    MK_OPR(all?,all_q);
 
     MK_OPR(form-action,form_action);
     MK_OPR(fixed-encoder,fixed_encoder);

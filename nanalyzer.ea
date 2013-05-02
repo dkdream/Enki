@@ -1,60 +1,60 @@
 
-(define (constant value)
-   (lambda (env) value))
-
-(define (recall name)
-   (lambda (env) 
-      (let ((value (find-value name env)))
-         (if (forced? value)
-               (forced-value value)
-            value))))
-
-(define (store name value)
-   (lambda (env) 
-      (update-bindings name (value env) env)))
-
-(define (external name value)
-   (lambda (env)
-      (global-add name (value env))))
-
-(define (choose test on_true on_false)
-   (lambda (env)
-      (if (test env)
-            (on_true env)
-         (on_false env))))
-
-(define (first-true first next)
-   (lambda (env)
-      (let ((value (first env)))
-         (if value
-               value
-            (next env)))))
-
-(define (first-false first next)
-   (lambda (env)
-      (let ((value (first env)))
-         (if value
-               (next env)
-            value))))
-
-(define (sequence first next)
-   (lambda (env)
-      (first env)
-      (next env)))
-
-(define (make-lambda vars body))
-
-(define (execute function args)
-   (application function args))
-
-(define (evaluator exp env)
-   ((analyzer exp) env)))
-
 ##
 ## control-tree -> execution-tree (only-lambdas)
 ## 
 (define (analyzer exp)
    (let (make-let-bindings control-analyzer cbegin)
+      (define (constant value)
+         (lambda (env) value))
+      
+      (define (recall name)
+         (lambda (env) 
+            (let ((value (find-value name env)))
+               (if (forced? value)
+                     (forced-value value)
+                  value))))
+      
+      (define (store name value)
+         (lambda (env) 
+            (update-bindings name (value env) env)))
+      
+      (define (external name value)
+         (lambda (env)
+            (global-add name (value env))))
+      
+      (define (choose test on_true on_false)
+         (lambda (env)
+            (if (test env)
+                  (on_true env)
+               (on_false env))))
+      
+      (define (first-true first next)
+         (lambda (env)
+            (let ((value (first env)))
+               (if value
+                     value
+                  (next env)))))
+      
+      (define (first-false first next)
+         (lambda (env)
+            (let ((value (first env)))
+               (if value
+                     (next env)
+                  value))))
+      
+      (define (sequence first next)
+         (lambda (env)
+            (first env)
+            (next env)))
+      
+      (define (make-lambda vars body))
+      
+      (define (execute function args)
+         (application function args))
+      
+      (define (evaluator exp env)
+         ((analyzer exp) env)))
+
       ## do-analy           - convert an control-tree argument into a value
       ## make-let-bindings - create and extended enviroment
       ## control-analyzer - convert a control-tree structure into a value
@@ -127,98 +127,142 @@
 
 
 ##
-## control-tree -> execution-tree (only-lambdas)
+## control-tree -> instruction-sequence
 ## 
-(define (compile exp target linkage)
-   (let (cbegin
-         make-let-bindings)         
+## model the compile function after the evaluator function
+## - where the frame is the the enviroment 
+## - instruction need to now what frame they are compiled
+## - local variables and arguments are marked as named registors
+## - 'test     is a machine registor reserved for test values
+## - 'result   is a machine registor for temparary and return values
+## - all instructions take only registors or labels as arguments
+## 
+## (make-registor name kind [index])
+## - when each registor is make it is marks as local, parameter or global
+## - it may be marked later as closure (only on parameter and local)
+##
+## (registor name frame)
+## - return the registor 'name from the current frame
+##
+## (instruction command . args)
+## command
+##   'bind    target-reg value-reg
+##   'set     target-reg value-reg
+##   'goto    label
+##   'onTrue  label
+##   'onFalse label
+##   'return  value-reg
+##   'closure target-reg arg0-reg..argn-reg
+##   'call    address-reg closure-reg arg0-reg..argn-reg
+##   'tail    address-reg closure-reg arg0-reg..argn-reg
+##   'tuple   target-reg count-reg
+##   'store   tuple-reg index-reg value-reg
+##   'push    value-reg
+##   'pop     target-reg
+##   'marker  label
+##
+## the (instruction 'bind ..) is resposible for allocation closure boxes
+## the (registor ...)         is resposible for converting parameter and local registors to closure registors
+###
+###
+###
+###
+(define (instruction command . list)
+   (let ((result (tuple command list)))
+      (type-of result :instruction)
+      result))
+
+(define (label name)
+   (let ((result (tuple name)))
+      (type-of result :label)
+      result))
+
+(define (flatten statements)
+   (let ((head (car statements))
+         (tail (cdr statements)))
+      (if (pair? head)
+            (append (flatten head) (flatten tail))
+         (cons head (flatten tail)))))
+
+(define (sequence needs modifies . list)
+   (if (and (all? needs 'symbol)
+            (all? modified 'symbol))
+         (let ((statements (flatten list)))
+            (if (all? :instruction statements)
+                  (let ((result (tuple needs modifies statements)))
+                     (type-of result :sequence)
+                     result))
+            (error 'SEQUENCE "non-instruction in statements")))
+      (error 'SEQUENCE "non-symbol in needs or modifies")))
+
+(define (union alist blist)
+   (if (nil? alist)
+         blist
+      (let ((head (car alist))
+            (tail (cdr alist)))
+         (if (member head blist)
+               (union tail blist)
+            (cons head (union tail blist))))))
+
+(define (difference list minus)
+   (if (nil? list)
+         nil
+      (let ((head (car list))
+            (tail (cdr list)))
+         (if (member head minus)
+               (difference tail minus)
+            (cons head (difference tail minus))))))
+
+(define empty-sequence (sequence nil nil))
+
+(define (append-sequence first next)
+   (sequence (union (element first 0)
+                    (difference (element next 0)
+                                (element first 1)))
+             (union (element first 1)
+                    (element next 1))
+             (element first 2)
+             (element next 2)))
+
+(define (append-preserving registors first next)
+   (if (nil? registors)
+         (append-sequence first next)
+      (let ((register (car registors)))
+         (if (and (needs-register? first register)
+                  (modifies-register? next register))
+               (preserving (cdr regs)
+                           (instruction-sequence (union (list register) (element first 0))
+                                                 (difference (element first 1) (list register))
+                                                 (instruction 'save register)
+                                                 (element first 2))
+                           next)
+            (preserving (cdr regs) first next)))))
+
+(define (tack-on head body)
+   (instruction-sequence (element head 0)
+                         (element head 1)
+                         (element head 2)
+                         (element body 2)))
+
+
+(define (parallel-sequences left right))
+
+(define (compile-linkage linkage)
+   (cond ((== 'return linkage) (instruction-sequence nil nil
+                                                     (instruction 'return)))
+         ((== 'next linkage) empty-sequence)
+         (else  (instruction-sequence nil nil
+                                      (instruction 'goto linkage)))))
+
+(define (compile exp frame target linkage)
+   (let (cbegin make-let-bindings)         
       ## make-let-bindings - create and extended enviroment
       ## control-compiler - convert a control-tree structure into a value
       (set cbegin (find-value 'begin controls))
-      (set (make-let-bindings bindings)
-           (if (nil? bindings)
-                 env
-              (let ((entry (car bindings))
-                    (tail  (make-let-bindings (cdr bindings))))
-                 (cond ((symbol? entry) (cons (cons entry nil) tail))
-                       ((pair?  entry) (cons (cons (car entry) 
-                                                   (compiler (car (cdr entry)) env))
-                                             tail))
-                       ((tuple? entry) (cons (cons (element entry 0)
-                                                   (compiler (element entry 1) env))
-                                             tail))))))
-      (set (instruction command . list) 
-           (let ((result (tuple command list)))
-              (type-of result :instruction)
-              result))
-      (set (flatten statements)
-           (let ((head (car statements))
-                 (tail (cdr statements)))
-              (if (pair? head)
-                    (append (flatten head) (flatten tail))
-                 (cons head (flatten tail)))))
-      (set (instruction-sequence needs modifies . list)
-           (let ((statements (flatten list)))
-              (let ((result (tuple needs modifies statements)))
-                 (type-of result :icode)
-                 result)))
+      (set (make-lambda-bindings parameters))
+      (set (make-let-bindings bindings))
       (set (needs-register? sequence register)    (member register (element sequence 0)))
       (set (modifies-register? sequence register) (member register (element sequence 1)))
-      (set (union alist blist)
-          (if (nil? alist)
-                blist
-             (let ((head (car alist))
-                   (tail (cdr alist)))
-                (if (member head blist)
-                      (union tail blist)
-                   (cons head (union tail blist))))))
-      (set (difference list minus)
-           (if (nil? list)
-                 nil
-              (let ((head (car list))
-                    (tail (cdr list)))
-                 (if (member head minus)
-                       (difference tail minus)
-                    (cons head (difference tail minus))))))
-      (set empty-sequence (instruction-sequence nil nil))
-      (set (append-sequence first next)
-           (instruction-sequence (union (element first 0)
-                                        (difference (element next 0)
-                                                    (element first 1)))
-                                 (union (element first 1)
-                                        (element next 1))
-                                 (element first 2)
-                                 (element next 2)))
-      (set (append-preserving registors first next)
-           (if (nil? registors)
-                 (append-sequence first next)
-              (let ((register (car registors)))
-                 (if (and (needs-register? first register)
-                          (modifies-register? next register))
-                       (preserving (cdr regs)
-                                   (instruction-sequence (union (list register) (element first 0))
-                                                         (difference (element first 1) (list register))
-                                                         (instruction 'save register)
-                                                         (element first 2))
-                                   next)
-                    (preserving (cdr regs) first next)))))
-      (set (tack-on head body)
-           (instruction-sequence (element head 0)
-                                 (element head 1)
-                                 (element head 2)
-                                 (element body 2)))
-      (set (parallel-sequences left right) 
-           (instruction-sequence (union (element left 0) (element right 0))
-      (set (end-with linkage sequence)
-           (append-preserving '(continue)
-                              sequence
-                              (compile-linkage linkage)))
-      (set (compile-linkage linkage)
-           (cond ((== 'return linkage) (instruction-sequence '(continue)
-                                                             nil
-                                                             (instruction 'return)))
-                 ((== 'next linkage) empty-sequence)
-                 (else (instruction-sequence nil nil (instruction 'goto linkage)))))                                        
       (set (compile-const value))
       (set (compile-type value))
       (set (compile-global name value))
