@@ -2403,7 +2403,7 @@ extern SUBR(all_q) {
     Node list;
     Node type;
 
-    checkArgs(args, "all?", 1, t_pair, nil);
+    checkArgs(args, "all?", 1, t_pair, NIL);
     forceArgs(args, &list, &type, 0);
 
     while (isType(list, t_pair)) {
