@@ -263,26 +263,6 @@
             (else exp))))
 
 ##
-## registers modelled after evaluator
-## control-tree -> set (escaping names)
-##
-(define (registers exp env)
-   (let (global? control-registers do-register fetch-entry)
-      ## global?           - check if a symbol is global in this envirment
-      ## control-registers - deal with control-tree structures
-      ## do-registers      - return the set of registers used by an argument
-      ## fetch-entry       - check if an value is a control or primitive
-      (cond ((primitive? exp) nil)
-            ((control?   exp) nil)
-            ((symbol?    exp) (if (global? exp) nil (cons exp nil)))
-            ((pair?      exp) (let ((head (fetch-entry (car exp)))
-                                    (tail (cdr exp)))
-                                 (cond ((control? head)   (control-registers head tail))
-                                       ((primitive? head) (union (map do-register tail) nil))
-                                       ((symbol? head)    (union (map do-register tail) (cons head nil)))
-                                       (else (error 'REGISTER "unknown operator " head)))))
-            (else nil))))
-##
 ##  application modelled after (apply.c:apply)
 ##
 (define (application action args env)
