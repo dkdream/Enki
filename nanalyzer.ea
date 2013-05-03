@@ -195,6 +195,16 @@
             (error 'SEQUENCE "non-instruction in statements")))
       (error 'SEQUENCE "non-symbol in needs or modifies")))
 
+(define (needs-register? sequence register)
+   (if (isA? sequence :sequence)
+         (if (isA? register 'symbol)
+               (member register (element sequence 0)))))
+
+(define (modifies-register? sequence register) 
+   (if (isA? sequence :sequence)
+         (if (isA? register 'symbol)
+               (member register (element sequence 1)))))
+
 (define (union alist blist)
    (if (nil? alist)
          blist
