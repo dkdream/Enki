@@ -130,7 +130,24 @@
 ## control-tree -> instruction-sequence
 ## 
 ## model the compile function after the evaluator function
-## - where the frame is the the enviroment 
+## - where the enviroment is a list of definitions [ symbol registor ] and frames [ argCount localCount boxList escapingList ]
+## each lambda control constructs a frame [ argCount 0 nil nil ] and adds it to the enviroment followed by the its definitions.
+## each let extends the enviroment and then count the local registor up to the first frame and the update the localCount
+## each variable reference update all frames from the point of access to the definition and may add to the enviroment.
+##
+## each registor is one of four types (global,closure,argument,local) and two kinds (box,unbox)
+## if a closure registor is the target of a set control it is changed to a box values
+##
+## registors is
+## the escapingList is a list of definitions
+## the search order
+##   1) enviroment up to the first frame if found return registor
+##   2) push frame
+##   3) search up to the next frame if found (4) otherwise (2)
+##   4) set result to found registor
+##   5) pop frame and add result to escapingList and create a new closure registor and set result 
+##   6) is stack empty? onTrue return result otherwise (5) 
+##
 ## - instruction need to now what frame they are compiled
 ## - local variables and arguments are marked as named registors
 ## - 'test     is a machine registor reserved for test values
