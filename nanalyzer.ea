@@ -184,15 +184,45 @@
 ###
 ###
 ###
+
+(define (let-frame locals)
+   ## let-frame [ localCount boxList ]
+   (type-of (tuple (length locals) nil) :let_frame))
+
+(define (lambda-frame arguments)
+   ## lambda-frame [ argumentCount localCount boxedList escapingList ]
+   (type-of (tuple (length arguments) 0 nil nil) :lambda_frame))
+
+(define (lambda-extend arguments enviroment)
+   (let (add-binding extend-env frame)
+      (set (add-binding symbol index env)
+           (let ((registor (arg-registor index)))
+              (cons (cons symbol registor) env)))
+      (set (extend-env args index env)
+           (if (pair? args)
+                 (add-binding (car args) index (extend-env (cdr arg) (+ index 1) env))
+              env))
+      (set frame (lambda-frame arguments))
+      (extend-env arguments 0 (cons frame enviroment))))
+            
+(define (let-extend offset locals enviroment)
+   (let (add-binding extend-env frame)
+      (set (add-binding entry index env)
+           (cons ((symbol? entry) (let ((registor (lcl-registor index)))
+                                     (cons (cons entry registor) env)))
+                 ((pair? entry) (let ((registor (lcl-registor index)))
+                                   (cons (cons (car entry) registor) env)))
+                 ((tuple? entry) (let ((registor (lcl-registor index)))
+                                    (cons (cons (element entry 0) registor) env)))
+                 (else (error 'LET-EXTEND (format "invalid entry %" entry)))))
+                 
+
+            
 (define (instruction command . list)
-   (let ((result (tuple command list)))
-      (type-of result :instruction)
-      result))
+   (type-of (tuple command list) :instruction)
 
 (define (label name)
-   (let ((result (tuple name)))
-      (type-of result :label)
-      result))
+   (type-of (tuple name) :label)
 
 (define (flatten statements)
    (let ((head (car statements))

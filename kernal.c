@@ -1020,6 +1020,7 @@ extern SUBR(type_of)
         fetchArgs(args, &value, &type, 0);
         if (isIdentical(type, s_symbol)) return;
         setType(value, type);
+        ASSIGN(result,value);
     } else {
         pair_GetCar(args.pair, &value);
         node_TypeOf(value, result);
@@ -1303,6 +1304,7 @@ extern SUBR(element) {
     if (2 < count) {
         forceArgs(args, &tuple, &index, &value, 0);
         tuple_SetItem(tuple.tuple, index.integer->value, value);
+        ASSIGN(result,tuple);
     } else {
         forceArgs(args, &tuple, &index, 0);
         tuple_GetItem(tuple.tuple, index.integer->value, result);
@@ -2002,6 +2004,7 @@ extern SUBR(car) {
         Node value;
         forceArgs(args, &pair, &value, 0);
         pair_SetCar(pair, value);
+        ASSIGN(result,pair);
     } else {
         forceArgs(args, &pair, 0);
         pair_GetCar(pair, result);
@@ -2018,6 +2021,7 @@ extern SUBR(cdr) {
         Node value;
         forceArgs(args, &pair, &value, 0);
         pair_SetCdr(pair, value);
+        ASSIGN(result,pair);
     } else {
         forceArgs(args, &pair, 0);
         pair_GetCdr(pair, result);
@@ -2267,19 +2271,23 @@ extern SUBR(scan_cycle) {
 }
 
 extern SUBR(length) {
-    Node     list;
-    unsigned count  = 0;
-    bool     dotted = false;
+    Node list;
 
     forceArgs(args, &list, 0);
 
     ASSIGN(result, NIL);
+
+    if (isNil(list)) {
+        integer_Create(0, result.integer);
+        return;
+    }
 
     if (isType(list, t_pair)) {
         unsigned count  = 0;
         bool     dotted = false;
         list_State(list.pair, &count, &dotted);
         integer_Create(count, result.integer);
+        return;
     }
 }
 
@@ -2419,6 +2427,24 @@ extern SUBR(all_q) {
     }
 
     ASSIGN(result, true_v);
+}
+
+extern SUBR(dot_q) {
+    Node list;
+
+    checkArgs(args, "dot?", 1, t_pair, NIL);
+    forceArgs(args, &list, 0);
+
+    ASSIGN(result, NIL);
+
+    if (isType(list, t_pair)) {
+        unsigned count  = 0;
+        bool     dotted = false;
+        list_State(list.pair, &count, &dotted);
+        if (dotted) {
+            ASSIGN(result, true_v);
+        }
+    }
 }
 
 /***************************************************************
@@ -2710,6 +2736,8 @@ void startEnkiLibrary() {
     MK_OPR(form?,form_q);
     MK_OPR(tuple?,tuple_q);
     MK_OPR(all?,all_q);
+
+    MK_OPR(dot?,dot_q);
 
     MK_OPR(form-action,form_action);
     MK_OPR(fixed-encoder,fixed_encoder);
