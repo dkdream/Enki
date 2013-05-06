@@ -214,9 +214,15 @@
                                    (cons (cons (car entry) registor) env)))
                  ((tuple? entry) (let ((registor (lcl-registor index)))
                                     (cons (cons (element entry 0) registor) env)))
-                 (else (error 'LET-EXTEND (format "invalid entry %" entry)))))
-                 
-
+                 (else (error 'LET-EXTEND (format "invalid entry %d" entry)))))
+      (set (extend-env entries index env)
+           (if (pair? args)
+                 (add-binding (car args) index (extend-env (cdr arg) (+ index 1) env))
+              env))
+      (set frame (let-frame locals))
+      (set max (+ offset (length locals)))
+      (update-lambda max enviroment)
+      (extend-env locals offset (cons frame enviroment))))
             
 (define (instruction command . list)
    (type-of (tuple command list) :instruction)

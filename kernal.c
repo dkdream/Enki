@@ -1606,6 +1606,18 @@ extern SUBR(format) {
                         continue;
                     }
 
+                    if ('o' == code) {
+                        buffer_print(&buffer, value);
+                    }
+
+                    if ('d' == code) {
+                        buffer_dump(&buffer, value);
+                    }
+
+                    if ('f' == code) {
+                        buffer_prettyPrint(&buffer, value);
+                    }
+
                     if ('p' == code) {
                         char data[20];
                         sprintf(data, "%p", value.reference);
