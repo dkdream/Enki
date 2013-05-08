@@ -130,9 +130,36 @@
 ## control-tree -> instruction-sequence
 ## 
 ## model the compile function after the evaluator function
-## - where the enviroment is a list of definitions [ symbol registor ] and frames [ argCount localCount boxList escapingList ]
-## each lambda control constructs a frame [ argCount 0 nil nil ] and adds it to the enviroment followed by the its definitions.
-## each let extends the enviroment and then count the local registor up to the first frame and the update the localCount
+## - where the enviroment is a list of 
+##    1) let frames    -- [ localList currentMax ]
+##       o. localList  -- the list of local registor (box registors used in child closures)
+##       o. currentMax -- the current max number of live locals registors
+##    2) lambda frames [ argumentList localMax closureList globalList ]
+##       o. argumentList -- list of argument registor (box registors used in child closures)
+##       o. localMax     -- max number of live locals registors
+##       o. closureList  -- list of closure registors (all closure registors are boxed)
+##       o. globalList   -- list of global registors (all global registors are boxed)
+##
+## registor types
+##  1) global   registor - refers to a global symbol value (symbol)
+##  2) closure  registor - refers to a closure value       (symbol,index)
+##  3) argument registor - refers to a argument value      (symbol,index,tail,box)
+##  4) local    registor - refers to a local value         (symbol,index,box)
+##
+## argument registors have a tail flag to mark a variable argument value
+## argument and local registors have a boxed flag
+##
+## each lambda control 
+##  1) constructs a lambda frame [ argumentList 0 nil nil nil ] and push to the enviroment
+##  2) adds its definition
+##
+## each let control
+##  1) constructs a let frame [ localList currentMax ]
+##  2) update the outer lambda frame localMax
+##  3) push to the enviroment
+##  4) adds its definition
+##
+##
 ## each variable reference update all frames from the point of access to the definition and may add to the enviroment.
 ##
 ## each registor is one of four types (global,closure,argument,local) and two kinds (box,unbox)
@@ -185,13 +212,37 @@
 ###
 ###
 
-(define (let-frame locals)
-   ## let-frame [ localCount boxList ]
-   (type-of (tuple (length locals) nil) :let_frame))
+(define (let-frame offset locals)
+   ## let-frame [ offset localCount ]
+   (type-of (tuple offset locals) :let_frame))
 
-(define (lambda-frame arguments)
-   ## lambda-frame [ argumentCount localCount boxedList escapingList ]
-   (type-of (tuple (length arguments) 0 nil nil) :lambda_frame))
+(define (lambda-frame arguments)   
+   ## lambda-frame [ argumentList localMax boxedList closureList globalList ]
+   (type-of (tuple (length arguments) 0 nil nil nil) :lambda_frame))
+
+(define (find-let enviroment)
+   (if (pair? enviroment)
+         (let ((top  (car enviroment))
+               (next (cdr enviroment)))
+            (cond ((isA? top :let_frame)    top)
+                  ((isA? top :lambda_frame) nil)
+                  (else  (find-let next))))
+      nil))
+
+(define (find-lambda enviroment)
+   (if (pair? enviroment)
+         (let ((top  (car enviroment))
+               (next (cdr enviroment)))
+            (cond ((isA? top :lambda_frame) top)
+                  (else  (find-let next))))
+      nil))
+      
+(define (update-lambda-max enviroment max)
+   (let ((entry (find-lambda enviroment)))      
+      (cond ((isA? entry :lambda_frame) (begin
+                                           (if (< (element entry 1) max)
+                                                 (element entry 1 max))))
+            (else (error 'UPDATE-LAMBDA "no lamba frame")))))
 
 (define (lambda-extend arguments enviroment)
    (let (add-binding extend-env frame)
@@ -205,8 +256,8 @@
       (set frame (lambda-frame arguments))
       (extend-env arguments 0 (cons frame enviroment))))
             
-(define (let-extend offset locals enviroment)
-   (let (add-binding extend-env frame)
+(define (let-extend locals enviroment)
+   (let (compute-offset add-binding extend-env offset count max frame)
       (set (add-binding entry index env)
            (cons ((symbol? entry) (let ((registor (lcl-registor index)))
                                      (cons (cons entry registor) env)))
@@ -219,10 +270,29 @@
            (if (pair? args)
                  (add-binding (car args) index (extend-env (cdr arg) (+ index 1) env))
               env))
-      (set frame (let-frame locals))
-      (set max (+ offset (length locals)))
-      (update-lambda max enviroment)
+      (set offset (compute-offset))
+      (set count  (length locals))
+      (set max    (+ offset count))
+      (set frame (let-frame max locals))
+      (update-lambda enviroment max)
       (extend-env locals offset (cons frame enviroment))))
+
+(define (find-registor enviroment symbol)
+   (if (nil? enviroment)
+         (find-global-registor symbol)
+      (let ((entry (car enviroment))
+            (tail  (cdr enviroment)))
+         (cond ((pair? entry) (if (== symbol (car entry))
+                                    (cdr entry)
+                                 (find-registor tail symbol)))
+               ((isA? entry :lambda_frame) (let ((check (find-registor (element entry 3) symbol)))
+                                              (if (nil? check)
+                                                    (let ((found (find-registor tail symbol)))
+                                                       (escaping-lambda entry symbol found)
+                                                       found)
+                                                 check)))
+               (else (find-registor tail symbol))))))
+                
             
 (define (instruction command . list)
    (type-of (tuple command list) :instruction)
