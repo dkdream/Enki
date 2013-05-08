@@ -55,9 +55,9 @@
       (define (evaluator exp env)
          ((analyzer exp) env)))
 
-      ## do-analy           - convert an control-tree argument into a value
+      ## do-analy          - convert an control-tree argument into a value
       ## make-let-bindings - create and extended enviroment
-      ## control-analyzer - convert a control-tree structure into a value
+      ## control-analyzer  - convert a control-tree structure into a value
       (set cbegin (find-value 'begin controls))
       (set (make-let-bindings bindings)
            (if (nil? bindings)
@@ -211,14 +211,40 @@
 ###
 ###
 ###
+(define (make-boxed registor)
+   (cond ((isA? registor :argument-registor) (element registor 1 true))
+         ((isA? registor :local-registor) (element registor 1 true))))
+
+(define (global-registor symbol) 
+   (type-of (tuple symbol) :global-registor))
+
+(define (cls-registor index registor)   
+   (make-boxed registor)
+   (type-of (tuple index registor) :closure-registor))
+
+(define (arg-registor index) 
+   (type-of (tuple index false) :argument-registor))
+
+(define (lcl-registor index) 
+   (type-of (tuple index false) :local-registor))
 
 (define (let-frame offset locals)
-   ## let-frame [ offset localCount ]
+   ## let-frame [ offset localList ]
    (type-of (tuple offset locals) :let_frame))
 
 (define (lambda-frame arguments)   
-   ## lambda-frame [ argumentList localMax boxedList closureList globalList ]
-   (type-of (tuple (length arguments) 0 nil nil nil) :lambda_frame))
+   ## lambda-frame [ argumentList localMax closureList globalList ]
+   (type-of (tuple arguments 0 nil nil nil) :lambda_frame))
+
+(define (extend-closure frame reg symbol)
+   (let (cls pair (count (length (element frame 2))))
+      (set cls (cls-registor count reg))
+      (set pair (cons symbol cls))
+      (element frame 2 (cons pair (element frame 2)))))
+
+(define (extend-global frame reg symbol)
+   (let ((pair (cons symbol reg)))
+      (element frame 3 (cons pair (element frame 3)))))
 
 (define (find-let enviroment)
    (if (pair? enviroment)
@@ -239,9 +265,8 @@
       
 (define (update-lambda-max enviroment max)
    (let ((entry (find-lambda enviroment)))      
-      (cond ((isA? entry :lambda_frame) (begin
-                                           (if (< (element entry 1) max)
-                                                 (element entry 1 max))))
+      (cond ((isA? entry :lambda_frame) (if (< (element entry 1) max)
+                                              (element entry 1 max)))
             (else (error 'UPDATE-LAMBDA "no lamba frame")))))
 
 (define (lambda-extend arguments enviroment)
@@ -249,22 +274,20 @@
       (set (add-binding symbol index env)
            (let ((registor (arg-registor index)))
               (cons (cons symbol registor) env)))
-      (set (extend-env args index env)
+      (set (map-args args index env)
            (if (pair? args)
-                 (add-binding (car args) index (extend-env (cdr arg) (+ index 1) env))
+                 (add-binding (car args) index (map-args (cdr arg) (+ index 1) env))
               env))
-      (set frame (lambda-frame arguments))
-      (extend-env arguments 0 (cons frame enviroment))))
+      (set frame (lambda-frame (map-args arguments nil)))
+      (cons frame enviroment)))
             
 (define (let-extend locals enviroment)
    (let (compute-offset add-binding extend-env offset count max frame)
       (set (add-binding entry index env)
-           (cons ((symbol? entry) (let ((registor (lcl-registor index)))
-                                     (cons (cons entry registor) env)))
-                 ((pair? entry) (let ((registor (lcl-registor index)))
-                                   (cons (cons (car entry) registor) env)))
-                 ((tuple? entry) (let ((registor (lcl-registor index)))
-                                    (cons (cons (element entry 0) registor) env)))
+           (let ((registor (lcl-registor index)))
+           (cons ((symbol? entry) (cons (cons entry registor) env)
+                 ((pair? entry)   (cons (cons (car entry) registor) env))
+                 ((tuple? entry)  (cons (cons (element entry 0) registor) env))
                  (else (error 'LET-EXTEND (format "invalid entry %d" entry)))))
       (set (extend-env entries index env)
            (if (pair? args)
@@ -279,19 +302,32 @@
 
 (define (find-registor enviroment symbol)
    (if (nil? enviroment)
-         (find-global-registor symbol)
+         (global-registor symbol)
       (let ((entry (car enviroment))
             (tail  (cdr enviroment)))
-         (cond ((pair? entry) (if (== symbol (car entry))
-                                    (cdr entry)
-                                 (find-registor tail symbol)))
-               ((isA? entry :lambda_frame) (let ((check (find-registor (element entry 3) symbol)))
-                                              (if (nil? check)
-                                                    (let ((found (find-registor tail symbol)))
-                                                       (escaping-lambda entry symbol found)
-                                                       found)
-                                                 check)))
-               (else (find-registor tail symbol))))))
+         (cond ((isA? entry :let_frame) (let ((value (find symbol (element entry 1))))
+                                           (if (nil? value)
+                                                 (find-registor tail symbol)
+                                              value)))
+
+               ((isA? entry :lambda_frame) (let ((reg (find symbol (element entry 0))))
+                                              (if (not (nil? reg))
+                                                    reg
+                                                 (set reg (find symbol (element entry 2)))
+                                                 (if (not (nil? reg))
+                                                       reg
+                                                    (set reg (find symbol (element entry 3)))
+                                                    (if (not (nil? reg))
+                                                          reg
+                                                       (set reg (find-registor tail symbol))
+                                                       (cond ((isA? reg :local-registor)    (extend-closure entry reg symbol))
+                                                             ((isA? reg :argument-registor) (extend-closure entry reg symbol))
+                                                             ((isA? reg :closure-registor)  (extend-closure entry reg symbol))
+                                                             ((isA? reg global-registor)    (extend-global  entry reg symbol))
+                                                             (else 'FIND-REGISTOR (format "invalid registor %d" reg))))))))
+               (else (error 'FIND-REGISTOR (format "invalid enviroment entry %d" entry)))))))
+                                                                
+                                                    
                 
             
 (define (instruction command . list)
