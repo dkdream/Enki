@@ -233,6 +233,13 @@ static inline bool matchChar(FILE *fp, int match)
     return false;
 }
 
+static inline bool checkBlank(FILE *fp)
+{
+    int chr = getc(fp);
+    ungetc(chr, fp);
+    return isBlank(chr);
+}
+
 // use by both readCode and readString
 static int readChar(int chr, FILE *fp)
 {
@@ -696,10 +703,12 @@ extern bool readExpr(FILE *fp, Target result)
         int chr = getc(fp);
         switch (chr) {
         case EOF:  return false;
+/*
         case '\t': continue;
         case '\n': continue;
         case '\r': continue;
         case ' ' : continue;
+*/
         case '#':
             {
                 skipComment(fp);
@@ -710,13 +719,34 @@ extern bool readExpr(FILE *fp, Target result)
             return readString(fp, '"', result);
 
         case '?':
-            return readCode(fp, result);
+            {
+                 if (!checkBlank(fp)) {
+                     return readCode(fp, result);
+                 } else {
+                     ASSIGN(result, s_qmark);
+                     return true;
+                 }
+             }
 
         case '\'':
-            return readQuote(fp, s_quote, result);
+            {
+                if (!checkBlank(fp)) {
+                    return readQuote(fp, s_quote, result);
+                } else {
+                    ASSIGN(result, s_ftick);
+                    return true;
+                }
+            }
 
         case '`':
-            return readQuote(fp, s_quasiquote, result);
+            {
+                if (!checkBlank(fp)) {
+                    return readQuote(fp, s_quasiquote, result);
+                } else {
+                    ASSIGN(result, s_btick);
+                    return true;
+                }
+            }
 
         case '(':
             return readList(fp, ')', result);
@@ -736,19 +766,28 @@ extern bool readExpr(FILE *fp, Target result)
             return true;
 
         case ':':
-            return readQuote(fp, s_type, result);
-            return true;
+            {
+                if (!checkBlank(fp)) {
+                    return readQuote(fp, s_type, result);
+                } else {
+                    ASSIGN(result, s_colon);
+                    return true;
+                }
+            }
 
         case '0' ... '9':
             return readInteger(fp, chr, result);
 
         case '\\':
             {
-              if (matchChar(fp, '@')) {
-                return readQuote(fp, s_unquote_splicing, result);
-              } else {
-                return readQuote(fp, s_unquote, result);
-              }
+                if (checkBlank(fp)) {
+                    ASSIGN(result, s_bslash);
+                    return true;
+                } else if (matchChar(fp, '@')) {
+                    return readQuote(fp, s_unquote_splicing, result);
+                } else {
+                    return readQuote(fp, s_unquote, result);
+                }
             }
 
         case '}':

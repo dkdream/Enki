@@ -138,6 +138,7 @@ extern bool buffer_print(TextBuffer *output, Node node) {
         buffer_add(output, (const char*)(node.type->name->value));
         buffer_add(output, " ");
         buffer_add(output, (const char*)(node.type->sort->name->value));
+        buffer_add(output, ")");
         return true;
     }
 
@@ -257,6 +258,7 @@ extern bool buffer_dump(TextBuffer *output, Node node) {
         buffer_add(output, (const char*)(node.type->name->value));
         buffer_add(output, " ");
         buffer_add(output, (const char*)(node.type->sort->name->value));
+        buffer_add(output, ")");
         return true;
     }
 

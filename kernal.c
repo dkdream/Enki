@@ -439,8 +439,13 @@ extern void eval_binding(Node local, Node env, Target result)
         list_GetItem(local.pair, 0, &symbol);
         list_GetItem(local.pair, 1, &expr);
     } else if (isType(local, t_tuple)) {
+        unsigned long count = asKind(local.tuple)->count;
         tuple_GetItem(local.tuple, 0, &symbol);
-        tuple_GetItem(local.tuple, 1, &expr);
+        if (1 < count) {
+            tuple_GetItem(local.tuple, (count - 1), &expr);
+        } else {
+            expr = NIL;
+        }
     }
 
     if (!isNil(expr)) {

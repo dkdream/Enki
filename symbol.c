@@ -22,6 +22,10 @@ Symbol s_dot = 0;
 Symbol s_comma = 0;
 Symbol s_colon = 0;
 Symbol s_semi  = 0;
+Symbol s_btick = 0;
+Symbol s_ftick = 0;
+Symbol s_qmark = 0;
+Symbol s_bslash = 0;
 
 Symbol s_axiom = 0;
 Symbol s_base = 0;
@@ -110,6 +114,10 @@ extern void init_global_symboltable() {
     symbol_Convert(",", &s_comma);
     symbol_Convert(":", &s_colon);
     symbol_Convert(";", &s_semi);
+    symbol_Convert("`", &s_btick);
+    symbol_Convert("'", &s_ftick);
+    symbol_Convert("?", &s_qmark);
+    symbol_Convert("\\", &s_bslash);
     symbol_Convert("unquote-splicing", &s_unquote_splicing);
 
     MK_SYM(axiom);

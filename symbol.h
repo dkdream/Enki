@@ -28,6 +28,10 @@ extern Symbol s_dot;
 extern Symbol s_comma;
 extern Symbol s_colon;
 extern Symbol s_semi;
+extern Symbol s_btick;
+extern Symbol s_ftick;
+extern Symbol s_qmark;
+extern Symbol s_bslash;
 
 extern Symbol s_axiom;
 extern Symbol s_base;
