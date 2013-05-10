@@ -396,6 +396,11 @@ static bool readList(FILE *fp, int delim, Target result)
             goto failure;
         }
 
+        if (isIdentical(hold.symbol, s_colon)) {
+            segment = tail;
+            continue;
+        }
+
         if (isIdentical(hold.symbol, s_comma)) {
             if (!segment) {
                 list = head;

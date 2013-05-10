@@ -1,0 +1,399 @@
+
+
+##
+## control-tree -> instruction-sequence
+## 
+## model the compile function after the evaluator function
+## - where the enviroment is a list of 
+##    1) let frames    -- [ localList currentMax ]
+##       o. localList  -- the list of local registor (box registors used in child closures)
+##       o. currentMax -- the current max number of live locals registors
+##    2) lambda frames [ argumentList localMax closureList globalList ]
+##       o. argumentList -- list of argument registor (box registors used in child closures)
+##       o. localMax     -- max number of live locals registors
+##       o. closureList  -- list of closure registors (all closure registors are boxed)
+##       o. globalList   -- list of global registors (all global registors are boxed)
+##
+## registor types
+##  1) global   registor - refers to a global symbol value (symbol)
+##  2) closure  registor - refers to a closure value       (symbol,index)
+##  3) argument registor - refers to a argument value      (symbol,index,tail,box)
+##  4) local    registor - refers to a local value         (symbol,index,box)
+##
+## argument registors have a tail flag to mark a variable argument value
+## argument and local registors have a boxed flag
+##
+## each lambda control 
+##  1) constructs a lambda frame [ argumentList 0 nil nil nil ] and push to the enviroment
+##  2) adds its definition
+##
+## each let control
+##  1) constructs a let frame [ localList currentMax ]
+##  2) update the outer lambda frame localMax
+##  3) push to the enviroment
+##  4) adds its definition
+##
+##
+## each variable reference update all frames from the point of access to the definition and may add to the enviroment.
+##
+## each registor is one of four types (global,closure,argument,local) and two kinds (box,unbox)
+## if a closure registor is the target of a set control it is changed to a box values
+##
+## registors is
+## the escapingList is a list of definitions
+## the search order
+##   1) enviroment up to the first frame if found return registor
+##   2) push frame
+##   3) search up to the next frame if found (4) otherwise (2)
+##   4) set result to found registor
+##   5) pop frame and add result to escapingList and create a new closure registor and set result 
+##   6) is stack empty? onTrue return result otherwise (5) 
+##
+## - instruction need to now what frame they are compiled
+## - local variables and arguments are marked as named registors
+## - 'test     is a machine registor reserved for test values
+## - 'result   is a machine registor for temparary and return values
+## - all instructions take only registors or labels as arguments
+## 
+## (make-registor name kind [index])
+## - when each registor is make it is marks as local, parameter or global
+## - it may be marked later as closure (only on parameter and local)
+##
+## (registor name frame)
+## - return the registor 'name from the current frame
+##
+## (instruction command . args)
+## command
+##   'bind    target-reg value-reg
+##   'set     target-reg value-reg
+##   'goto    label
+##   'onTrue  label
+##   'onFalse label
+##   'return  value-reg
+##   'closure target-reg arg0-reg..argn-reg
+##   'call    address-reg closure-reg arg0-reg..argn-reg
+##   'tail    address-reg closure-reg arg0-reg..argn-reg
+##   'tuple   target-reg count-reg
+##   'store   tuple-reg index-reg value-reg
+##   'push    value-reg
+##   'pop     target-reg
+##   'marker  label
+##
+## the (instruction 'bind ..) is resposible for allocation closure boxes
+## the (registor ...)         is resposible for converting parameter and local registors to closure registors
+###
+###
+###
+###
+(define (make-boxed registor)
+   (cond ((isA? registor :argument-registor) (element registor 1 true))
+         ((isA? registor :local-registor)    (element registor 1 true))))
+
+(define (global-registor symbol) 
+   (type-of (tuple symbol) :global-registor))
+
+## all closure references are boxed.
+(define (cls-registor index registor)   
+   (make-boxed registor)
+   (type-of (tuple index registor) :closure-registor))
+
+(define (arg-registor index) 
+   (type-of (tuple index false) :argument-registor))
+
+(define (lcl-registor index) 
+   (type-of (tuple index false) :local-registor))
+
+(define (let-frame offset locals)
+   ## let-frame [ offset localList ]
+   (type-of (tuple offset locals) :let_frame))
+
+(define (lambda-frame arguments)   
+   ## lambda-frame [ argumentList localMax closureList globalList ]
+   (type-of (tuple arguments 0 nil nil nil) :lambda_frame))
+
+
+##
+## prepend to the lambda-frames closureList
+##
+(define (extend-closure frame reg symbol)
+   (let (cls pair (count (length (element frame 2))))
+      (set cls (cls-registor count reg))
+      (set pair (cons symbol cls))
+      (element frame 2 (cons pair (element frame 2)))))
+
+##
+## prepend to the lambda-frames globalList
+##
+(define (extend-global frame reg symbol)
+   (let ((pair (cons symbol reg)))
+      (element frame 3 (cons pair (element frame 3)))))
+
+##
+## find the nearest let (or null)
+##
+(define (find-let enviroment)
+   (if (pair? enviroment)
+         (let ((top  (car enviroment))
+               (next (cdr enviroment)))
+            (cond ((isA? top :let_frame)    top)
+                  ((isA? top :lambda_frame) nil)
+                  (else  (find-let next))))
+      nil))
+
+##
+## find the nearest lambda (or null)
+##
+(define (find-lambda enviroment)
+   (if (pair? enviroment)
+         (let ((top  (car enviroment))
+               (next (cdr enviroment)))
+            (cond ((isA? top :lambda_frame) top)
+                  (else  (find-let next))))
+      nil))
+      
+##
+## update the nearest lambda's localMax (if needed)
+##
+(define (update-lambda-max enviroment max)
+   (let ((entry (find-lambda enviroment)))      
+      (cond ((isA? entry :lambda_frame) (if (< (element entry 1) max)
+                                              (element entry 1 max)))
+            (else (error 'UPDATE-LAMBDA "no lamba frame")))))
+
+##
+## create a lambda frame and return an extended enviroment
+##
+(define (lambda-extend arguments enviroment)
+   (let (add-binding extend-env frame)
+      (set (add-binding symbol index env)
+           (let ((registor (arg-registor index)))
+              (cons (cons symbol registor) env)))
+      (set (map-args args index env)
+           (if (pair? args)
+                 (add-binding (car args) index (map-args (cdr arg) (+ index 1) env))
+              env))
+      (set frame (lambda-frame (map-args arguments nil)))
+      (cons frame enviroment)))
+            
+##
+## create a let frame and return an extended enviroment
+##
+(define (let-extend locals enviroment)
+   (let (compute-offset add-binding extend-env offset count max frame)
+      (set (add-binding entry index env)
+           (let ((registor (lcl-registor index)))
+           (cond ((symbol? entry) (cons (cons entry registor) env)
+                 ((pair? entry)   (cons (cons (car entry) registor) env))
+                 ((tuple? entry)  (cons (cons (element entry 0) registor) env))
+                 (else (error 'LET-EXTEND (format "invalid entry %d" entry)))))
+      (set (extend-env entries index env)
+           (if (pair? args)
+                 (add-binding (car args) index (extend-env (cdr arg) (+ index 1) env))
+              env))
+      (set offset (compute-offset))
+      (set count  (length locals))
+      (set max    (+ offset count))
+      (set frame (let-frame max locals))
+      (update-lambda enviroment max)
+      (extend-env locals offset (cons frame enviroment))))
+
+(define (find-registor enviroment symbol)
+   (if (nil? enviroment)
+         (global-registor symbol)
+      (let ((entry (car enviroment))
+            (tail  (cdr enviroment)))
+         (cond ((isA? entry :let_frame) (let ((value (find symbol (element entry 1))))
+                                           (if (nil? value)
+                                                 (find-registor tail symbol)
+                                              value)))
+
+               ((isA? entry :lambda_frame) (let ((reg (find symbol (element entry 0))))
+                                              (if (not (nil? reg))
+                                                    reg
+                                                 (set reg (find symbol (element entry 2)))
+                                                 (if (not (nil? reg))
+                                                       reg
+                                                    (set reg (find symbol (element entry 3)))
+                                                    (if (not (nil? reg))
+                                                          reg
+                                                       (set reg (find-registor tail symbol))
+                                                       (cond ((isA? reg :local-registor)    (extend-closure entry reg symbol))
+                                                             ((isA? reg :argument-registor) (extend-closure entry reg symbol))
+                                                             ((isA? reg :closure-registor)  (extend-closure entry reg symbol))
+                                                             ((isA? reg global-registor)    (extend-global  entry reg symbol))
+                                                             (else 'FIND-REGISTOR (format "invalid registor %d" reg))))))))
+               (else (error 'FIND-REGISTOR (format "invalid enviroment entry %d" entry)))))))
+                                                                
+                                                    
+                
+            
+(define (instruction command . list)
+   (type-of (tuple command list) :instruction)
+
+(define (label name)
+   (type-of (tuple name) :label)
+
+(define (flatten statements)
+   (let ((head (car statements))
+         (tail (cdr statements)))
+      (if (pair? head)
+            (append (flatten head) (flatten tail))
+         (cons head (flatten tail)))))
+
+(define (sequence needs modifies . list)
+   (if (and (all? needs 'symbol)
+            (all? modified 'symbol))
+         (let ((statements (flatten list)))
+            (if (all? :instruction statements)
+                  (let ((result (tuple needs modifies statements)))
+                     (type-of result :sequence)
+                     result))
+            (error 'SEQUENCE "non-instruction in statements")))
+      (error 'SEQUENCE "non-symbol in needs or modifies")))
+
+(define (needs-register? sequence register)
+   (if (isA? sequence :sequence)
+         (if (isA? register 'symbol)
+               (member register (element sequence 0)))))
+
+(define (modifies-register? sequence register) 
+   (if (isA? sequence :sequence)
+         (if (isA? register 'symbol)
+               (member register (element sequence 1)))))
+
+(define (union alist blist)
+   (if (nil? alist)
+         blist
+      (let ((head (car alist))
+            (tail (cdr alist)))
+         (if (member head blist)
+               (union tail blist)
+            (cons head (union tail blist))))))
+
+(define (difference list minus)
+   (if (nil? list)
+         nil
+      (let ((head (car list))
+            (tail (cdr list)))
+         (if (member head minus)
+               (difference tail minus)
+            (cons head (difference tail minus))))))
+
+(define empty-sequence (sequence nil nil))
+
+(define (append-sequence first next)
+   (sequence (union (element first 0)
+                    (difference (element next 0)
+                                (element first 1)))
+             (union (element first 1)
+                    (element next 1))
+             (element first 2)
+             (element next 2)))
+
+(define (append-preserving registors first next)
+   (if (nil? registors)
+         (append-sequence first next)
+      (let ((register (car registors)))
+         (if (and (needs-register? first register)
+                  (modifies-register? next register))
+               (preserving (cdr regs)
+                           (instruction-sequence (union (list register) (element first 0))
+                                                 (difference (element first 1) (list register))
+                                                 (instruction 'save register)
+                                                 (element first 2))
+                           next)
+            (preserving (cdr regs) first next)))))
+
+(define (tack-on head body)
+   (instruction-sequence (element head 0)
+                         (element head 1)
+                         (element head 2)
+                         (element body 2)))
+
+
+(define (parallel-sequences left right))
+
+(define (compile-linkage linkage)
+   (cond ((== 'return linkage) (instruction-sequence nil nil
+                                                     (instruction 'return)))
+         ((== 'next linkage) empty-sequence)
+         (else  (instruction-sequence nil nil
+                                      (instruction 'goto linkage)))))
+
+(define (compile exp frame target linkage)
+   (let (cbegin make-let-bindings)         
+      ## make-let-bindings - create and extended enviroment
+      ## control-compiler - convert a control-tree structure into a value
+      (set cbegin (find-value 'begin controls))
+      (set (make-lambda-bindings parameters))
+      (set (make-let-bindings bindings))
+      (set (needs-register? sequence register)    (member register (element sequence 0)))
+      (set (modifies-register? sequence register) (member register (element sequence 1)))
+      (set (compile-const value))
+      (set (compile-type value))
+      (set (compile-global name value))
+      (set (compile-choose test on_true on_false))
+      (set (compile-first-true first next))
+      (set (compile-first-false first next))
+      (set (compile-sequence first next))
+      (set (compile-make-lambda vars body))           
+      (set (compile-apply function args))
+      (set (compile-recall label))
+      (set (compile-local label value))
+      (set (compile-block args)
+           (if (nil? args)
+                 (const nil)
+              (if (nil? (cdr args))
+                    (compiler (car args) target linkage)
+                 (compile-sequence (compiler (car args) 'void 'next)
+                                   (compile-block (cdr args))))))
+      (set (control-compiler control args)
+           (let (check name)
+              (set name (control-name control))
+              (set (check symbol) (== symbol name))
+              (cond ((check 'define) (compile-global (car args) (car (cdr args))))
+                    ((check 'quote)  (compile-const (car args)))
+                    ((check 'type)   (compile-type args))
+                    ((check 'if)     (compile-choose (compiler (car args) 'test 'next)
+                                                     (control-block (car (cdr args)))
+                                                     (control-block (cdr (cdr args)))
+                    ((check 'unless) (compile-choose (compiler (car args) 'test 'next)
+                                                     (compile-block (cdr (cdr args)))
+                                                     (compile-block (car (cdr args)))))
+                    ((check 'and)    (if (nil? args)
+                                           (compile-constant true)
+                                        (if (nil? (cdr args))
+                                              (compiler (car args) target linkage)
+                                           (compile-first-true (compiler (car args))
+                                                               (control-compiler control (cdr args))))))
+                    ((check 'or)     (if (nil? args)
+                                           (compiler-constant nil)
+                                        (if (nil? (cdr args))
+                                              (compiler (car args) target linkage)
+                                           (compile-first-false (compiler (car args))
+                                                                (control-compiler control (cdr args))))))
+                    ((check 'set)   (compile-local (car args)
+                                                   (compiler (car (cdr args)))))
+                    ((check 'begin)  (compile-block args)
+                    ((check 'lambda) (compile-make-lambda (car args)
+                                                          (compiler (cons cbegin (cdr args))
+                                                                    'result
+                                                                    'return)))
+                    ((check 'apply)  (let ((fproc (compiler (car args)))
+                                           (vals  (map compiler (car (cdr args)))))
+                                        (lambda (env)
+                                           (execute (fproc env)
+                                                    (map (lambda (aproc) (aproc env)) vals)))))
+                    )))
+      (cond ((primitive? exp) (compile-constant exp))
+            ((control?   exp) (compile-constant exp))
+            ((symbol?    exp) (compile-recall exp))
+            ((pair?      exp) (control-compiler capply exp)
+            ((tuple?     exp) (compile-constant exp))
+            ((text?      exp) (compile-constant exp))
+            ((integer?   exp) (compile-constant exp))
+            ((nil?       exp) (compile-constant exp))
+            ((comma?     exp) (error 'COMPILER "comma not supported (yet)" exp))
+            ((semi?      exp) (error 'COMPILER "semi not supported (yet)" exp))
+            ((block?     exp) (error 'COMPILER "block not supported (yet)" exp))
+            (else exp))))
