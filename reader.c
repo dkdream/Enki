@@ -351,6 +351,68 @@ static bool list2type(Pair list, Node type) {
     return false;
 }
 
+static bool readGroup(FILE *fp, Node type, Target result)
+{
+    GC_Begin(7);
+
+    const char *error = 0;
+    unsigned size;
+    bool     dotted;
+
+    Node  first;
+    Pair  head;
+    Pair  tail;
+    Node  hold;
+    Tuple tuple;
+
+    GC_Protect(first);
+    GC_Protect(head);
+    GC_Protect(tail);
+    GC_Protect(hold);
+    GC_Protect(tuple);
+
+    if (!readExpr(fp, &(first.reference))) {
+        ASSIGN(result, NIL);
+        GC_End();
+        return false;
+    }
+
+    if (!pair_Create(first, NIL, &head)) goto failure;
+
+    tail = head;
+
+    for (;;) {
+        if (!readExpr(fp, &(hold.reference))) goto eof;
+        if (!pair_Create(hold, NIL, &(hold.pair))) goto failure;
+        if (!pair_SetCdr(tail, hold)) goto failure;
+        tail = hold.pair;
+    }
+
+  eof:
+    if (!list_State(head, &size, &dotted)) goto failure;
+    if (2 > size) {
+        ASSIGN(result, first);
+        goto done;
+    }
+
+    if (!tuple_Create(size, &tuple)) goto failure;
+    if (!tuple_Fill(tuple, head))    goto failure;
+    if (!setType(tuple, type))       goto failure;
+    ASSIGN(result, tuple);
+
+  done:
+    GC_End();
+    return true;
+
+  failure:
+    if (!error) {
+        fatal("%s", error);
+    }
+
+    GC_End();
+    return false;
+}
+
 // (...)
 static bool readList(FILE *fp, int delim, Target result)
 {
@@ -383,17 +445,14 @@ static bool readList(FILE *fp, int delim, Target result)
         if (!readExpr(fp, &(hold.reference))) goto eof;
 
         if (isIdentical(hold.symbol, s_dot)) {
-            if (!readExpr(fp, &(hold.reference))) {
+            if (!readGroup(fp, t_comma, &(hold.reference))) {
                 error = "missing item after .";
                 goto failure;
             }
 
             if (!pair_SetCdr(tail, hold)) goto failure;
 
-            if (!readExpr(fp, &(hold.reference))) goto eof;
-
-            error = "extra item after .";
-            goto failure;
+            goto eof;
         }
 
         if (isIdentical(hold.symbol, s_colon)) {
