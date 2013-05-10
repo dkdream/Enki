@@ -162,7 +162,7 @@ static unsigned short chartab[]= {
     /*  7f del */   0,
 };
 
-/* syntax: ! " # $ % & ' ( ) * + , . / : ; < = > [ \ ] ^ ` { } | ^ */
+/* syntax: ! " # $ % & ' ( ) * + , . / : ; < = > ? [ ] \ ` { } | ^ */
 /*
 ** !  -> PREFIX
 ** "  -> string
@@ -170,21 +170,22 @@ static unsigned short chartab[]= {
 ** $  -> PREFIX
 ** %  -> PREFIX
 ** &  -> PREFIX
-** '  -> quote
+** '  -> quote or s_ftick
 ** (  -> list ')'
 ** +  -> PREFIX
 ** ,  -> s_comma
 ** .  -> PREFIX
 ** /  -> PREFIX
-** :  -> type
+** :  -> type or s_colon
 ** ;  -> s_semi
 ** <  -> PREFIX
 ** =  -> PREFIX
 ** >  -> PREFIX
+** ?  -> char-code or s_qmark
 ** [  -> tuple ']'
-** \  -> unquote ** \@ -> unquote_splicing
+** \  -> (unquote, \@ -> unquote_splicing) or s_bslash
 ** ^  -> PREFIX
-** `  -> quasiqute
+** `  -> quasiquote or s_btick
 ** {  -> block '}'
 ** |  -> PREFIX
 ** ^  -> PREFIX
@@ -703,12 +704,6 @@ extern bool readExpr(FILE *fp, Target result)
         int chr = getc(fp);
         switch (chr) {
         case EOF:  return false;
-/*
-        case '\t': continue;
-        case '\n': continue;
-        case '\r': continue;
-        case ' ' : continue;
-*/
         case '#':
             {
                 skipComment(fp);
