@@ -1,5 +1,4 @@
 
-
 ##
 ## control-tree -> instruction-sequence
 ## 
@@ -103,13 +102,29 @@
 (define (lcl-registor index) 
    (type-of (tuple index false) :local-registor))
 
-(define (let-frame offset locals)
-   ## let-frame [ offset localList ]
-   (type-of (tuple offset locals) :let_frame))
+(define (let-frame start locals)
+   (let (name convert)
+      (set (name entry)
+           (cond ((symbol? entry) entry)
+                 ((pair? entry)   (car entry))
+                 ((tuple? entry)  (element entry 0))
+                 (else (error 'LET-FRAME (format "unknow let entry @{d}" entry)))))
+      (set (convert inx list)
+           (cond ((nil? list) nil)
+                 (else (cons (cons (name (car list)) (lcl-register inx))
+                             (convert (inx + 1) (cdr list))))))
+   ## let-frame [ max-offset localList ]
+   (type-of (tuple (+ start (length locals)) (convert start locals)) :let_frame))
 
 (define (lambda-frame arguments)   
-   ## lambda-frame [ argumentList localMax closureList globalList ]
-   (type-of (tuple arguments 0 nil nil nil) :lambda_frame))
+   (let (convert)
+      (set (convert inx list)
+           (cond ((nil? list) nil)
+                 ((symbol? list) (cons (cons list (arg-register inx)) nil))
+                 (else (cons (cons (car list) (arg-register inx))
+                             (convert (inx + 1) (cdr list))))))
+      ## lambda-frame [ argumentList localMax closureList globalList ]
+      (type-of (tuple (convert 0 arguments) 0 nil nil nil) :lambda_frame)))
 
 
 ##
@@ -132,25 +147,44 @@
 ## find the nearest let (or null)
 ##
 (define (find-let enviroment)
-   (if (pair? enviroment)
-         (let ((top  (car enviroment))
-               (next (cdr enviroment)))
-            (cond ((isA? top :let_frame)    top)
-                  ((isA? top :lambda_frame) nil)
-                  (else  (find-let next))))
-      nil))
+   (if (nil? enviroment)
+         nil
+      (let ((top  (car enviroment))
+            (next (cdr enviroment)))
+         (cond ((isA? top :let_frame)    top)
+               ((isA? top :lambda_frame) nil)
+               (else  (find-let next))))))
 
 ##
 ## find the nearest lambda (or null)
 ##
 (define (find-lambda enviroment)
-   (if (pair? enviroment)
-         (let ((top  (car enviroment))
-               (next (cdr enviroment)))
-            (cond ((isA? top :lambda_frame) top)
-                  (else  (find-let next))))
-      nil))
-      
+   (if (nil? enviroment)
+         nil
+      (let ((top  (car enviroment))
+            (next (cdr enviroment)))
+         (cond ((isA? top :lambda_frame) top)
+               (else  (find-lambda next))))))
+
+##
+## find registor in frame
+##
+(define (frame-registor frame symbol)   
+   (cond ((nil? frame) (global-registor symbol))
+         ((isA? frame :let_frame) (member symbol (element frame 1)))
+         ((isA? frame :lambda_frame) (let ((check (member symbol (element frame 0))))
+                                        (if (nil? check)
+                                              (set check (member symbol (element frame 2))))
+                                        (if (nil? check)
+                                              (set check (member symbol (element frame 3))))
+                                        check))
+         (else (error 'FRAME-REGISTOR (format "invalid search frame @{d}" frame)))))
+
+##
+## update lambda context with (symbol . registor) -> n-register
+##
+(define (update-lambda-context symbol registor))
+
 ##
 ## update the nearest lambda's localMax (if needed)
 ##
@@ -161,41 +195,28 @@
             (else (error 'UPDATE-LAMBDA "no lamba frame")))))
 
 ##
+## return the current local offset (for a new let frame)
+##
+(define (local-offset enviroment)
+   (let ((entry (find-let enviroment)))
+      (if (nil? entry)
+            0
+         (element entry 0))))
+
+##
 ## create a lambda frame and return an extended enviroment
 ##
 (define (lambda-extend arguments enviroment)
-   (let (add-binding extend-env frame)
-      (set (add-binding symbol index env)
-           (let ((registor (arg-registor index)))
-              (cons (cons symbol registor) env)))
-      (set (map-args args index env)
-           (if (pair? args)
-                 (add-binding (car args) index (map-args (cdr arg) (+ index 1) env))
-              env))
-      (set frame (lambda-frame (map-args arguments nil)))
-      (cons frame enviroment)))
+   (cons (lambda-frame arguments) enviroment))
             
 ##
 ## create a let frame and return an extended enviroment
 ##
-(define (let-extend locals enviroment)
-   (let (compute-offset add-binding extend-env offset count max frame)
-      (set (add-binding entry index env)
-           (let ((registor (lcl-registor index)))
-           (cond ((symbol? entry) (cons (cons entry registor) env)
-                 ((pair? entry)   (cons (cons (car entry) registor) env))
-                 ((tuple? entry)  (cons (cons (element entry 0) registor) env))
-                 (else (error 'LET-EXTEND (format "invalid entry %d" entry)))))
-      (set (extend-env entries index env)
-           (if (pair? args)
-                 (add-binding (car args) index (extend-env (cdr arg) (+ index 1) env))
-              env))
-      (set offset (compute-offset))
-      (set count  (length locals))
-      (set max    (+ offset count))
-      (set frame (let-frame max locals))
-      (update-lambda enviroment max)
-      (extend-env locals offset (cons frame enviroment))))
+(define (let-extend locals enviroment)   
+   (let ((start (local-offset enviroment))
+         (count (length locals)))
+      (update-lambda-max enviroment (+ start count))
+      (cons (let-frame start locals) enviroment)))
 
 (define (find-registor enviroment symbol)
    (if (nil? enviroment)
