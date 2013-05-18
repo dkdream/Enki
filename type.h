@@ -57,7 +57,7 @@ extern bool rule_Create(Symbol,Sort,Sort,Sort,Rule*); /* add a new rule for symb
 extern bool name_Create(Sort,Name*);                  /* construct a new type variable */
 
 extern bool type_Pi(Type*, ...);             /* Pi(var:type...):type      dependent-functions*/
-extern bool type_Sigma(Type*, ...);          /* Sigman(var:type...):type  dependent-tuples*/
+extern bool type_Sigma(Type*, ...);          /* Sigma(var:type...):type   dependent-tuples*/
 extern bool type_Mu(Type*, ...);             /* Mu(var:type):type         recursive-functions*/
 extern bool type_Delta(Type*, ...);          /* Delta(var:type,predicate) subtypes */
 

@@ -72,7 +72,7 @@ extern bool list_State(Pair pair, unsigned *count, bool *dotted) {
     unsigned at = 0;
     for (; pair ; ++at) {
         if (!isType(pair, t_pair)) {
-            *count  = at;
+            *count  = ++at;
             *dotted = true;
             return true;
         }

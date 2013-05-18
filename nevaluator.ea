@@ -117,14 +117,18 @@
    (type-of (tuple (+ start (length locals)) (convert start locals)) :let_frame))
 
 (define (lambda-frame arguments)   
-   (let (convert)
+   (let (fixed bind convert)
+      (set (not (dot? arguments)))
+      (set (bind name index)
+            (cons name (arg-register index)))
       (set (convert inx list)
            (cond ((nil? list) nil)
-                 ((symbol? list) (cons (cons list (arg-register inx)) nil))
-                 (else (cons (cons (car list) (arg-register inx))
-                             (convert (inx + 1) (cdr list))))))
-      ## lambda-frame [ argumentList localMax closureList globalList ]
-      (type-of (tuple (convert 0 arguments) 0 nil nil nil) :lambda_frame)))
+                 ((symbol? list) (cons (bind list inx) nil))
+                 ((pair? list)   (cons (bind (car list) inx)
+                                       (convert (inx + 1) (cdr list))))
+                 (else (error 'LAMBDA-ARG (format "unknown lambda arg @{d}" list)))))
+      ## lambda-frame [ fixed argumentList localMax closureList globalList ]
+      (type-of (tuple fixed (convert 0 arguments) 0 nil nil nil) :lambda_frame)))
 
 
 ##
