@@ -1,0 +1,132 @@
+##
+## 
+##
+(define (instruction command . list)
+   (type-of (tuple command list) :instruction)
+
+##
+##
+##
+(define (label name)
+   (type-of (tuple name) :label)
+
+##
+## flatten a nested collection of statements into a linear list
+##
+(define (flatten statements)
+   (let ((head (car statements))
+         (tail (cdr statements)))
+      (if (pair? head)
+            (append (flatten head) (flatten tail))
+         (cons head (flatten tail)))))
+
+##
+## construct a sequence that needs 
+##
+(define (sequence needs modifies . list)
+   (if (and (all? needs 'symbol)
+            (all? modified 'symbol))
+         (let ((statements (flatten list)))
+            (if (all? :instruction statements)
+                  (type-of (tuple needs modifies statements) :sequence)
+               (error 'SEQUENCE "non-instruction in statements")))
+      (error 'SEQUENCE "non-symbol in needs or modifies")))
+
+##
+## dose this sequence need this symbol?
+##
+(define (needs-register? sequence register)
+   (if (isA? sequence :sequence)
+         (if (isA? register 'symbol)
+               (member register (element sequence 0))
+            (error 'NEED "non-symbol used"))
+      (error 'NEED "non-sequence used")))
+
+##
+## dose this sequence modify this symbol?
+##
+(define (modifies-register? sequence register) 
+   (if (isA? sequence :sequence)
+         (if (isA? register 'symbol)
+               (member register (element sequence 1))
+            (error 'MODIFY "non-symbol used"))
+      (error 'MODIFY "non-sequence used")))
+
+##
+## construct the union of two lists
+##
+(define (union alist blist)
+   (if (nil? alist)
+         blist
+      (let ((head (car alist))
+            (tail (cdr alist)))
+         (if (member head blist)
+               (union tail blist)
+            (cons head (union tail blist))))))
+
+##
+## construct the list without some elements
+##
+(define (difference list minus)
+   (if (nil? list)
+         nil
+      (let ((head (car list))
+            (tail (cdr list)))
+         (if (member head minus)
+               (difference tail minus)
+            (cons head (difference tail minus))))))
+
+##
+## define the empty-sequence
+##
+(define empty-sequence (sequence nil nil))
+
+##
+## append two sequences
+##
+(define (append-sequence first next)
+   (sequence (union (element first 0)
+                    (difference (element next 0)
+                                (element first 1)))
+             (union (element first 1)
+                    (element next 1))
+             (element first 2)
+             (element next 2)))
+
+##
+## append two sequences while preserving some registers
+##
+(define (append-preserving registors first next)
+   (if (nil? registors)
+         (append-sequence first next)
+      (let ((register (car registors)))
+         (if (and (needs-register? first register)
+                  (modifies-register? next register))
+               (preserving (cdr regs)
+                           (sequence (union (list register) (element first 0))
+                                     (difference (element first 1) (list register))
+                                     (instruction 'save register)
+                                     (element first 2))
+                           next)
+            (preserving (cdr regs) first next)))))
+
+##
+## append two sequences treating body as if no registers are changed
+##
+(define (tack-on head body)
+   (sequence (element head 0)
+             (element head 1)
+             (element head 2)
+             (element body 2)))
+
+##
+## construct a sequence that gotos the next instruction 
+## examples:
+##    return from call (return)
+##    to the else block in an if statement (goto)
+##    to the block after this block (next)
+##
+(define (compile-linkage linkage)
+   (cond ((== 'return linkage) (sequence nil nil (instruction 'return)))
+         ((== 'next linkage)   empty-sequence)
+         (else                 (sequence nil nil (instruction 'goto linkage)))))

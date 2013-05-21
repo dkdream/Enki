@@ -1,0 +1,200 @@
+
+(define (global-registor symbol) 
+   (type-of (tuple symbol) :global-registor))
+
+(define (arg-registor index) 
+   (type-of (tuple index false) :argument-registor))
+
+(define (lcl-registor index) 
+   (type-of (tuple index false) :local-registor))
+
+(define (make-boxed registor)
+   (cond ((isA? registor :argument-registor) (element registor 1 true))
+         ((isA? registor :local-registor)    (element registor 1 true))))
+
+(define (cls-registor index registor)   
+   (make-boxed registor)
+   (type-of (tuple index registor) :closure-registor))
+
+##
+## make a new let frame
+##
+(define (let-frame start locals)
+   (let (name convert)
+      (set (name entry)
+           (cond ((symbol? entry) entry)
+                 ((pair? entry)   (car entry))
+                 ((tuple? entry)  (element entry 0))
+                 (else (error 'LET-FRAME (format "unknow let entry @{d}" entry)))))
+      (set (convert inx list)
+           (cond ((nil? list) nil)
+                 (else (cons (cons (name (car list)) (lcl-register inx))
+                             (convert (inx + 1) (cdr list))))))
+      ## let-frame [ offset localList ]
+      (type-of (tuple (+ start (length locals))
+                      (convert start locals))
+               :let_frame)))
+
+##
+## search let-frame for symbol
+##
+(define (search-let frame symbol)
+   (let ((list (element frame 1)))
+      (find symbol list)))
+
+##
+## make a new lambda frame
+##
+(define (lambda-frame arguments)   
+   (let (fixed bind convert)
+      (set (not (dot? arguments)))
+      (set (bind name index)
+           (cons name (arg-register index)))
+      (set (convert inx list)
+           (cond ((nil? list) nil)
+                 ((symbol? list) (cons (bind list inx) nil))
+                 ((pair? list)   (cons (bind (car list) inx)
+                                       (convert (inx + 1) (cdr list))))
+                 (else (error 'LAMBDA-ARG (format "unknown lambda arg @{d}" list)))))
+      ## lambda-frame [ fixed argumentList localMax closureList globalList ]
+      (type-of (tuple fixed (convert 0 arguments) 0 nil nil nil)
+               :lambda_frame)))
+
+##
+## search lambda-frame for symbol
+##
+(define (search-let frame symbol)
+   (let (result
+         (arguments (element frame 1))
+         (captured  (element frame 3))
+         (externs   (element frame 4)))      
+      (set result (find symbol arguments))
+      (if (nil? result) (set result (find symbol captured)))
+      (if (nil? result) (set result (find symbol externs)))
+      result))
+
+##
+## prepend to the lambda-frames closureList
+##
+(define (extend-closure frame reg symbol)
+   (let (cls pair count)
+      (set count (length (element frame 2)))
+      (set cls   (cls-registor count reg))
+      (set pair  (cons symbol cls))
+      (element frame 2 (cons pair (element frame 2)))))
+
+##
+## prepend to the lambda-frames globalList
+##
+(define (extend-global frame reg symbol)
+   (let ((pair (cons symbol reg)))
+      (element frame 3 (cons pair (element frame 3)))))
+
+
+##
+## find the nearest let (or null)
+##
+(define (find-let enviroment)
+   (if (nil? enviroment)
+         nil
+      (let ((top  (car enviroment))
+            (next (cdr enviroment)))
+         (cond ((isA? top :let_frame)    top)
+               ((isA? top :lambda_frame) nil)
+               (else  (find-let next))))))
+
+##
+## find the nearest lambda (or null)
+##
+(define (find-lambda enviroment)
+   (if (nil? enviroment)
+         nil
+      (let ((top  (car enviroment))
+            (next (cdr enviroment)))
+         (cond ((isA? top :lambda_frame) top)
+               (else  (find-lambda next))))))
+
+
+##
+## find registor in frame
+##
+(define (frame-registor frame symbol)   
+   (cond ((nil? frame) (global-registor symbol))
+         ((isA? frame :let_frame) (member symbol (element frame 1)))
+         ((isA? frame :lambda_frame) (let ((check (member symbol (element frame 0))))
+                                        (if (nil? check)
+                                              (set check (member symbol (element frame 2))))
+                                        (if (nil? check)
+                                              (set check (member symbol (element frame 3))))
+                                        check))
+         (else (error 'FRAME-REGISTOR (format "invalid search frame @{d}" frame)))))
+
+##
+## update lambda context with (symbol . registor) -> n-register
+##
+(define (update-lambda-context symbol registor))
+
+##
+## update the nearest lambda's localMax (if needed)
+##
+(define (update-lambda-max enviroment max)
+   (let ((entry (find-lambda enviroment)))      
+      (cond ((isA? entry :lambda_frame) (if (< (element entry 1) max)
+                                              (element entry 1 max)))
+            (else (error 'UPDATE-LAMBDA "no lamba frame")))))
+
+##
+## return the current local offset (for a new let frame)
+##
+(define (local-offset enviroment)
+   (let ((entry (find-let enviroment)))
+      (if (nil? entry)
+            0
+         (element entry 0))))
+
+##
+## create a lambda frame and return an extended enviroment
+##
+(define (lambda-extend arguments enviroment)
+   (cons (lambda-frame arguments) enviroment))
+            
+##
+## create a let frame and return an extended enviroment
+##
+(define (let-extend locals enviroment)   
+   (let ((start (local-offset enviroment))
+         (count (length locals)))
+      (update-lambda-max enviroment (+ start count))
+      (cons (let-frame start locals) enviroment)))
+
+##
+## find registor for symbol
+##
+(define (find-registor enviroment symbol)
+   (if (nil? enviroment)
+         (global-registor symbol)
+      (let (result
+            (entry (car enviroment))
+            (tail  (cdr enviroment)))
+         (cond ((isA? entry :let_frame)    (begin
+                                              (set result (search-let entry symbol))
+                                              (if (nil? result)
+                                                    (find-registor enviroment symbol)
+                                                 result)))
+               ((isA? entry :lambda_frame) (begin
+                                              (set result (search-lambda entry symbol))
+                                              (if (nil? result)
+                                                    (let (tmp)
+                                                       (set tmp (find-registor tail symbol))
+                                                       (cond ((isA? tmp :local-registor)    (extend-closure entry tmp symbol))
+                                                             ((isA? tmp :argument-registor) (extend-closure entry tmp symbol))
+                                                             ((isA? tmp :closure-registor)  (extend-closure entry tmp symbol))
+                                                             ((isA? tmp global-registor)    (extend-global  entry tmp symbol))
+                                                             (else (errro 'FIND-REGISTOR (format "invalid registor %d" tmp)))))
+                                                 result)))
+               (else (error 'FIND-REGISTOR (format "invalid enviroment entry %d" entry)))))))
+
+
+
+
+
