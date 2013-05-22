@@ -479,12 +479,15 @@ extern SUBR(encode_let) {
 
 extern void eval_binding(Node local, Node env, Target result)
 {
-    GC_Begin(2);
+    GC_Begin(4);
+
     Node symbol;
     Node expr;
+    Node type;
     Node value;
 
     GC_Protect(expr);
+    GC_Protect(type);
     GC_Protect(value);
 
     if (isType(local, s_symbol)) {
@@ -502,11 +505,18 @@ extern void eval_binding(Node local, Node env, Target result)
     if (isType(local, t_tuple)) {
         unsigned long count = asKind(local.tuple)->count;
         tuple_GetItem(local.tuple, 0, &symbol);
-        if (1 < count) {
-            tuple_GetItem(local.tuple, (count - 1), &expr);
-        } else {
-            expr = NIL;
+
+        if (2 > count) {
+            value = NIL;
+            goto done;
         }
+
+        tuple_GetItem(local.tuple, (count - 1), &expr);
+
+        if (2 < count) {
+            tuple_GetItem(local.tuple, 1, &type);
+        }
+
         goto do_eval;
     }
 
@@ -515,6 +525,13 @@ extern void eval_binding(Node local, Node env, Target result)
         eval(expr, env, &value);
     } else {
         value = NIL;
+    }
+
+    if (!isNil(type)) {
+        eval(type, env, &type);
+        if (!isType(value, type)) {
+            value = void_v;
+        }
     }
 
   done:
@@ -550,9 +567,22 @@ extern SUBR(let)
     GC_End();
 }
 
-extern void environ_Lambda(Node symbol, Node env, Target result)
+extern void environ_Lambda(Node parameter, Node env, Target result)
 {
-    pair_Create(symbol, NIL, result.pair);
+    Node symbol = NIL;
+
+    if (isType(parameter, s_symbol)) {
+        pair_Create(parameter, NIL, result.pair);
+        return;
+    }
+
+    if (isType(parameter, t_tuple)) {
+        tuple_GetItem(parameter.tuple, 0, &symbol);
+        pair_Create(symbol, NIL, result.pair);
+        return;
+    }
+
+    pair_Create(parameter, NIL, result.pair);
 }
 
 extern SUBR(encode_lambda) {
@@ -2528,6 +2558,32 @@ extern SUBR(dot_q) {
     }
 }
 
+extern SUBR(void_q) {
+    Node value;
+
+    checkArgs(args, "void?", 1, NIL);
+    forceArgs(args, &value, 0);
+
+    if (!isIdentical(value, void_v)) {
+        ASSIGN(result, NIL);
+    } else {
+        ASSIGN(result, true_v);
+    }
+}
+
+extern SUBR(true_q) {
+    Node value;
+
+    checkArgs(args, "true?", 1, NIL);
+    forceArgs(args, &value, 0);
+
+    if (!isIdentical(value, true_v)) {
+        ASSIGN(result, NIL);
+    } else {
+        ASSIGN(result, true_v);
+    }
+}
+
 /***************************************************************
  ***************************************************************
  ***************************************************************
@@ -2823,6 +2879,8 @@ void startEnkiLibrary() {
     MK_OPR(all?,all_q);
 
     MK_OPR(dot?,dot_q);
+    MK_OPR(void?,void_q);
+    MK_OPR(true?,true_q);
 
     MK_OPR(form-action,form_action);
     MK_OPR(fixed-encoder,fixed_encoder);
