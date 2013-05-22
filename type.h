@@ -28,6 +28,7 @@ struct type {
     };
 };
 
+extern Sort void_s;
 extern Sort zero_s;
 
 extern Type t_any;
@@ -50,6 +51,7 @@ extern Type t_semi;
 extern Type t_text;
 extern Type t_true;
 extern Type t_tuple;
+extern Type t_void;
 
 extern bool sort_Create(Symbol,Sort*);                /* each sort has a unique name */
 extern bool type_Create(Symbol,Sort,Type*);           /* each basetype in a sort has a unique name */

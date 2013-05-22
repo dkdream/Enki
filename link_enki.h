@@ -45,6 +45,11 @@ extern inline bool isNil(ptr val) {
   return 0 == val;
 }
 
+extern inline bool isVoid(ptr)  __attribute__((always_inline));
+extern inline bool isVoid(ptr val) {
+  return -1 == val;
+}
+
 extern inline bool isBoxed(ptr)  __attribute__((always_inline));
 extern inline bool isBoxed(ptr val) {
   return ((val & BOX_TAG_MASK) == BOX_TAG);
@@ -59,7 +64,7 @@ extern inline bool isBool(ptr)  __attribute__((always_inline));
 extern inline bool isBool(ptr val) {
   if ((val & BOOL_TAG_MASK) == BOOL_TAG)
     return -1;
-  else 
+  else
     return 0;
 }
 

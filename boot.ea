@@ -51,11 +51,11 @@
                               `(\%define \pattern (\%kind \@body))))))
 
 (define expand-define (%define-with define))
-(define expand-set    (%define-with set))
+(define expand-bind   (%define-with bind))
 (define expand-macro  (%define-kind define form))
 
 (define define (form expand-define))
-(define set    (form expand-set))
+(define bind   (form expand-bind))
 (define macro  (form expand-macro))
 
 ## (rec var exp) -> (let ([var '()]) (set! var exp))

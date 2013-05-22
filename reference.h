@@ -94,7 +94,8 @@ node_target {
 
 typedef union node_target Target;
 
-#define NIL ((Node)((Reference)0))
+#define NIL  ((Node)((Reference)0))
+#define VOID ((Node)((Reference)-1))
 
 #define ASSIGN(target, node) enki_assign(target, node)
 

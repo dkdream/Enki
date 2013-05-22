@@ -35,6 +35,8 @@ unsigned int ea_global_trace = 0;
 //
 struct gc_treadmill enki_zero_space;
 struct gc_header    enki_true;
+struct gc_header    enki_void;
+
 
 Space     _zero_space;
 unsigned __alloc_cycle;
@@ -42,6 +44,7 @@ unsigned __scan_cycle;
 
 Node        enki_globals = NIL; // nt_pair(nil, alist)
 Node              true_v = NIL;
+Node              void_v = NIL;
 Primitive  p_eval_symbol = 0;
 Primitive    p_eval_pair = 0;
 Primitive p_apply_lambda = 0;
@@ -304,6 +307,58 @@ extern SUBR(begin)
     eval_begin(args, env, result);
 }
 
+extern SUBR(bind)
+{ //Fixed
+    Node symbol = NIL;
+    Node expr   = NIL;
+    Node value  = NIL;
+    Node temp   = NIL;
+
+    fetchArgs(args, &symbol, &expr, 0);
+
+    if (!isType(symbol, s_symbol)) {
+        fprintf(stderr, "\nerror: non-symbol identifier in set: ");
+        dump(stderr, symbol);
+        fprintf(stderr, "\n");
+        fflush(stderr);
+        fatal(0);
+    }
+
+    Pair entry;
+
+    if (!alist_Entry(env.pair, symbol, &entry)) {
+        fprintf(stderr, "\nerror: cannot set undefined variable: ");
+        dump(stderr, symbol);
+        fprintf(stderr, "\n");
+        fflush(stderr);
+        fatal(0);
+    }
+
+    pair_GetCdr(entry, &temp);
+
+    if (!isIdentical(temp, void_v)) {
+        fprintf(stderr, "\nerror: cannot bind a bound local value: ");
+        dump(stderr, symbol);
+        fprintf(stderr, "\n");
+        fflush(stderr);
+        fatal(0);
+    }
+
+    eval(expr, env, &value);
+
+    if (!isType(value, t_lambda)) {
+        fprintf(stderr, "\nerror: cannot use bind to assign a value to a local: ");
+        dump(stderr, symbol);
+        fprintf(stderr, "\n");
+        fflush(stderr);
+        fatal(0);
+    }
+
+    pair_SetCdr(entry, value);
+
+    ASSIGN(result,value);
+}
+
 extern SUBR(set)
 { //Fixed
     Node symbol = NIL;
@@ -434,11 +489,17 @@ extern void eval_binding(Node local, Node env, Target result)
 
     if (isType(local, s_symbol)) {
         symbol = local;
-        expr   = NIL;
-    } else if (isType(local, t_pair)) {
+        value  = void_v;
+        goto done;
+    }
+
+    if (isType(local, t_pair)) {
         list_GetItem(local.pair, 0, &symbol);
         list_GetItem(local.pair, 1, &expr);
-    } else if (isType(local, t_tuple)) {
+        goto do_eval;
+    }
+
+    if (isType(local, t_tuple)) {
         unsigned long count = asKind(local.tuple)->count;
         tuple_GetItem(local.tuple, 0, &symbol);
         if (1 < count) {
@@ -446,14 +507,17 @@ extern void eval_binding(Node local, Node env, Target result)
         } else {
             expr = NIL;
         }
+        goto do_eval;
     }
 
+  do_eval:
     if (!isNil(expr)) {
         eval(expr, env, &value);
     } else {
         value = NIL;
     }
 
+  done:
     pair_Create(symbol, value, result.pair);
 
     GC_End();
@@ -2606,14 +2670,17 @@ void startEnkiLibrary() {
     init_global_typetable();
 
     true_v = (Node)init_atom(&enki_true, 0);
+    void_v = (Node)init_atom(&enki_void, 0);
 
     setType(true_v, t_true);
+    setType(void_v, t_void);
 
     pair_Create(NIL,NIL, &enki_globals.pair);
 
     VM_DEBUG(1, "startEnkiLibrary init globals");
 
     MK_CONST(true,true_v);
+    MK_CONST(void,void_v);
     MK_CONST(nil,NIL);
 
     MK_CONST(Zero,zero_s);
@@ -2627,6 +2694,7 @@ void startEnkiLibrary() {
     MK_FXD(if);
     MK_FXD(and);
     MK_FXD(or);
+    MK_FXD(bind);
     MK_FXD(set);
     MK_FXD(delay);
 
