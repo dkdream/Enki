@@ -183,7 +183,7 @@ static unsigned short chartab[]= {
 ** >  -> PREFIX
 ** ?  -> char-code or s_qmark
 ** [  -> tuple ']'
-** \  -> (unquote, \@ -> unquote_splicing) or s_bslash
+** \  -> (unquote, \@ -> unquote_splicing) or (s_bslash,  \@ -> s_bsat)
 ** ^  -> PREFIX
 ** `  -> quasiquote or s_btick
 ** {  -> block '}'
@@ -421,13 +421,11 @@ static bool readList(FILE *fp, int delim, Target result)
     const char *error = 0;
     Pair  head;
     Pair  tail;
-    Pair  segment;
     Pair  list;
     Node  hold;
 
     GC_Protect(head);
     GC_Protect(tail);
-    GC_Protect(segment);
     GC_Protect(list);
     GC_Protect(hold);
 
@@ -445,7 +443,7 @@ static bool readList(FILE *fp, int delim, Target result)
         if (!readExpr(fp, &(hold.reference))) goto eof;
 
         if (isIdentical(hold.symbol, s_dot)) {
-            if (!readGroup(fp, t_comma, &(hold.reference))) {
+            if (!readExpr(fp, &(hold.reference))) {
                 error = "missing item after .";
                 goto failure;
             }
@@ -453,29 +451,6 @@ static bool readList(FILE *fp, int delim, Target result)
             if (!pair_SetCdr(tail, hold)) goto failure;
 
             goto eof;
-        }
-
-        if (isIdentical(hold.symbol, s_colon)) {
-            segment = tail;
-            continue;
-        }
-
-        if (isIdentical(hold.symbol, s_comma)) {
-            if (!segment) {
-                list = head;
-            } else {
-                if (!pair_GetCdr(segment, &list)) goto failure;
-            }
-
-            if (!list2type(list, t_comma)) goto failure;
-
-            if (!segment) {
-                segment = head;
-            } else {
-                segment = list;
-            }
-            tail = segment;
-            continue;
         }
 
         if (!pair_Create(hold, NIL, &(hold.pair))) goto failure;
@@ -488,14 +463,6 @@ static bool readList(FILE *fp, int delim, Target result)
         error = "EOF while reading list";
         goto failure;
     }
-
-    if (!segment) goto done;
-
-    if (!pair_GetCdr(segment, &list)) goto failure;
-
-    if (isNil(list)) goto done;
-
-    if (!list2type(list, t_comma)) goto failure;
 
  done:
     GC_End();
@@ -522,13 +489,11 @@ static bool readTuple(FILE *fp, Node type, int delim, Target result)
 
     Pair  head;
     Pair  tail;
-    Pair  segment;
     Pair  list;
     Node  hold;
 
     GC_Protect(head);
     GC_Protect(tail);
-    GC_Protect(segment);
     GC_Protect(list);
     GC_Protect(hold);
 
@@ -547,25 +512,6 @@ static bool readTuple(FILE *fp, Node type, int delim, Target result)
 
     for (;;) {
         if (!readExpr(fp, &(hold.reference))) goto eof;
-
-        if (isIdentical(hold.symbol, s_semi)) {
-            if (!segment) {
-                list = head;
-            } else {
-                if (!pair_GetCdr(segment, &list)) goto failure;
-            }
-
-            if (!list2type(list, t_semi)) goto failure;
-
-            if (!segment) {
-                segment = head;
-            } else {
-                segment = list;
-            }
-            tail = segment;
-            continue;
-        }
-
         if (!pair_Create(hold, NIL, &(hold.pair))) goto failure;
         if (!pair_SetCdr(tail, hold)) goto failure;
         tail = hold.pair;
@@ -575,14 +521,6 @@ static bool readTuple(FILE *fp, Node type, int delim, Target result)
     if (!matchChar(fp, delim)) {
         error = "EOF while reading list";
         goto failure;
-    }
-
-    if (segment) {
-        if (!pair_GetCdr(segment, &list)) goto failure;
-
-        if (!isNil(list)) {
-            if (!list2type(list, t_semi)) goto failure;
-        }
     }
 
     if (!list_State(head, &size, &dotted)) goto failure;
@@ -843,7 +781,12 @@ extern bool readExpr(FILE *fp, Target result)
                     ASSIGN(result, s_bslash);
                     return true;
                 } else if (matchChar(fp, '@')) {
-                    return readQuote(fp, s_unquote_splicing, result);
+                    if (checkBlank(fp)) {
+                        ASSIGN(result, s_bsat);
+                        return true;
+                    } else {
+                        return readQuote(fp, s_unquote_splicing, result);
+                    }
                 } else {
                     return readQuote(fp, s_unquote, result);
                 }
