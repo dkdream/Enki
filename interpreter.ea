@@ -2,7 +2,7 @@
 
 ##
 ## Fixed Operators
-##  define, quote, type, if, and, or, set, delay, while, begin, let, lambda
+##  define, quote, type, if, and, or, bind, set, delay, while, begin, let, lambda
 ##
 
 
@@ -11,8 +11,8 @@
 ##
 (define (find-value symbol context)
    (let (match entry)
-      (set match (lambda (binding) (== (element binding 0) symbol)))
-      (set entry (find match context))
+      (bind match (lambda (binding) (== (element binding 0) symbol)))
+      (bind entry (find match context))
       (if (nil? entry)
             (find-value symbol (environment))
          (element entry 1))))
@@ -33,10 +33,10 @@
 ##
 (define (expander exp env)
    (let (expand-list do-expand apply-form)
-      (set do-expand 
+      (bind do-expand 
            (lambda (item)
               (expander item env)))
-      (set expand-list
+      (bind expand-list
            (lambda (exp)
               (let ((head (expander (car exp) env))
                     (tail (cdr exp)))
@@ -47,7 +47,7 @@
                                                   (apply-form value tail)
                                                (cons head (map do-expand tail)))))
                        (else (cons head (map do-expand tail)))))))
-      (set apply-form
+      (bind apply-form
            (lambda (form args)
               (let ((action (form-action form)))
                  (if (nil? action)
@@ -61,7 +61,7 @@
 ##
 (define (encoder exp env)
    (let (encode-list do-encode apply-encoder)
-      (set encode-list
+      (bind encode-list
            (lambda (exp)
               (let ((head (encoder (car exp) env))
                     (tail (cdr exp)))
@@ -71,10 +71,10 @@
                                 ((fixed? value)     (cons value (apply-encoder value tail)))
                                 (else               (cons head  (map do-encode tail)))))
                     (cons head (map do-encode tail))))))
-      (set do-encode
+      (bind do-encode
            (lambda (item)
               (encoder item env)))
-      (set apply-encoder 
+      (bind apply-encoder 
            (lambda (fixed tail)
               (let ((action (fixed-encoder fixed)))
                  (if (nil? action)
@@ -88,7 +88,7 @@
 ##
 (define (evaluator exp env)
    (let (do-eval)
-      (set do-eval
+      (bind do-eval
            (lambda (item)
               (evaluator item env)))
       (cond ((forced? exp) (forced-value exp))
@@ -106,12 +106,12 @@
 ##
 (define (application action args env)
    (let (eval-begin)
-      (set eval-begin 
-           (lambda (body context)
-              (if (nil? (cdr body))
-                    (evaluator (car body) context)
-                 (evaluator (car body) context)
-                 (eval-begin (cdr body) context))))
+      (bind eval-begin 
+            (lambda (body context)
+               (if (nil? (cdr body))
+                     (evaluator (car body) context)
+                  (evaluator (car body) context)
+                  (eval-begin (cdr body) context))))
       (cond ((primitive? action) (apply action args env))
             ((lambda? action)    (let ((defn    (element action 0))
                                        (closure (element action 1)))

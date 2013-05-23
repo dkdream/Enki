@@ -11,6 +11,8 @@
               "define"
               "lambda"
               "macro"
+              "bind"
+              "set"
               ) t)
        "\\>")
       '(1 font-lock-keyword-face))

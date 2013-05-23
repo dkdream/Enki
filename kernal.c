@@ -346,14 +346,6 @@ extern SUBR(bind)
 
     eval(expr, env, &value);
 
-    if (!isType(value, t_lambda)) {
-        fprintf(stderr, "\nerror: cannot use bind to assign a value to a local: ");
-        dump(stderr, symbol);
-        fprintf(stderr, "\n");
-        fflush(stderr);
-        fatal(0);
-    }
-
     pair_SetCdr(entry, value);
 
     ASSIGN(result,value);
@@ -364,6 +356,7 @@ extern SUBR(set)
     Node symbol = NIL;
     Node expr   = NIL;
     Node value  = NIL;
+    Node temp   = NIL;
 
     fetchArgs(args, &symbol, &expr, 0);
 
@@ -379,6 +372,16 @@ extern SUBR(set)
 
     if (!alist_Entry(env.pair, symbol, &entry)) {
         fprintf(stderr, "\nerror: cannot set undefined variable: ");
+        dump(stderr, symbol);
+        fprintf(stderr, "\n");
+        fflush(stderr);
+        fatal(0);
+    }
+
+    pair_GetCdr(entry, &temp);
+
+    if (isIdentical(temp, void_v)) {
+        fprintf(stderr, "\nerror: cannot set an unbound local value: ");
         dump(stderr, symbol);
         fprintf(stderr, "\n");
         fflush(stderr);

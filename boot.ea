@@ -9,7 +9,7 @@
 
 (define expand-quote
    (let (qq-list qq-element qq-object)
-      (set qq-list (lambda (l)
+      (bind qq-list (lambda (l)
                       (if (pair? l)
                             (let ((obj (car l))
                                   (rst (cdr l)))
@@ -21,12 +21,12 @@
                                            value))
                                   (list 'cons (qq-object obj) (qq-list rst))))
                          (list 'quote l))))
-      (set qq-element (lambda (l)
+      (bind qq-element (lambda (l)
                          (let ((head (car l)))
                             (if (== head 'unquote)
                                   (cadr l)
                                (qq-list l)))))
-      (set qq-object (lambda (object)
+      (bind qq-object (lambda (object)
                         (if (pair? object)
                               (qq-element object)
                            (list 'quote object))))
