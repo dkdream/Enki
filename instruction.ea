@@ -132,82 +132,129 @@
          (else                 (sequence nil nil (instruction 'goto linkage)))))
 
 
-(define (make-lambda-bindings parameters))
-(define (make-let-bindings bindings))
-(define (needs-register? sequence register)    (member register (element sequence 0)))
-(define (modifies-register? sequence register) (member register (element sequence 1)))
-(define (compile-const value target linkage))
-(define (compile-type value target linkage))
-(define (compile-global name value target linkage))
-(define (compile-choose test on_true on_false target linkage))
-(define (compile-first-true first next))
-(define (compile-first-false first next))
-(define (compile-sequence first next target linkage))
-(define (compile-make-lambda vars body))
-(define (compile-apply function args))
 (define (compile-recall label))
-(define (compile-local label value))
 
-(define (compile-block args target linkage)
+##
+## link a test-sequence with a jump to on_true or on_false 
+##
+(define (link-choice register test on_true on_false))
+
+##
+## link[ first, jump-on-false(target,label), linkage, label: rest }
+##
+(define (link-first-true first rest target linkage))
+
+##
+## link[ first, jump-on-true(target,label), linkage, label: rest }
+##
+(define (link-first-false target first rest target linkage))
+
+##
+##
+##
+(define (link-sequence first next))
+
+##
+## compile global assignment
+##
+(define (compile-global name value frame target linkage))
+
+##
+## compile a the construction of a constant value (anything that reader.c can make)
+##
+(define (compile-const value frame target linkage))
+
+##
+## compile a the construction of a type value
+##
+(define (compile-type value frame target linkage))
+
+##
+## compile a block of code where only the last value is return.
+##
+(define (compile-block args frame target linkage)
    (if (nil? args)
-         (compile-const nil target linkage)
+         (compile-const nil frame target linkage)
       (if (nil? (cdr args))
-            (compiler (car args) target linkage)
-         (compile-sequence (compiler (car args) 'void 'next)
-                           (compile-block (cdr args) target linkage)))))
+            (compiler (car args) frame target linkage)
+         (link-sequence (compiler (car args) frame nil 'next)
+                        (compile-block (cdr args) frame target linkage)))))
+
+##
+## compile a value and assign it to a local label
+##
+(define (compile-local label value frame target linkage))
+
+##
+## compile a lambda value
+##
+(define (compile-lambda vars body frame target linkage))
+
+##
+## compile a let block
+##
+(define (compile-let bindings body frame target linkage))
+
+##
+## compile a function application
+##
+(define (compile-apply function args frame target linkage))
+
+##
+## compile a variable recall
+##
+(define (compile-recall label frame target linkage))
+
+
+##
+## compile a (fixed) operator
+##
+(define (control-compiler control args frame target linkage)
+   (let (check name)
+      (bind name (control-name control))
+      (bind (check symbol) (== symbol name))
+      (cond ((check 'define) (compile-global (car args) (car (cdr args)) frame target linkage))
+            ((check 'quote)  (compile-const (car args) frame target linkage))
+            ((check 'type)   (compile-type args frame target linkage))
+            ((check 'if)     (link-choice 'test 
+                                          (compiler (car args) frame 'test 'next)
+                                          (control-block (car (cdr args)) frame target linkage)
+                                          (control-block (cdr (cdr args)) frame target linkage)))
+            ((check 'unless) (link-choice 'test 
+                                          (compiler (car args) frame 'test 'next)
+                                          (compile-block (cdr (cdr args)) frame target linkage)
+                                          (compile-block (car (cdr args)) frame target linkage)))
+            ((check 'and)    (if (nil? args)
+                                   (compile-const true frame target linkage)
+                                (if (nil? (cdr args))
+                                      (compiler (car args) frame target linkage)
+                                   (link-first-true (compiler (car args) frame target 'next)
+                                                    (control-compiler control (cdr args) frame target linkage)))))
+            ((check 'or)     (if (nil? args)
+                                   (compiler-constant nil frame target linkage)
+                                (if (nil? (cdr args))
+                                      (compiler (car args) frame target linkage)
+                                   (link-first-false (compiler (car args) frame target 'next)
+                                                     (control-compiler control (cdr args) frame target linkage)))))
+            ((check 'set)    (compile-local (car args) (car (cdr args)) frame target linkage))
+            ((check 'begin)  (compile-block args frame target linkage))
+            ((check 'lambda) (compile-lambda (car args) (cdr args) frame target linkage))
+            ((check 'let)    (compile-let    (car args) (cdr args) frame target linkage))
+            ((check 'apply)  (compile-apply  (car args) (cdr args) frame target linkage))
+            )))
 
 (define (compile exp frame target linkage)
-   (let (cbegin make-let-bindings)
-      ## make-let-bindings - create and extended enviroment
-      ## control-compiler - convert a control-tree structure into a value
-      (set cbegin (find-value 'begin controls))
-      (set (control-compiler control args)
-           (let (check name)
-              (set name (control-name control))
-              (set (check symbol) (== symbol name))
-              (cond ((check 'define) (compile-global (car args) (car (cdr args))))
-                    ((check 'quote)  (compile-const (car args) ))
-                    ((check 'type)   (compile-type args))
-                    ((check 'if)     (compile-choose (compiler (car args) 'test 'next)
-                                                     (control-block (car (cdr args)))
-                                                     (control-block (cdr (cdr args)))
-                                                     ((check 'unless) (compile-choose (compiler (car args) 'test 'next)
-                                                                                      (compile-block (cdr (cdr args)))
-                                                                                      (compile-block (car (cdr args)))))
-                                                     ((check 'and)    (if (nil? args)
-                                                                            (compile-constant true)
-                                                                         (if (nil? (cdr args))
-                                                                               (compiler (car args) target linkage)
-                                                                            (compile-first-true (compiler (car args))
-                                                                                                (control-compiler control (cdr args))))))
-                                                     ((check 'or)     (if (nil? args)
-                                                                            (compiler-constant nil)
-                                                                         (if (nil? (cdr args))
-                                                                               (compiler (car args) target linkage)
-                                                                            (compile-first-false (compiler (car args))
-                                                                                                 (control-compiler control (cdr args))))))
-                                                     ((check 'set)   (compile-local (car args)
-                                                                                    (compiler (car (cdr args)))))
-                                                     ((check 'begin)  (compile-block args)
-                                                      ((check 'lambda) (compile-make-lambda (car args)
-                                                                                            (compiler (cons cbegin (cdr args))
-                                                                                                      'result
-                                                                                                      'return)))
-                                                      ((check 'apply)  (let ((fproc (compiler (car args)))
-                                                                             (vals  (map compiler (car (cdr args)))))
-                                                                          (lambda (env)
-                                                                             (execute (fproc env)
-                                                                                      (map (lambda (aproc) (aproc env)) vals)))))
-                                                      )))
-                    (cond ((primitive? exp) (compile-constant exp))
-                          ((control?   exp) (compile-constant exp))
-                          ((symbol?    exp) (compile-recall exp))
-                          ((pair?      exp) (control-compiler capply exp))
-                          ((tuple?     exp) (compile-constant exp))
-                          ((text?      exp) (compile-constant exp))
-                          ((integer?   exp) (compile-constant exp))
-                          ((nil?       exp) (compile-constant exp))
-                          ((comma?     exp) (error 'COMPILER "comma not supported (yet)" exp))
-                          ((semi?      exp) (error 'COMPILER "semi not supported (yet)" exp))
-                          ((block?     exp) (error 'COMPILER "block not supported (yet)" exp))
-                          (else exp)))
+   (let (capply)
+      (bind capply (find-value 'apply controls))
+      (cond ((primitive? exp) (compile-const exp frame target linkage))
+            ((control?   exp) (control-compiler (control-directive exp) (control-args exp) frame target linkage))
+            ((symbol?    exp) (compile-recall exp frame target linkage))
+            ((pair?      exp) (control-compiler capply exp frame target linkage))
+            ((tuple?     exp) (compile-const exp frame target linkage))
+            ((text?      exp) (compile-const exp frame target linkage))
+            ((integer?   exp) (compile-const exp frame target linkage))
+            ((nil?       exp) (compile-const exp frame target linkage))
+            ((comma?     exp) (error 'COMPILER "comma not supported (yet)" exp))
+            ((semi?      exp) (error 'COMPILER "semi not supported (yet)" exp))
+            ((block?     exp) (error 'COMPILER "block not supported (yet)" exp))
+            (else exp))))
