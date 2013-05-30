@@ -16,6 +16,9 @@
    (make-boxed registor)
    (type-of (tuple index registor) :closure-registor))
 
+(define (cpu-registor name)
+   (type-of (tuple name) :cpu-registor))
+
 ##
 ## make a new let frame
 ##
@@ -46,15 +49,14 @@
 ## make a new lambda frame
 ##
 (define (lambda-frame arguments)   
-   (let (fixed bind convert)
-      (bind (not (dot? arguments)))
-      (bind (bind name index)
+   (let (fixed assign convert)
+      (bind fixed (dot? arguments))
+      (bind (assign name index)
            (cons name (arg-register index)))
       (bind (convert inx list)
            (cond ((nil? list) nil)
-                 ((symbol? list) (cons (bind list inx) nil))
-                 ((pair? list)   (cons (bind (car list) inx)
-                                       (convert (inx + 1) (cdr list))))
+                 ((symbol? list) (cons (assign list inx) nil))
+                 ((pair? list)   (cons (assign (car list) inx) (convert (inx + 1) (cdr list))))
                  (else (error 'LAMBDA-ARG (format "unknown lambda arg @{d}" list)))))
       ## lambda-frame [ fixed argumentList localMax closureList globalList ]
       (type-of (tuple fixed (convert 0 arguments) 0 nil nil nil)
@@ -190,9 +192,9 @@
                                                              ((isA? tmp :argument-registor) (extend-closure entry tmp symbol))
                                                              ((isA? tmp :closure-registor)  (extend-closure entry tmp symbol))
                                                              ((isA? tmp global-registor)    (extend-global  entry tmp symbol))
-                                                             (else (errro 'FIND-REGISTOR (format "invalid registor %d" tmp)))))
+                                                             (else (errro 'FIND-REGISTOR (format "invalid registor @{d}" tmp)))))
                                                  result)))
-               (else (error 'FIND-REGISTOR (format "invalid enviroment entry %d" entry)))))))
+               (else (error 'FIND-REGISTOR (format "invalid enviroment entry @{d}" entry)))))))
 
 
 

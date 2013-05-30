@@ -1,14 +1,35 @@
 ##
-## 
+## assembler instruction
 ##
 (define (instruction command . list)
    (type-of (tuple command list) :instruction)
 
 ##
-##
+##  assembler label
+##  examples:
+##     (label '.LC0)     -> .LC0:
+##     (label 's_lambda) -> s_lambda:
 ##
 (define (label name)
    (type-of (tuple name) :label)
+
+##
+##  assembler instruction
+##  examples: 
+##     (directive 'string "xxx") -> .string "xxx"
+##     (directive 'type 'init_global_symboltable '@function)  -> .type   init_global_symboltable, @function
+##
+(define (directive name . args)
+   (type-of (tuple name args) :directive)
+
+##
+##  assembler declaration (ie .globl name)
+##  examples:
+##     (declaration 'init_global_symboltable) -> .globl init_global_symboltabl
+##
+(define (declaration name)
+   (type-of (tuple name args) :declaration)
+
 
 ##
 ## flatten a nested collection of statements into a linear list
@@ -23,34 +44,8 @@
 ##
 ## construct a sequence that needs 
 ##
-(define (sequence needs modifies . list)
-   (if (and (all? needs 'symbol)
-            (all? modified 'symbol))
-         (let ((statements (flatten list)))
-            (if (all? :instruction statements)
-                  (type-of (tuple needs modifies statements) :sequence)
-               (error 'SEQUENCE "non-instruction in statements")))
-      (error 'SEQUENCE "non-symbol in needs or modifies")))
-
-##
-## dose this sequence need this symbol?
-##
-(define (needs-register? sequence register)
-   (if (isA? sequence :sequence)
-         (if (isA? register 'symbol)
-               (member register (element sequence 0))
-            (error 'NEED "non-symbol used"))
-      (error 'NEED "non-sequence used")))
-
-##
-## dose this sequence modify this symbol?
-##
-(define (modifies-register? sequence register) 
-   (if (isA? sequence :sequence)
-         (if (isA? register 'symbol)
-               (member register (element sequence 1))
-            (error 'MODIFY "non-symbol used"))
-      (error 'MODIFY "non-sequence used")))
+(define (sequence . statements)
+   (type-of (tuple (flatten statements)) :sequence))
 
 ##
 ## construct the union of two lists
@@ -79,45 +74,29 @@
 ##
 ## define the empty-sequence
 ##
-(define empty-sequence (sequence nil nil))
+(define empty-sequence (sequence))
 
 ##
 ## append two sequences
 ##
-(define (append-sequence first next)
-   (sequence (union (element first 0)
-                    (difference (element next 0)
-                                (element first 1)))
-             (union (element first 1)
-                    (element next 1))
-             (element first 2)
-             (element next 2)))
+(define (append-sequence . list)
+   (let (join append)
+      (bind (join first next)
+            (sequence (element first 0)
+                      (element next 0)))
+      (bind (combined first rest)
+            (if (nil? rest)
+                  first
+               (join first (combined (car rest) (cdr rest)))))
+      (if (nil? list)
+            empty-sequence
+         (combined (car list) (cdr list))))
 
 ##
-## append two sequences while preserving some registers
+## the instructions to make a lambda using label as the machine code address
+## and set the target registor to the lambda object
 ##
-(define (append-preserving registors first next)
-   (if (nil? registors)
-         (append-sequence first next)
-      (let ((register (car registors)))
-         (if (and (needs-register? first register)
-                  (modifies-register? next register))
-               (preserving (cdr regs)
-                           (sequence (union (list register) (element first 0))
-                                     (difference (element first 1) (list register))
-                                     (instruction 'save register)
-                                     (element first 2))
-                           next)
-            (preserving (cdr regs) first next)))))
-
-##
-## append two sequences treating body as if no registers are changed
-##
-(define (tack-on head body)
-   (sequence (element head 0)
-             (element head 1)
-             (element head 2)
-             (element body 2)))
+(define (make-lambda label target))
 
 ##
 ## construct a sequence that gotos the next instruction 
@@ -127,17 +106,22 @@
 ##    to the block after this block (next)
 ##
 (define (compile-linkage linkage)
-   (cond ((== 'return linkage) (sequence nil nil (instruction 'return)))
+   (cond ((== 'return linkage) (sequence (instruction 'return)))
          ((== 'next linkage)   empty-sequence)
-         (else                 (sequence nil nil (instruction 'goto linkage)))))
-
-
-(define (compile-recall label))
+         (else                 (sequence (instruction 'goto linkage)))))
 
 ##
 ## link a test-sequence with a jump to on_true or on_false 
 ##
-(define (link-choice register test on_true on_false))
+(define (link-choice test on_true on_false)
+   (let ((flabel (new-label))
+         (treg (cpu-registor 'test)))
+      (append-sequence test
+                       (sequence (instruction 'test treg treg)
+                                 (instruction 'jz flabel))
+                       on_true
+                       (sequence (label flabel))
+                       on_false)))
 
 ##
 ## link[ first, jump-on-false(target,label), linkage, label: rest }
@@ -150,110 +134,126 @@
 (define (link-first-false target first rest target linkage))
 
 ##
-##
-##
-(define (link-sequence first next))
-
-##
 ## compile global assignment
 ##
-(define (compile-global name value frame target linkage))
+(define (compile-global name value env target linkage)
+   (let ((greg (global-registor name)))
+      (append-sequence (compile value env greg 'next)
+                       (sequence (instruction 'mov greg target))
+                       (compile-linkage linkage))))
 
 ##
 ## compile a the construction of a constant value (anything that reader.c can make)
 ##
-(define (compile-const value frame target linkage))
+(define (compile-const value env target linkage))
 
 ##
 ## compile a the construction of a type value
 ##
-(define (compile-type value frame target linkage))
+(define (compile-type value env target linkage))
 
 ##
 ## compile a block of code where only the last value is return.
 ##
-(define (compile-block args frame target linkage)
+(define (compile-block args env target linkage)
    (if (nil? args)
-         (compile-const nil frame target linkage)
+         (compile-const nil env target linkage)
       (if (nil? (cdr args))
-            (compiler (car args) frame target linkage)
-         (link-sequence (compiler (car args) frame nil 'next)
-                        (compile-block (cdr args) frame target linkage)))))
+            (compiler (car args) env target linkage)
+         (append-sequence (compiler (car args) env (cpu-registor 'test) 'next)
+                          (compile-block (cdr args) env target linkage)))))
 
 ##
-## compile a value and assign it to a local label
+## compile a value and assign it to a local var
 ##
-(define (compile-local label value frame target linkage))
+(define (compile-local label value env target linkage)
+   (let ((lreg (find-registor label)))
+      (if (isA? lreg :global-registor)
+            (error 'BIND-ERROR (format "undefined local name @{d}" label))
+         (append-sequence (compiler value env lreg 'next)
+                          (sequence (instruction 'mov lreg target))
+                          (compile-linkage linkage)))))
 
 ##
 ## compile a lambda value
 ##
-(define (compile-lambda vars body frame target linkage))
+(define (compile-lambda vars body env target linkage)
+   (let ((start  (new-label))
+         (after  (new-label))
+         (nested (cons (lambda-frame vars) env)))
+      (append-sequence (sequence (instruction 'jmp after)
+                                 (label start))
+                       (compile-block body nested (cpu-registor 'return) 'return)
+                       (sequence (label after))
+                       (make-lambda start target)
+                       (compile-linkage linkage))))
 
 ##
 ## compile a let block
 ##
-(define (compile-let bindings body frame target linkage))
+(define (compile-let bindings body env target linkage))
 
 ##
 ## compile a function application
 ##
-(define (compile-apply function args frame target linkage))
+(define (compile-apply function args env target linkage))
 
 ##
 ## compile a variable recall
 ##
-(define (compile-recall label frame target linkage))
+(define (compile-recall label env target linkage)
+   (let ((register (frame-registor env label)))
+      (append-sequence (sequence registor nil (instruction 'mov registor target))
+                       (compile-linkage linkage))))
 
 
 ##
 ## compile a (fixed) operator
 ##
-(define (control-compiler control args frame target linkage)
-   (let (check name)
+(define (control-compiler control args env target linkage)
+   (let (check name treg)
+      (bind treg (cpu-registor 'test))
       (bind name (control-name control))
       (bind (check symbol) (== symbol name))
-      (cond ((check 'define) (compile-global (car args) (car (cdr args)) frame target linkage))
-            ((check 'quote)  (compile-const (car args) frame target linkage))
-            ((check 'type)   (compile-type args frame target linkage))
-            ((check 'if)     (link-choice 'test 
-                                          (compiler (car args) frame 'test 'next)
-                                          (control-block (car (cdr args)) frame target linkage)
-                                          (control-block (cdr (cdr args)) frame target linkage)))
-            ((check 'unless) (link-choice 'test 
-                                          (compiler (car args) frame 'test 'next)
-                                          (compile-block (cdr (cdr args)) frame target linkage)
-                                          (compile-block (car (cdr args)) frame target linkage)))
+      (cond ((check 'define) (compile-global (car args) (car (cdr args)) env target linkage))
+            ((check 'quote)  (compile-const (car args) env target linkage))
+            ((check 'type)   (compile-type args env target linkage))
+            ((check 'if)     (link-choice (compiler (car args) env treg 'next)
+                                          (control-block (car (cdr args)) env target linkage)
+                                          (control-block (cdr (cdr args)) env target linkage)))
+            ((check 'unless) (link-choice (compiler (car args) env treg 'next)
+                                          (compile-block (cdr (cdr args)) env target linkage)
+                                          (compile-block (car (cdr args)) env target linkage)))
             ((check 'and)    (if (nil? args)
-                                   (compile-const true frame target linkage)
+                                   (compile-const true env target linkage)
                                 (if (nil? (cdr args))
-                                      (compiler (car args) frame target linkage)
-                                   (link-first-true (compiler (car args) frame target 'next)
-                                                    (control-compiler control (cdr args) frame target linkage)))))
+                                      (compiler (car args) env target linkage)
+                                   (link-first-true (compiler (car args) env target 'next)
+                                                    (control-compiler control (cdr args) env target linkage)))))
             ((check 'or)     (if (nil? args)
-                                   (compiler-constant nil frame target linkage)
+                                   (compiler-constant nil env target linkage)
                                 (if (nil? (cdr args))
-                                      (compiler (car args) frame target linkage)
-                                   (link-first-false (compiler (car args) frame target 'next)
-                                                     (control-compiler control (cdr args) frame target linkage)))))
-            ((check 'set)    (compile-local (car args) (car (cdr args)) frame target linkage))
-            ((check 'begin)  (compile-block args frame target linkage))
-            ((check 'lambda) (compile-lambda (car args) (cdr args) frame target linkage))
-            ((check 'let)    (compile-let    (car args) (cdr args) frame target linkage))
-            ((check 'apply)  (compile-apply  (car args) (cdr args) frame target linkage))
+                                      (compiler (car args) env target linkage)
+                                   (link-first-false (compiler (car args) env target 'next)
+                                                     (control-compiler control (cdr args) env target linkage)))))
+            ((check 'set)    (compile-local (car args) (car (cdr args)) env target linkage))
+            ((check 'begin)  (compile-block args env target linkage))
+            ((check 'lambda) (compile-lambda (car args) (cdr args) env target linkage))
+            ((check 'let)    (compile-let    (car args) (cdr args) env target linkage))
+            ((check 'apply)  (compile-apply  (car args) (cdr args) env target linkage))
             )))
 
-(define (compile exp frame target linkage)
+(define (compile exp env target linkage)
    (let (capply)
       (bind capply (find-value 'apply controls))
-      (cond ((primitive? exp) (compile-const exp frame target linkage))
-            ((control?   exp) (control-compiler (control-directive exp) (control-args exp) frame target linkage))
-            ((symbol?    exp) (compile-recall exp frame target linkage))
-            ((pair?      exp) (control-compiler capply exp frame target linkage))
-            ((tuple?     exp) (compile-const exp frame target linkage))
-            ((text?      exp) (compile-const exp frame target linkage))
-            ((integer?   exp) (compile-const exp frame target linkage))
-            ((nil?       exp) (compile-const exp frame target linkage))
+      (cond ((primitive? exp) (compile-const exp env target linkage))
+            ((control?   exp) (control-compiler (control-directive exp) (control-args exp) env target linkage))
+            ((symbol?    exp) (compile-recall exp env target linkage))
+            ((pair?      exp) (control-compiler capply exp env target linkage))
+            ((tuple?     exp) (compile-const exp env target linkage))
+            ((text?      exp) (compile-const exp env target linkage))
+            ((integer?   exp) (compile-const exp env target linkage))
+            ((nil?       exp) (compile-const exp env target linkage))
             ((comma?     exp) (error 'COMPILER "comma not supported (yet)" exp))
             ((semi?      exp) (error 'COMPILER "semi not supported (yet)" exp))
             ((block?     exp) (error 'COMPILER "block not supported (yet)" exp))
