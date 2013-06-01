@@ -1,0 +1,14 @@
+Links:
+  http://math.andrej.com/2012/11/08/how-to-implement-dependent-type-theory-i/
+  http://www.andres-loeh.de/LambdaPi/
+  http://www.cs.cmu.edu/~rwh/courses/typesys/notes/Recursive-types.html
+
+Pi(x:X,Y=Func(x))    => Lambda(X):Y
+Sigma(x:X,Y=Func(x)) => Pair(X,Y)
+Mu(x,Y=Func(x))      => Func(x=Y):S -- fixed-point
+Delta(x:X,Pred(x))   => Forall(x:X,Pred(x)) <: X
+
+
+----------------------------------
+
+
