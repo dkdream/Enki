@@ -7,6 +7,7 @@
  **   -- <desc>
  **/
 #include "reference.h"
+#include "hashcode.h"
 
 extern Node true_v;
 extern Node void_v;

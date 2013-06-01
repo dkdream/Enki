@@ -1,8 +1,7 @@
 ##
 ## assembler instruction
 ##
-(define (instruction command . list)
-   (type-of (tuple command list) :instruction)
+(define (instruction command . list) (type-of (tuple command list) :instruction)
 
 ##
 ##  assembler label
@@ -10,8 +9,7 @@
 ##     (label '.LC0)     -> .LC0:
 ##     (label 's_lambda) -> s_lambda:
 ##
-(define (label name)
-   (type-of (tuple name) :label)
+(define (label name) (type-of (tuple name) :label)
 
 ##
 ##  assembler instruction
@@ -19,16 +17,14 @@
 ##     (directive 'string "xxx") -> .string "xxx"
 ##     (directive 'type 'init_global_symboltable '@function)  -> .type   init_global_symboltable, @function
 ##
-(define (directive name . args)
-   (type-of (tuple name args) :directive)
+(define (directive name . args) (type-of (tuple name args) :directive)
 
 ##
 ##  assembler declaration (ie .globl name)
 ##  examples:
 ##     (declaration 'init_global_symboltable) -> .globl init_global_symboltabl
 ##
-(define (declaration name)
-   (type-of (tuple name args) :declaration)
+(define (declaration name) (type-of (tuple name args) :declaration)
 
 
 ##

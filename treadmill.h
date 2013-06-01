@@ -265,13 +265,6 @@ extern inline Node getType(const Node value) {
     return kind->type;
 }
 
-extern inline bool isType(const Node value, const Node type) __attribute__((always_inline));
-extern inline bool isType(const Node value, const Node type) {
-    Kind kind = asKind(value);
-    if (!kind) return false;
-    return kind->type.reference == type.reference;
-}
-
 extern inline bool isAtomic(const Node value) __attribute__((always_inline));
 extern inline bool isAtomic(const Node value) {
     Kind kind = asKind(value);

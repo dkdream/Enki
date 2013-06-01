@@ -29,7 +29,7 @@
 #include <stdbool.h>
 #include <error.h>
 
-typedef unsigned long long HashCode;
+
 typedef unsigned long      Size;
 
 typedef void *Reference;

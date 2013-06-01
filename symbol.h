@@ -13,6 +13,7 @@
  **
  **/
 #include "reference.h"
+#include "hashcode.h"
 #include "text_buffer.h"
 
 struct symbol {

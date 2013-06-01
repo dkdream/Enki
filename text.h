@@ -8,6 +8,7 @@
  **/
 #include "reference.h"
 #include "text_buffer.h"
+#include "hashcode.h"
 
 /* */
 struct text {

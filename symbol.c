@@ -195,20 +195,6 @@ extern void check_SymbolTable__(const char* filename, unsigned line) {
     }
 }
 
-static inline HashCode hash_full(TextBuffer value) {
-    HashCode result = 5381;
-
-    unsigned int length = value.position;
-    const char*  begin  = value.buffer;
-
-    for ( ; length-- ; ) {
-        int val = begin[length];
-        result = ((result << 5) + result) + val;
-    }
-
-    return result;
-}
-
 extern bool symbol_Create(TextBuffer value, Symbol *target) {
     if (!value.buffer) {
         *target = _empty_symbol;

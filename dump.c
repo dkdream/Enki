@@ -140,7 +140,7 @@ extern bool buffer_print(TextBuffer *output, Node node) {
 
     if (isIdentical(type, s_base)) {
         echo_format(output, "type(%p ", node.reference);
-        buffer_add(output, (const char*)(node.type->name->value));
+        buffer_add(output, type_ConstantName(node.type));
         buffer_add(output, " ");
         buffer_add(output, (const char*)(node.type->sort->name->value));
         buffer_add(output, ")");
@@ -179,16 +179,16 @@ extern bool buffer_print(TextBuffer *output, Node node) {
             echo_format(output, "<type %p>", type.reference);
         } else if (isIdentical(type.type->sort, zero_s)) {
             echo_format(output, "<%s %s>",
-                        (const char*)(type.type->name->value),
+                        type_ConstantName(type.type),
                         (const char*)(type.type->sort->name->value));
         } else if (isIdentical(type.type->sort, void_s)) {
             echo_format(output, "<%s %s>",
-                        (const char*)(type.type->name->value),
+                        type_ConstantName(type.type),
                         (const char*)(type.type->sort->name->value));
         } else {
             echo_format(output, "<type %p %s %s>",
                         type.reference,
-                        (const char*)(type.type->name->value),
+                        type_ConstantName(type.type),
                         (const char*)(type.type->sort->name->value));
         }
     }
@@ -270,7 +270,7 @@ extern bool buffer_dump(TextBuffer *output, Node node) {
 
     if (isIdentical(type, s_base)) {
         echo_format(output, "type(%p ", node.reference);
-        buffer_add(output, (const char*)(node.type->name->value));
+        buffer_add(output, type_ConstantName(node.type));
         buffer_add(output, " ");
         buffer_add(output, (const char*)(node.type->sort->name->value));
         buffer_add(output, ")");
@@ -309,16 +309,16 @@ extern bool buffer_dump(TextBuffer *output, Node node) {
         if (!isType(type, s_base)) {
             echo_format(output, "type %p", type.reference);
         } else if (isIdentical(type.type->sort, zero_s)) {
-            buffer_add(output, (const char*)(type.type->name->value));
+            buffer_add(output, type_ConstantName(type.type));
             buffer_add(output, " ");
             buffer_add(output, (const char*)(type.type->sort->name->value));
         } else if (isIdentical(type.type->sort, void_s)) {
-            buffer_add(output, (const char*)(type.type->name->value));
+            buffer_add(output, type_ConstantName(type.type));
             buffer_add(output, " ");
             buffer_add(output, (const char*)(type.type->sort->name->value));
         } else {
             echo_format(output, "type %p ", type.reference);
-            buffer_add(output, (const char*)(type.type->name->value));
+            buffer_add(output, type_ConstantName(type.type));
             buffer_add(output, " ");
             buffer_add(output, (const char*)(type.type->sort->name->value));
         }
@@ -449,7 +449,7 @@ extern void buffer_prettyPrint(TextBuffer *output, Node node) {
         if (isIdentical(type, s_base)) {
             offset += 20;
             echo_format(output, "type(%p ", node.reference);
-            buffer_add(output, (const char*)(node.type->name->value));
+            buffer_add(output, type_ConstantName(node.type));
             buffer_add(output, " ");
             buffer_add(output, (const char*)(node.type->sort->name->value));
             buffer_add(output, ")");
@@ -507,21 +507,21 @@ extern void buffer_prettyPrint(TextBuffer *output, Node node) {
             } else if (isIdentical(type.type->sort, zero_s)) {
                 offset += 20;
                 buffer_add(output, "<");
-                buffer_add(output, (const char*)(type.type->name->value));
+                buffer_add(output, type_ConstantName(type.type));
                 buffer_add(output, " ");
                 buffer_add(output, (const char*)(type.type->sort->name->value));
                 buffer_add(output, ">");
             } else if (isIdentical(type.type->sort, void_s)) {
                 offset += 20;
                 buffer_add(output, "<");
-                buffer_add(output, (const char*)(type.type->name->value));
+                buffer_add(output, type_ConstantName(type.type));
                 buffer_add(output, " ");
                 buffer_add(output, (const char*)(type.type->sort->name->value));
                 buffer_add(output, ">");
             } else {
                 offset += 20;
                 echo_format(output, "<type %p ", type.reference);
-                buffer_add(output, (const char*)(type.type->name->value));
+                buffer_add(output, type_ConstantName(type.type));
                 buffer_add(output, " ");
                 buffer_add(output, (const char*)(type.type->sort->name->value));
                 buffer_add(output, ">");

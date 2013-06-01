@@ -17,6 +17,11 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+typedef struct type_constant* TypeCnt;
+typedef struct type_index*    TypeInx;
+typedef struct type_label*    TypeLbl;
+typedef struct type_branch*   TypeBrn;
+
 struct name {
     Sort sort;
 };
@@ -157,19 +162,6 @@ extern void check_TypeTable__(const char* filename, unsigned line) {
     }
 }
 
-static inline HashCode hash_merge(HashCode init, unsigned length, void* buffer) {
-    HashCode result = init;
-
-    const char* begin = (const char*)buffer;
-
-    for ( ; length-- ; ) {
-        int val = begin[length];
-        result = ((result << 5) + result) + val;
-    }
-
-    return result;
-}
-
 extern bool sort_Create(Symbol symbol, Sort* target) {
     if (!symbol) return false;
 
@@ -210,51 +202,6 @@ extern bool sort_Create(Symbol symbol, Sort* target) {
     return true;
 }
 
-extern bool type_Create(Symbol symbol, Sort sort, Type* target) {
-    if (!symbol) return false;
-    if (!sort)   return false;
-
-    const HashCode hashcode = hash_merge(symbol->hashcode,
-                                         sizeof(sort->hashcode),
-                                         &(sort->hashcode));
-
-    const int row   = hashcode % _global_typetable->size;
-    Header    group = _global_typetable->row[row].first;
-
-    for ( ; group; group = group->after) {
-        if (!isIdentical(group->kind.type, s_base)) continue;
-
-        Type test = (Type) asReference(group);
-
-        if (test->sort != sort)   continue;
-        if (test->name != symbol) continue;
-
-        ASSIGN(target, test);
-
-        return true;
-    }
-
-    Header entry = fresh_atom(0, sizeof(struct type));
-
-    if (!entry) return false;
-
-    entry->kind.type     = (Node) s_base;
-    entry->kind.constant = 1;
-
-    Type result = (Type) asReference(entry);
-
-    result->hashcode = hashcode;
-    result->sort     = sort;
-    result->name     = symbol;
-
-    entry->after = _global_typetable->row[row].first;
-    _global_typetable->row[row].first = entry;
-
-    ASSIGN(target, result);
-
-    return true;
-}
-
 extern bool rule_Create(Symbol symbol, Sort in, Sort out, Sort type, Rule* target) {
     if (!symbol) return false;
     if (!in)     return false;
@@ -262,17 +209,9 @@ extern bool rule_Create(Symbol symbol, Sort in, Sort out, Sort type, Rule* targe
     if (!type)   return false;
 
     HashCode hashcode = symbol->hashcode;
-    hashcode = hash_merge(hashcode,
-                          sizeof(in->hashcode),
-                          &(in->hashcode));
-
-    hashcode = hash_merge(hashcode,
-                          sizeof(out->hashcode),
-                          &(out->hashcode));
-
-    hashcode = hash_merge(hashcode,
-                          sizeof(type->hashcode),
-                          &(type->hashcode));
+    hashcode = hash_merge(hashcode, in->hashcode);
+    hashcode = hash_merge(hashcode, out->hashcode);
+    hashcode = hash_merge(hashcode, type->hashcode);
 
     const int row   = hashcode % _global_typetable->size;
     Header    group = _global_typetable->row[row].first;
@@ -338,6 +277,58 @@ extern bool name_Create(Sort sort, Name* target) {
     return true;
 }
 
+extern bool type_Create(Symbol symbol, Sort sort, Type* target) {
+    if (!symbol) return false;
+    if (!sort)   return false;
+
+    const HashCode hashcode = hash_merge(symbol->hashcode,
+                                         sort->hashcode);
+
+    const int row   = hashcode % _global_typetable->size;
+    Header    group = _global_typetable->row[row].first;
+
+    for ( ; group; group = group->after) {
+        if (!isIdentical(group->kind.type, s_base)) continue;
+
+        Type test = (Type) asReference(group);
+
+        if (test->sort != sort)        continue;
+        if (test->code != tc_constant) continue;
+
+        if (((TypeCnt)test)->name != symbol)      continue;
+
+        ASSIGN(target, test);
+
+        return true;
+    }
+
+    Header entry = fresh_atom(0, sizeof(struct type_constant));
+
+    if (!entry) return false;
+
+    entry->kind.type     = (Node) s_base;
+    entry->kind.constant = 1;
+
+    TypeCnt result = (TypeCnt) asReference(entry);
+
+    result->hashcode = hashcode;
+    result->sort     = sort;
+    result->code     = tc_constant;
+    result->name     = symbol;
+
+    entry->after = _global_typetable->row[row].first;
+    _global_typetable->row[row].first = entry;
+
+    ASSIGN(target, result);
+
+    return true;
+}
+
+extern bool type_Union(const Type left, const Type right, Type* result) {
+    if (!left)  return false;
+    if (!right) return false;
+}
+
 extern bool type_Pi(Type* target, ...) {
     return false;
 }
@@ -354,6 +345,20 @@ extern bool type_Delta(Type* target, ...) {
     return false;
 }
 
+
+extern bool type_Contains(const Type type, const Node value) {
+    if (!type) return false;
+
+    Kind kind = asKind(type);
+
+    if (!kind) return false;
+
+    if (!isAType(kind->type)) return false;
+
+    Type vtype = kind->type.type;
+
+    if (type == vtype) return true;
+}
 
 /*****************
  ** end of file **

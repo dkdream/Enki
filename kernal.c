@@ -430,14 +430,15 @@ extern SUBR(type)
     Node symbol;
     pair_GetCar(args.pair, &symbol);
 
-    if (!isType(symbol, s_symbol)) {
-        // this needs to handle complex types
-        // right now its is just like quote
-        ASSIGN(result, symbol);
+    if (isType(symbol, s_symbol)) {
+        type_Create(symbol.symbol, zero_s, result.type);
         return;
     }
 
-    type_Create(symbol.symbol, zero_s, result.type);
+    // this needs to handle complex types
+    // right now its is just like quote
+    ASSIGN(result, symbol);
+    return;
 }
 
 extern void environ_Let(Node local, Node env, Target result)
@@ -2763,6 +2764,7 @@ void startEnkiLibrary() {
     MK_EFXD(let,encode_let);
     MK_EFXD(lambda,encode_lambda);
 
+    MK_OPR(%type,type);
     MK_OPR(%if,if);
     MK_OPR(%and,and);
     MK_OPR(%or,or);
