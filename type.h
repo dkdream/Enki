@@ -32,39 +32,29 @@ enum type_code {
 };
 
 struct type {
-    HashCode hashcode;
-    Sort sort;
-    enum type_code code;
+    HashCode hashcode; Sort sort; enum type_code code;
     HashCode marker[0];
 };
 
 struct type_constant {
-    HashCode hashcode;
-    Sort sort;
-    enum type_code code;
+    HashCode hashcode; Sort sort; enum type_code code;
     Symbol name;
 };
 
 struct type_index {
-    HashCode hashcode;
-    Sort sort;
-    enum type_code code;
+    HashCode hashcode; Sort sort; enum type_code code;
     unsigned index;
     Type     slot;
 };
 
 struct type_label {
-    HashCode hashcode;
-    Sort sort;
-    enum type_code code;
-    Symbol lable;
+    HashCode hashcode; Sort sort; enum type_code code;
+    Symbol label;
     Type   slot;
 };
 
 struct type_branch {
-    HashCode hashcode;
-    Sort sort;
-    enum type_code code;
+    HashCode hashcode; Sort sort; enum type_code code;
     Type left;
     Type right;
 };

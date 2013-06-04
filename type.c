@@ -22,6 +22,15 @@ typedef struct type_index*    TypeInx;
 typedef struct type_label*    TypeLbl;
 typedef struct type_branch*   TypeBrn;
 
+
+//  s_base  is a base    type (type constant)
+//  s_type  is a compond type (index,label,union,tuple,record)
+
+//  s_sort  is a sort
+//  s_axiom is a axiom pair   (c:s)
+//  s_rule  is a rule  triple (in=s1,out=s2,kind=s3)
+//  s_name  is a variable reference used in a formula
+
 struct name {
     Sort sort;
 };
@@ -35,7 +44,7 @@ struct axion {
 struct rule {
     HashCode hashcode;
     Symbol   group;
-    Sort in, out, type;
+    Sort in, out, kind;
 };
 
 struct _internal_Row {
@@ -202,16 +211,13 @@ extern bool sort_Create(Symbol symbol, Sort* target) {
     return true;
 }
 
-extern bool rule_Create(Symbol symbol, Sort in, Sort out, Sort type, Rule* target) {
+extern bool rule_Create(Symbol symbol, Sort in, Sort out, Sort kind, Rule* target) {
     if (!symbol) return false;
     if (!in)     return false;
     if (!out)    return false;
-    if (!type)   return false;
+    if (!kind)   return false;
 
     HashCode hashcode = symbol->hashcode;
-    hashcode = hash_merge(hashcode, in->hashcode);
-    hashcode = hash_merge(hashcode, out->hashcode);
-    hashcode = hash_merge(hashcode, type->hashcode);
 
     const int row   = hashcode % _global_typetable->size;
     Header    group = _global_typetable->row[row].first;
@@ -224,7 +230,7 @@ extern bool rule_Create(Symbol symbol, Sort in, Sort out, Sort type, Rule* targe
         if (test->group != symbol) continue;
         if (test->in    != in)     continue;
         if (test->out   != out)    continue;
-        if (test->type  != type)   continue;
+        if (test->kind  != kind)   continue;
 
         ASSIGN(target, test);
 
@@ -244,7 +250,7 @@ extern bool rule_Create(Symbol symbol, Sort in, Sort out, Sort type, Rule* targe
     result->group    = symbol;
     result->in       = in;
     result->out      = out;
-    result->type     = type;
+    result->kind     = kind;
 
     entry->after = _global_typetable->row[row].first;
     _global_typetable->row[row].first = entry;
@@ -281,8 +287,7 @@ extern bool type_Create(Symbol symbol, Sort sort, Type* target) {
     if (!symbol) return false;
     if (!sort)   return false;
 
-    const HashCode hashcode = hash_merge(symbol->hashcode,
-                                         sort->hashcode);
+    const HashCode hashcode = symbol->hashcode;
 
     const int row   = hashcode % _global_typetable->size;
     Header    group = _global_typetable->row[row].first;
@@ -324,9 +329,180 @@ extern bool type_Create(Symbol symbol, Sort sort, Type* target) {
     return true;
 }
 
-extern bool type_Union(const Type left, const Type right, Type* result) {
+static bool union_IsMember(TypeBrn set, Type type) {
+    for (; set ;) {
+        Type left  = set->left;
+        Type right = set->right;
+
+        if (isIdentical(left, type)) return true;
+
+        if (right->code == tc_union) {
+            set = (TypeBrn) right;
+            continue;
+        }
+
+        return isIdentical(right,type);
+    }
+
+    return false;
+}
+
+static bool union_Cons(const Type left, const Type right, Type* result) {
+    const Sort sort = left->sort;
+    const HashCode hashcode = hash_merge(left->hashcode,
+                                         right->hashcode);
+
+    const int row   = hashcode % _global_typetable->size;
+    Header    group = _global_typetable->row[row].first;
+
+    for ( ; group; group = group->after) {
+        if (!isIdentical(group->kind.type, s_type)) continue;
+
+        Type test = (Type) asReference(group);
+
+        if (test->sort != sort)     continue;
+        if (test->code != tc_union) continue;
+
+        TypeBrn branch = (TypeBrn) test;
+
+        if (isIdentical(branch->left, left)) {
+            if (isIdentical(branch->right, right)) {
+                ASSIGN(result, test);
+                return true;
+            }
+        }
+    }
+
+    Header entry = fresh_atom(0, sizeof(struct type_branch));
+
+    if (!entry) return false;
+
+    entry->kind.type     = (Node) s_type;
+    entry->kind.constant = 1;
+
+    TypeBrn branch = (TypeBrn) asReference(entry);
+
+    branch->hashcode = hashcode;
+    branch->sort     = left->sort;
+    branch->code     = tc_union;
+    branch->left     = left;
+    branch->right    = right;
+
+    entry->after = _global_typetable->row[row].first;
+    _global_typetable->row[row].first = entry;
+
+    ASSIGN(result, branch);
+    return true;
+}
+
+static bool union_Add(const Type left, TypeBrn right, Type* result) {
+    Type hold;
+    Type rleft  = right->left;
+    Type rright = right->right;
+
+    if (left == rleft) {
+        ASSIGN(result, right);
+        return true;
+    }
+
+    if (left == rright) {
+        ASSIGN(result, right);
+        return true;
+    }
+
+    /* (left != rleft) && (left != rright) */
+
+    if (left < rleft) {
+        return union_Cons(left, (Type) right, result);
+    }
+
+    if (right->code == tc_union) {
+        if (!union_Add(left, (TypeBrn) rright, &hold)) return false;
+    } else {
+        if (left < rright) {
+            if (!union_Cons(left, rright, &hold)) return false;
+        } else {
+            if (!union_Cons(rright, left, &hold)) return false;
+        }
+    }
+
+    return union_Cons(rleft, hold, result);
+}
+
+static bool union_Merge(TypeBrn left, TypeBrn right, Type* result) {
+    Type hold;
+    Type lleft  = left->left;
+    Type rleft  = right->left;
+
+    if (lleft == rleft) {
+        /* head == lleft & head == rleft */
+        if (!type_Union(left->right, right->right, &hold)) return false;
+        return union_Cons(rleft, hold, result);
+    }
+
+    if (lleft < rleft) {
+        /* head == lleft */
+        if (!type_Union(left->right, (Type)right, &hold)) return false;
+        return union_Cons(lleft, hold, result);
+    }
+
+    if (lleft > rleft) {
+        /* head == rleft */
+        if (!type_Union(right->right, (Type)left, &hold)) return false;
+        return union_Cons(rleft, hold, result);
+    }
+
+    return false;
+}
+
+/*
+ * build unions a list of non unions
+ * ie: union(a,b,c) == union(a,union(b,c))
+ */
+extern bool type_Union(Type left, Type right, Type* result) {
     if (!left)  return false;
     if (!right) return false;
+
+    /* forall(A) union(A,A) == A */
+    if (isIdentical(left,right)) {
+        ASSIGN(result, left);
+        return true;
+    }
+
+    /* currently unions are mono-sorted */
+    if (!isIdentical(left->sort,right->sort)) return false;
+
+    unsigned option = 0;
+
+    option += (left->code == tc_union)  ? 1 : 0;
+    option += (right->code == tc_union) ? 2 : 0;
+
+    Type hold;
+
+    switch (option) {
+    case 0:
+        /* enforce address order of union members */
+        if (left > right) {
+            hold = left;
+            left = right;
+            right = hold;
+        }
+        return union_Cons(left, right, result);
+
+    case 1: /* left == tc_union, right != tc_union */
+        hold = left;
+        left = right;
+        right = hold;
+        /* fall thru */
+
+    case 2: /* left != tc_union, right == tc_union */
+        return union_Add(left, (TypeBrn)right, result);
+
+    case 3:
+        return union_Merge((TypeBrn) left, (TypeBrn) right, result);
+    }
+
+    return false;
 }
 
 extern bool type_Pi(Type* target, ...) {
