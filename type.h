@@ -95,18 +95,17 @@ extern bool type_Create(Symbol,Sort,Type*); /* each type constant in a sort has 
 /* Forall S, a, b, c where a:S and b:S and c:S then union(union(a,b),c) == union(a,union(b,c)) */
 extern bool type_Union(const Type left, const Type right, Type*);
 
-/* Forall S, i, a       where a:S and i>0          then tuple(i:a):S */
-/* Forall S, i, j, a, b where i!=j and a:S and b:s then tuple(tuple(i:a),tuple(j:b)):S */
-/* Forall S, i, j, a, b where i!=j and a:S and b:s then tuple(tuple(i:a),tuple(j:b)) == tuple(tuple(j:b),tuple(i:a)) */
-extern bool type_Tuple(const unsigned index, const Type at, Type*);
-extern bool type_TupleExtend(const Type left, const Type right, Type*);
+/* Tuples := index(i,a) | tuple(a,b) where a,b in Tuple */
+/* tuple(a,b) == tuple(b,a) */
+/* tuple(a,tuple(b,c)) == tuple(tuple(a,b),c) */
+extern bool type_Index(const unsigned index, const Type at, Type*);
+extern bool type_Tuple(const Type left, const Type right, Type*);
 
-
-/* Forall S, i, a       where a:S and i:Symbol     then record(i:a):S */
-/* Forall S, i, j, a, b where i!=j and a:S and b:s then record(record(i:a),record(j:b)):S */
-/* Forall S, i, j, a, b where i!=j and a:S and b:s then record(record(i:a),record(j:b)) == record(record(j:b),record(i:a)) */
-extern bool type_Record(const Symbol label, const Type at, Type*);
-extern bool type_RecordExtend(const Type left, const Type right, Type*);
+/* Record := label(i,a) | record(a,b) where a,b in Record */
+/* record(a,b) == record(b,a) */
+/* record(a,record(b,c)) == record(record(a,b),c) */
+extern bool type_Label(const Symbol label, const Type at, Type*);
+extern bool type_Record(const Type left, const Type right, Type*);
 
 
 extern bool type_Pi(Type*, ...);             /* Pi(var:type...):type      dependent-functions*/
@@ -115,8 +114,6 @@ extern bool type_Mu(Type*, ...);             /* Mu(var:type):type         recurs
 extern bool type_Delta(Type*, ...);          /* Delta(var:type,predicate) subtypes */
 
 extern bool type_Contains(const Type type, const Node value); /* */
-
-
 
 extern void init_global_typetable();
 extern void final_global_typetable();

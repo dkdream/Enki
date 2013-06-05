@@ -329,26 +329,12 @@ extern bool type_Create(Symbol symbol, Sort sort, Type* target) {
     return true;
 }
 
-static bool union_IsMember(TypeBrn set, Type type) {
-    for (; set ;) {
-        Type left  = set->left;
-        Type right = set->right;
-
-        if (isIdentical(left, type)) return true;
-
-        if (right->code == tc_union) {
-            set = (TypeBrn) right;
-            continue;
-        }
-
-        return isIdentical(right,type);
-    }
-
-    return false;
-}
-
-static bool union_Cons(const Type left, const Type right, Type* result) {
-    const Sort sort = left->sort;
+static bool branch_Cons(const enum type_code kind,
+                        const Sort sort,
+                        const Type left,
+                        const Type right,
+                        Type* result)
+{
     const HashCode hashcode = hash_merge(left->hashcode,
                                          right->hashcode);
 
@@ -360,8 +346,8 @@ static bool union_Cons(const Type left, const Type right, Type* result) {
 
         Type test = (Type) asReference(group);
 
-        if (test->sort != sort)     continue;
-        if (test->code != tc_union) continue;
+        if (test->sort != sort) continue;
+        if (test->code != kind) continue;
 
         TypeBrn branch = (TypeBrn) test;
 
@@ -383,8 +369,8 @@ static bool union_Cons(const Type left, const Type right, Type* result) {
     TypeBrn branch = (TypeBrn) asReference(entry);
 
     branch->hashcode = hashcode;
-    branch->sort     = left->sort;
-    branch->code     = tc_union;
+    branch->sort     = sort;
+    branch->code     = kind;
     branch->left     = left;
     branch->right    = right;
 
@@ -393,6 +379,33 @@ static bool union_Cons(const Type left, const Type right, Type* result) {
 
     ASSIGN(result, branch);
     return true;
+}
+
+static bool union_IsMember(TypeBrn set, Type type) {
+    for (; set ;) {
+        Type left  = set->left;
+        Type right = set->right;
+
+        if (isIdentical(left, type)) return true;
+
+        if (right->code == tc_union) {
+            set = (TypeBrn) right;
+            continue;
+        }
+
+        return isIdentical(right,type);
+    }
+
+    return false;
+}
+
+static bool union_Cons(const Type left, const Type right, Type* result) {
+    const Sort sort = left->sort;
+    return branch_Cons(tc_union,
+                       sort,
+                       left,
+                       right,
+                       result);
 }
 
 static bool union_Add(const Type left, TypeBrn right, Type* result) {
@@ -502,6 +515,115 @@ extern bool type_Union(Type left, Type right, Type* result) {
         return union_Merge((TypeBrn) left, (TypeBrn) right, result);
     }
 
+    return false;
+}
+
+extern bool type_Index(const unsigned index, const Type at, Type* result) {
+    if (!at) return false;
+
+    const Sort sort = at->sort;
+    const HashCode hashcode = hash_merge((HashCode) index,
+                                         at->hashcode);
+
+    const int row   = hashcode % _global_typetable->size;
+    Header    group = _global_typetable->row[row].first;
+
+    for ( ; group; group = group->after) {
+        if (!isIdentical(group->kind.type, s_type)) continue;
+
+        Type test = (Type) asReference(group);
+
+        if (test->sort != sort)     continue;
+        if (test->code != tc_index) continue;
+
+        TypeInx inx = (TypeInx) test;
+
+        if (index == inx->index) {
+            if (isIdentical(inx->slot, at)) {
+                ASSIGN(result, test);
+                return true;
+            }
+        }
+    }
+
+    Header entry = fresh_atom(0, sizeof(struct type_index));
+
+    if (!entry) return false;
+
+    entry->kind.type     = (Node) s_type;
+    entry->kind.constant = 1;
+
+    TypeInx inx = (TypeInx) asReference(entry);
+
+    inx->hashcode = hashcode;
+    inx->sort     = sort;
+    inx->code     = tc_index;
+    inx->index    = index;
+    inx->slot     = at;
+
+    entry->after = _global_typetable->row[row].first;
+    _global_typetable->row[row].first = entry;
+
+    ASSIGN(result, inx);
+    return true;
+}
+
+extern bool type_Tuple(const Type left, const Type right, Type* result) {
+    return false;
+}
+
+extern bool type_Label(const Symbol label, const Type at, Type* result) {
+    if (!label) return false;
+    if (!at)    return false;
+
+    const Sort sort = at->sort;
+    const HashCode hashcode = hash_merge(label->hashcode,
+                                         at->hashcode);
+
+    const int row   = hashcode % _global_typetable->size;
+    Header    group = _global_typetable->row[row].first;
+
+    for ( ; group; group = group->after) {
+        if (!isIdentical(group->kind.type, s_type)) continue;
+
+        Type test = (Type) asReference(group);
+
+        if (test->sort != sort)     continue;
+        if (test->code != tc_label) continue;
+
+        TypeLbl field = (TypeLbl) test;
+
+        if (isIdentical(field->label,label)) {
+            if (isIdentical(field->slot, at)) {
+                ASSIGN(result, test);
+                return true;
+            }
+        }
+    }
+
+    Header entry = fresh_atom(0, sizeof(struct type_index));
+
+    if (!entry) return false;
+
+    entry->kind.type     = (Node) s_type;
+    entry->kind.constant = 1;
+
+    TypeLbl field = (TypeLbl) asReference(entry);
+
+    field->hashcode = hashcode;
+    field->sort     = sort;
+    field->code     = tc_label;
+    field->label    = label;
+    field->slot     = at;
+
+    entry->after = _global_typetable->row[row].first;
+    _global_typetable->row[row].first = entry;
+
+    ASSIGN(result, field);
+    return true;
+}
+
+extern bool type_Record(const Type left, const Type right, Type* result) {
     return false;
 }
 
