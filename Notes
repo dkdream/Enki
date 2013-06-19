@@ -11,4 +11,150 @@ Delta(x:X,Pred(x))   => Forall(x:X,Pred(x)) <: X
 
 ----------------------------------
 
+x:Y  means x is a member/element of Y
+X#Y  means forall x:X then x:Y
+X*Y  means forall x:X,y:Y then (x,y):(X*Y) 
+
+C=Constant
+S=Sort
+A=Axiom
+R[y]=Rule of function y
+
+S    # C
+A    # (C*S)
+R[o] # (S*S*S)
+
+(c1,s1):A         => c1:s1
+(s1,s2,s3):R[yyy] => forall e1:s1 and e2:s2 => (yyy e1 e2):s3
+
+----------------------------------
+
+if there is a distinguted constant 'void':Sorts this is the empty sort
+this can we build Predicates as functions form expressions to Sorts
+such that if P(e) != 'void' then P(e) is true.
+
+---------------------------------
+
+----- procedure operators ------
+
+(lambda <vars> <body>)    - constructor of a procedure 
+(predicate <vars> <body>) - constructor of a predicate function
+
+----- expression operators ------
+
+(let <body>)   - closure operator
+(mu <body>)    - fixed point operator
+(any <body>)   - constructor of an element of a Sort (defined by R[any]) (union)
+(all <body>)   - constructor of an element of a Sort (defined by R[all]) (record/tuple/set)
+(pi <body>)    - constructor of an element of a Sort (defined by R[pi])
+(sigma <body>) - constructor of an element of a Sort (defined by R[sigma])
+(delta <body>) - constructor of an element of a Sort (defined by R[delta])
+
+----- ----- ----- ----- ----- -----
+
+(select constant type) - constructor of an selected element type (define by R[select])
+
+(index offset type) - constructor of an indexed element type (define by R[select])
+(label symbol type) - constructor of a  labeled element type (define by R[select])
+
+----- ----- ----- ----- ----- -----
+
+forall s1:S and e1:s1 => e1 == (any e1 e1) |= (s1,s1,s1):R[all]
+forall s1:S and e1:s1 => e1 == (all e1 e1) |= (s1,s1,s1):R[all]
+
+---------------------------------
+
+(tuple <body>) - tuple value constructor
+(list <body>)  - list value constructor
+(cons <body>)  - pair value construtor
+         
+---------------------------------
+
+given
+ o. e1:s1
+ o. e2:s2
+ o. (s1,s2,s3):R[any]
+
+(any e1 e2):s3
+----------------------
+
+given
+ o. e1:s1
+ o. e2:s2
+ o. e3:s3
+ o. (s2,s3,si):R[any]
+ o. (s1,si,s4):R[any]
+
+(any e1 e2 e3):s4
+----------------------
+
+given
+ o. e1:s1
+ o. e2:s2
+ o. (s1,s2,s3):R[all]
+
+(all e1 e2):s3
+----------------------
+
+given
+ o. e1:s1
+ o. e2:s2
+ o. e3:s3
+ o. (s2,s3,si):R[all]
+ o. (s1,si,s4):R[all]
+
+(all e1 e2 e3):s4
+----------------------
+
+given:
+ o. e1:s1
+ o. e2:s2
+ o. (s1,s2,s3):R[sigma]
+
+(sigma e1 e2):s3
+----------------------
+
+given:
+ o. e1:s1
+ o. e2:s2
+ o. e3:s3
+ o. (s2,s3,si):R[sigma]
+ o. (s1,si,s4):R[sigma]
+
+(sigma e1 e2 e3):s4
+----------------------
+
+given: 
+ o. e1:s1
+ o. e2:s2
+ o. (s1,s2,s3):R[sigma]
+
+(pi e1 e2):s3
+-----------------------
+
+given: 
+ o. e1:s1
+ o. e2:s2
+ o. e3:s3
+ o. (s2,s3,si):R[sigma]
+ o. (s1,si,s4):R[sigma]
+
+(pi e1 e2 e3):s4
+-----------------------
+
+given: 
+ o. e1:s1
+ o. e2:s2
+ o. exx:(pi (_:s1) (_:s2) s3)
+ o. e3 == (XX a b)
+ o. (s1,s2,si):R[pi]
+ o. (si,s3,sj):R[pi]
+
+(pi ((a e1) (b e2)) (exx a b)):sj
+---------------------------
+
+
+
+
+
 
