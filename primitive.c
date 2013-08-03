@@ -21,7 +21,8 @@ extern bool primitive_Create(Symbol label, Operator function, Primitive *target)
 
     Primitive result = *target;
 
-    setType(result, t_primitive);
+    setConstructor(result, s_primitive);
+
     result->label    = label;
     result->function = function;
 

@@ -96,6 +96,7 @@ extern bool buffer_print(TextBuffer *output, Node node) {
     }
 
     Node type = getType(node);
+    Node ctor = getConstructor(node);
 
     if (isNil(type)) {
         if (isAtomic(node)) {
@@ -125,7 +126,7 @@ extern bool buffer_print(TextBuffer *output, Node node) {
         return true;
     }
 
-    if (isIdentical(type, t_primitive)) {
+    if (isIdentical(ctor, s_primitive)) {
         buffer_add(output,"@");
         buffer_add(output, (const char *) node.primitive->label->value);
         return true;
@@ -147,7 +148,7 @@ extern bool buffer_print(TextBuffer *output, Node node) {
         return true;
     }
 
-    if (isIdentical(type, t_pair)) {
+    if (isIdentical(ctor, s_pair)) {
         echo_format(output, "pair(%p (%p, %p))",
                     node.reference,
                     node.pair->car.reference,
@@ -162,7 +163,7 @@ extern bool buffer_print(TextBuffer *output, Node node) {
         return true;
     }
 
-    if (isIdentical(type, t_fixed)) {
+    if (isIdentical(ctor, s_fixed)) {
         const unsigned max = asKind(node)->count;
         unsigned inx = 0;
         buffer_add(output, "{");
@@ -223,6 +224,7 @@ extern bool buffer_dump(TextBuffer *output, Node node) {
     }
 
     Node type = getType(node);
+    Node ctor = getConstructor(node);
 
     if (isNil(type)) {
         if (isAtomic(node)) {
@@ -255,7 +257,7 @@ extern bool buffer_dump(TextBuffer *output, Node node) {
         return true;
     }
 
-    if (isIdentical(type, t_primitive)) {
+    if (isIdentical(ctor, s_primitive)) {
         buffer_add(output, "@");
         buffer_add(output, (const char*)(node.primitive->label->value));
         return true;
@@ -277,7 +279,7 @@ extern bool buffer_dump(TextBuffer *output, Node node) {
         return true;
     }
 
-    if (isIdentical(type, t_pair)) {
+    if (isIdentical(ctor, s_pair)) {
         echo_format(output, "pair(%p (%p, %p))",
                     node.reference,
                     node.pair->car.reference,
@@ -292,7 +294,7 @@ extern bool buffer_dump(TextBuffer *output, Node node) {
         return true;
     }
 
-    if (isIdentical(type, t_fixed)) {
+    if (isIdentical(ctor, s_fixed)) {
         const unsigned max = asKind(node)->count;
         unsigned inx = 0;
         buffer_add(output, "{");
@@ -356,7 +358,7 @@ extern bool buffer_dumpTree(TextBuffer *output, unsigned level, Node node) {
         buffer_dumpTree(output, level+1, value);
     }
 
-    if (isType(node, t_pair)) {
+    if (isPair(node)) {
         if (!buffer_dump(output,node)) return false;
         sub_tree(node.pair->car);
         sub_tree(node.pair->cdr);
@@ -404,6 +406,7 @@ extern void buffer_prettyPrint(TextBuffer *output, Node node) {
         }
 
         Node type = getType(node);
+        Node ctor = getConstructor(node);
 
         if (isNil(type)) {
             offset += 10;
@@ -431,7 +434,7 @@ extern void buffer_prettyPrint(TextBuffer *output, Node node) {
             return;
         }
 
-        if (isIdentical(type, t_primitive)) {
+        if (isIdentical(ctor, s_primitive)) {
             offset += 20;
             buffer_add(output, "@");
             buffer_add(output, (const char*)(node.primitive->label->value));
@@ -456,12 +459,12 @@ extern void buffer_prettyPrint(TextBuffer *output, Node node) {
             return;
         }
 
-        if (isIdentical(type, t_pair)) {
+        if (isIdentical(ctor, s_pair)) {
             Node tail = node.pair->cdr;
             buffer_add(output, "(");
             prettyPrint_intern(node.pair->car, level+1);
             while (tail.reference) {
-                if (isType(tail, t_pair)) {
+                if (isPair(tail)) {
                     buffer_add(output, " ");
                     prettyPrint_intern(tail.pair->car, level+1);
                     tail = tail.pair->cdr;
@@ -487,7 +490,7 @@ extern void buffer_prettyPrint(TextBuffer *output, Node node) {
             return;
         }
 
-        if (isIdentical(type, t_fixed)) {
+        if (isIdentical(ctor, s_fixed)) {
             const unsigned max = asKind(node)->count;
             unsigned inx = 0;
             buffer_add(output, "{");

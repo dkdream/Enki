@@ -24,6 +24,7 @@ extern bool tuple_Create(unsigned size, Tuple* target) {
     Tuple result = (*target);
 
     setType(result, t_tuple);
+    setConstructor(result, s_tuple);
 
     unsigned inx = 0;
     for (; inx < size ;++inx) {
@@ -81,7 +82,7 @@ extern bool tuple_Fill(Tuple tuple, Pair list) {
 
     for (; inx < max ;++inx) {
         if (!list) return true;
-        if (!isType(list, t_pair)) return true;
+        if (!isPair(list)) return true;
 
         Node value = list->car;
 

@@ -43,7 +43,6 @@ Symbol s_hashcode;
 Symbol s_header = 0;
 Symbol s_infile = 0;
 Symbol s_integer = 0;
-Symbol s_integer;
 Symbol s_kind = 0;
 Symbol s_lambda = 0;
 Symbol s_name = 0;
@@ -52,7 +51,6 @@ Symbol s_node = 0;
 Symbol s_opaque = 0;
 Symbol s_outfile = 0;
 Symbol s_pair = 0;
-Symbol s_pair;
 Symbol s_pointer = 0;
 Symbol s_primitive = 0;
 Symbol s_quasiquote = 0;
@@ -137,16 +135,13 @@ extern void init_global_symboltable() {
     MK_SYM(header);
     MK_SYM(infile);
     MK_SYM(integer);
-    MK_SYM(integer);
     MK_SYM(kind);
-    MK_SYM(lambda);
     MK_SYM(lambda);
     MK_SYM(name);
     MK_SYM(nil);
     MK_SYM(node);
     MK_SYM(opaque);
     MK_SYM(outfile);
-    MK_SYM(pair);
     MK_SYM(pair);
     MK_SYM(pointer);
     MK_SYM(primitive);
@@ -258,9 +253,10 @@ extern bool symbol_Create(TextBuffer value, Symbol *target) {
                  result);
     }
 
-    entry->kind.type     = (Node)t_symbol;
-    entry->kind.constant = 1;
-    entry->after         = _global_symboltable->row[row].first;
+    entry->kind.type        = (Node)t_symbol;
+    entry->kind.constructor = (Node)s_symbol;
+    entry->kind.constant    = 1;
+    entry->after            = _global_symboltable->row[row].first;
 
     result->size     = size;
     result->hashcode = hashcode;

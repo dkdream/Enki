@@ -85,6 +85,7 @@ extern bool opaque_Create(Node type, long size, Reference* target) {
     return true;
 }
 
+// args := (type | constructor | nil)*
 extern unsigned checkArgs(Node args, const char* name, unsigned min, ...)
 {
     unsigned count  = 0;
@@ -105,18 +106,18 @@ extern void forceArg(Node arg, Target result) {
 
     GC_Protect(tmp);
 
-    if (isType(arg, t_delay)) {
+    if (fromCtor(arg, s_delay)) {
         Node dexpr, denv;
         tuple_GetItem(arg.tuple, 1, &dexpr);
         tuple_GetItem(arg.tuple, 2, &denv);
         eval(dexpr, denv, &tmp);
         tuple_SetItem(arg.tuple, 0, tmp);
-        setType(arg.tuple, t_forced);
+        setConstructor(arg.tuple, s_forced);
         ASSIGN(result, tmp);
         goto done;
     }
 
-    if (isType(arg, t_forced)) {
+    if (fromCtor(arg, s_forced)) {
         tuple_GetItem(arg.tuple, 0, result);
         goto done;
     }
@@ -143,7 +144,7 @@ extern int forceArgs(Node args, ...)
 
     darken_Node(args);
 
-    while (isType(args, t_pair)) {
+    while (isPair(args)) {
         ++count;
 
         if (location) {
@@ -185,7 +186,7 @@ extern int fetchArgs(Node args, ...)
 
     darken_Node(args);
 
-    while (isType(args, t_pair)) {
+    while (isPair(args)) {
         ++count;
 
         if (location) {
@@ -219,7 +220,7 @@ extern void eval_begin(Node body, Node env, Target last)
     GC_Protect(expr);
     GC_Protect(value);
 
-    while (isType(body, t_pair)) {
+    while (isPair(body)) {
         pair_GetCar(body.pair, &expr);
         pair_GetCdr(body.pair, &body);
         eval(expr, env, &value);
@@ -268,7 +269,7 @@ extern SUBR(and)
     expr = NIL;
     ans  = true_v;
 
-    for (; isType(body, t_pair) ;) {
+    for (; isPair(body) ;) {
         pair_GetCar(body.pair, &expr);
         pair_GetCdr(body.pair, &body);
         eval(expr, env, &ans);
@@ -290,7 +291,7 @@ extern SUBR(or)
     expr = NIL;
     ans  = NIL;
 
-    for (; isType(body, t_pair) ;) {
+    for (; isPair(body) ;) {
         pair_GetCar(body.pair, &expr);
         pair_GetCdr(body.pair, &body);
         eval(expr, env, &ans);
@@ -503,7 +504,7 @@ extern void environ_Let(Node local, Node env, Target result)
 
     if (isType(local, t_symbol)) {
         symbol = local;
-    } else if (isType(local, t_pair)) {
+    } else if (isPair(local)) {
         pair_GetCar(local.pair, &symbol);
     } else if (isType(local, t_tuple)) {
         tuple_GetItem(local.tuple, 0, &symbol);
@@ -523,7 +524,7 @@ extern SUBR(encode_let) {
 
     pair_GetCar(args.pair, &locals);
 
-    if (!isType(locals, t_pair)) {
+    if (!isPair(locals)) {
         encode(args, env, result);
         GC_End();
         return;
@@ -556,7 +557,7 @@ extern void eval_binding(Node local, Node env, Target result)
         goto done;
     }
 
-    if (isType(local, t_pair)) {
+    if (isPair(local)) {
         list_GetItem(local.pair, 0, &symbol);
         list_GetItem(local.pair, 1, &expr);
         goto do_eval;
@@ -614,7 +615,7 @@ extern SUBR(let)
     pair_GetCar(args.pair, &bindings);
     pair_GetCdr(args.pair, &body);
 
-    if (!isType(bindings, t_pair)) {
+    if (!isPair(bindings)) {
         eval_begin(body, env, result);
     } else {
         list_Map(eval_binding, bindings.pair, env, &(env2.pair));
@@ -680,7 +681,8 @@ extern SUBR(encode_lambda) {
 extern SUBR(lambda)
 {
     pair_Create(args, env, result.pair);
-    setType(*result.reference, t_lambda);
+//    setType(*result.reference, t_lambda);
+    setConstructor(*result.reference, s_lambda);
 }
 
 extern SUBR(delay)
@@ -693,7 +695,7 @@ extern SUBR(delay)
     tuple_SetItem(tuple, 0, NIL);
     tuple_SetItem(tuple, 1, expr);
     tuple_SetItem(tuple, 2, env);
-    setType(tuple, t_delay);
+    setConstructor(tuple, s_delay);
 
     ASSIGN(result, tuple);
 }
@@ -718,7 +720,7 @@ extern SUBR(member)
 
     forceArgs(args, &tst, &lst, 0);
 
-    while (isType(lst, t_pair)) {
+    while (isPair(lst)) {
         Node elm = NIL;
 
         pair_GetCar(lst.pair, &elm);
@@ -747,7 +749,7 @@ extern SUBR(find)
 
     forceArgs(args, &tst, &lst, 0);
 
-    while (isType(lst, t_pair)) {
+    while (isPair(lst)) {
         Node elm = NIL;
 
         pair_GetCar(lst.pair, &elm);
@@ -787,7 +789,7 @@ extern SUBR(map) {
     Node function;
     Node list;
 
-    checkArgs(args, "map", 1, NIL, t_pair);
+    checkArgs(args, "map", 1, NIL, s_pair);
     forceArgs(args, &function, &list, 0);
 
     if (isNil(function)) {
@@ -795,7 +797,7 @@ extern SUBR(map) {
         return;
     }
 
-    if (!isType(list, t_pair)) {
+    if (!isPair(list)) {
         call_with(function, list, env, result);
         return;
     }
@@ -818,7 +820,7 @@ extern SUBR(map) {
 
     Pair last = first.pair;
 
-    for (; isType(pair->cdr.pair, t_pair) ;) {
+    for (; isPair(pair->cdr.pair) ;) {
         pair   = pair->cdr.pair;
         input  = pair->car;
         output = NIL;
@@ -860,7 +862,7 @@ extern SUBR(eval_symbol)
 
     pair_GetCdr(entry, &tmp);
 
-    if (isType(tmp, t_forced)) {
+    if (fromCtor(tmp, s_forced)) {
         tuple_GetItem(tmp.tuple, 0, &tmp);
         pair_SetCdr(entry, tmp);
     }
@@ -899,17 +901,17 @@ extern SUBR(eval_pair)
     // first eval the head
     eval(head, env, &head);
 
-    if (isType(head, t_delay)) {
+    if (fromCtor(head, s_delay)) {
         Node dexpr, denv;
         tuple_GetItem(head.tuple, 1, &dexpr);
         tuple_GetItem(head.tuple, 2, &denv);
         eval(dexpr, denv, &tmp);
         tuple_SetItem(head.tuple, 0, tmp);
-        setType(head.tuple, t_forced);
+        setConstructor(head.tuple, s_forced);
         head = tmp;
     }
 
-    if (isType(head, t_fixed)) {
+    if (fromCtor(head, s_fixed)) {
         // apply Fixed to un-evaluated arguments
         Node func = NIL;
         tuple_GetItem(head.tuple, fxd_eval, &func);
@@ -957,11 +959,11 @@ extern SUBR(apply_lambda)
 
     // bind parameters to values
     // extending the closure enviroment
-    while (isType(formals, t_pair)) {
+    while (isPair(formals)) {
         Node var = NIL;
         Node val = NIL;
 
-        if (!isType(vlist, t_pair)) {
+        if (!isPair(vlist)) {
             fprintf(stderr, "\nerror: too few arguments params: ");
             prettyPrint(stderr, vars);
             fprintf(stderr, " args: ");
@@ -1131,7 +1133,7 @@ extern SUBR(form)
 
   tuple_Create(1, &tuple);
   tuple_SetItem(tuple, 0, func);
-  setType(tuple, t_form);
+  setConstructor(tuple, s_form);
 
   ASSIGN(result, (Node)tuple);
 }
@@ -1163,7 +1165,7 @@ extern SUBR(fixed)
       return;
   }
 
-  setType(tuple, t_fixed);
+  setConstructor(tuple, s_fixed);
 
   ASSIGN(result, (Node)tuple);
 }
@@ -1183,7 +1185,7 @@ extern SUBR(type_of)
         if (isIdentical(type, t_symbol)) {
             fatal("only symbol may have the symbol type\n");
         }
-        if (isType(value, t_symbol)) {
+        if (isSymbol(value)) {
             fatal("symbol can only have the symbol type\n");
         }
         if (isAType(value)) {
@@ -1208,6 +1210,33 @@ extern SUBR(kind_of)
     forceArgs(args, &value, 0);
 
     ASSIGN(result, getType(value));
+}
+
+extern SUBR(ctor_of)
+{
+    Node value, ctor;
+
+    int count = checkArgs(args, "ctor-of", 1, NIL);
+
+    if (1 < count) {
+        fetchArgs(args, &value, &ctor, 0);
+
+        if (!isSymbol(ctor)) {
+            fatal("only symbol can be used as ctor\n");
+        }
+
+        if (isConstant(value)) {
+            fatal("can not remap the ctor of a constant\n");
+        }
+
+        setConstructor(value,ctor);
+
+        ASSIGN(result,value);
+    } else {
+        forceArgs(args, &value, 0);
+
+        ASSIGN(result, getConstructor(value));
+    }
 }
 
 extern SUBR(isA_q)
@@ -1370,13 +1399,13 @@ extern SUBR(dump)
 {
     Node value = NIL;
 
-    if (isType(args, t_pair)) {
+    if (isPair(args)) {
         pair_GetCar(args.pair, &value);
         pair_GetCdr(args.pair, &args);
         prettyPrint(stdout, value);
     }
 
-    while (isType(args, t_pair)) {
+    while (isPair(args)) {
         printf(" ");
         pair_GetCar(args.pair, &value);
         pair_GetCdr(args.pair, &args);
@@ -1391,13 +1420,13 @@ extern SUBR(dumpln)
 {
     Node value = NIL;
 
-    if (isType(args, t_pair)) {
+    if (isPair(args)) {
         pair_GetCar(args.pair, &value);
         pair_GetCdr(args.pair, &args);
         prettyPrint(stdout, value);
     }
 
-    while (isType(args, t_pair)) {
+    while (isPair(args)) {
         printf(" ");
         pair_GetCar(args.pair, &value);
         pair_GetCdr(args.pair, &args);
@@ -1413,7 +1442,7 @@ extern SUBR(print)
 {
     Node value = NIL;
 
-    while (isType(args, t_pair)) {
+    while (isPair(args)) {
         pair_GetCar(args.pair, &value);
         pair_GetCdr(args.pair, &args);
         print(stdout, value);
@@ -1427,7 +1456,7 @@ extern SUBR(println)
 {
     Node value = NIL;
 
-    while (isType(args, t_pair)) {
+    while (isPair(args)) {
         pair_GetCar(args.pair, &value);
         pair_GetCdr(args.pair, &args);
         print(stdout, value);
@@ -1442,7 +1471,7 @@ extern SUBR(debug)
 {
     Node value = NIL;
     long level = 1;
-    if (isType(args, t_pair)) {
+    if (isPair(args)) {
         pair_GetCar(args.pair, &value);
         if (isType(value, t_integer)) {
             level = value.integer->value;
@@ -1450,7 +1479,7 @@ extern SUBR(debug)
         }
     }
     if (ea_global_debug <= level) {
-        while (isType(args, t_pair)) {
+        while (isPair(args)) {
             pair_GetCar(args.pair, &value);
             pair_GetCdr(args.pair, &args);
             print(stderr, value);
@@ -1467,7 +1496,7 @@ extern SUBR(level)
 
     integer_Create(ea_global_debug, &value.integer);
 
-    if (isType(args, t_pair)) {
+    if (isPair(args)) {
         Node nvalue;
         pair_GetCar(args.pair, &nvalue);
         if (isType(nvalue, t_integer)) {
@@ -1568,7 +1597,7 @@ extern SUBR(concat_text) {
 
     checkArgs(args, "concat-text", 2, t_text, t_text);
 
-    while (isType(args, t_pair)) {
+    while (isPair(args)) {
         Node text;
 
         pair_GetCar(args.pair, &text);
@@ -1604,7 +1633,7 @@ extern SUBR(concat_symbol) {
 
     checkArgs(args, "concat-symbol", 2, NIL, NIL);
 
-    while (isType(args, t_pair)) {
+    while (isPair(args)) {
         Node text;
 
         pair_GetCar(args.pair, &text);
@@ -1647,7 +1676,7 @@ extern SUBR(mark_time) {
     Node value = NIL;
     bool prefix = false;
 
-    while (isType(args, t_pair)) {
+    while (isPair(args)) {
         pair_GetCar(args.pair, &value);
         pair_GetCdr(args.pair, &args);
         if (isType(value, t_symbol)) {
@@ -1745,7 +1774,7 @@ extern SUBR(format) {
 
     checkArgs(args, "format", 1, t_text);
 
-    if (!isType(args, t_pair)) {
+    if (!isPair(args)) {
         fatal("missing first argument to format\n");
     } else {
         Node form = NIL;
@@ -1769,7 +1798,7 @@ extern SUBR(format) {
 
                 ++count;
 
-                if (!isType(args, t_pair)) {
+                if (!isPair(args)) {
                     fatal("missing argument %d to format code \'%c\' \n", count, code);
                 } else {
                     Node value = NIL;
@@ -1986,7 +2015,7 @@ extern SUBR(fprint) {
 
     checkArgs(args, "fprint", 1, t_outfile);
 
-    if (!isType(args, t_pair)) {
+    if (!isPair(args)) {
          fatal("missing first argument to fprint\n");
     } else {
         Node outfile = NIL;
@@ -2001,7 +2030,7 @@ extern SUBR(fprint) {
         out = ((OSFile)(outfile.reference))->file;
     }
 
-    while (isType(args, t_pair)) {
+    while (isPair(args)) {
         Node text;
         pair_GetCar(args.pair, &text);
         pair_GetCdr(args.pair, &args);
@@ -2191,7 +2220,7 @@ extern SUBR(sizeof) {
 
 extern SUBR(car) {
     Pair pair;
-    unsigned count = checkArgs(args, "car", 1, t_pair);
+    unsigned count = checkArgs(args, "car", 1, s_pair);
 
     ASSIGN(result,NIL);
 
@@ -2208,7 +2237,7 @@ extern SUBR(car) {
 
 extern SUBR(cdr) {
     Pair pair;
-    unsigned count = checkArgs(args, "cdr", 1, t_pair);
+    unsigned count = checkArgs(args, "cdr", 1, s_pair);
 
     ASSIGN(result,NIL);
 
@@ -2228,7 +2257,7 @@ extern SUBR(pair_q) {
     checkArgs(args, "pair?", 1, NIL);
     pair_GetCar(args.pair, &value);
 
-    if (isType(value, t_pair)) {
+    if (isPair(value)) {
         ASSIGN(result, true_v);
     } else {
         ASSIGN(result, NIL);
@@ -2275,10 +2304,10 @@ extern SUBR(box) {
 extern SUBR(set_end) {
     Node head;
     Node tail;
-    checkArgs(args, "set-end", 1, t_pair, NIL);
+    checkArgs(args, "set-end", 1, s_pair, NIL);
     forceArgs(args, &head, &tail, 0);
 
-    if (!isType(head, t_pair)) {
+    if (!isPair(head)) {
         ASSIGN(result, NIL);
     }
 
@@ -2349,7 +2378,7 @@ extern SUBR(bprint) {
 
     checkArgs(args, "bprint", 1, t_buffer);
 
-    if (!isType(args, t_pair)) {
+    if (!isPair(args)) {
         fatal("missing first argument to bprint\n");
     } else {
         Node buffer = NIL;
@@ -2364,7 +2393,7 @@ extern SUBR(bprint) {
         out = ((TextBuffer *)(buffer.reference));
     }
 
-    while (isType(args, t_pair)) {
+    while (isPair(args)) {
         Node text;
         pair_GetCar(args.pair, &text);
         pair_GetCdr(args.pair, &args);
@@ -2412,7 +2441,7 @@ extern SUBR(forced_q) {
     checkArgs(args, "forced?", 1, NIL);
     pair_GetCar(args.pair, &value);
 
-    if (isType(value, t_forced)) {
+    if (fromCtor(value, s_forced)) {
         ASSIGN(result, true_v);
     } else {
         ASSIGN(result, NIL);
@@ -2477,7 +2506,7 @@ extern SUBR(length) {
         return;
     }
 
-    if (isType(list, t_pair)) {
+    if (isPair(list)) {
         unsigned count  = 0;
         bool     dotted = false;
         list_State(list.pair, &count, &dotted);
@@ -2489,7 +2518,7 @@ extern SUBR(length) {
 extern SUBR(fixed_encoder) {
     Tuple fixed;
 
-    checkArgs(args, "fixed-encoder", 1, t_fixed);
+    checkArgs(args, "fixed-encoder", 1, s_fixed);
     fetchArgs(args, &fixed, 0);
 
     if (!tuple_GetItem(fixed, fxd_encode, result)) {
@@ -2500,7 +2529,7 @@ extern SUBR(fixed_encoder) {
 extern SUBR(fixed_evaluator) {
     Tuple fixed;
 
-    checkArgs(args, "fixed-evaluator", 1, t_fixed);
+    checkArgs(args, "fixed-evaluator", 1, s_fixed);
     fetchArgs(args, &fixed, 0);
 
     if (!tuple_GetItem(fixed, fxd_eval, result)) {
@@ -2511,7 +2540,7 @@ extern SUBR(fixed_evaluator) {
 extern SUBR(form_action) {
     Tuple form;
 
-    checkArgs(args, "form-action", 1, t_form);
+    checkArgs(args, "form-action", 1, s_form);
     fetchArgs(args, &form, 0);
 
     if (!tuple_GetItem(form, 0, result)) {
@@ -2522,7 +2551,7 @@ extern SUBR(form_action) {
 extern SUBR(forced_value) {
     Tuple forced;
 
-    checkArgs(args, "forced-value", 1, t_forced);
+    checkArgs(args, "forced-value", 1, s_forced);
     fetchArgs(args, &forced, 0);
 
     if (!tuple_GetItem(forced, 0, result)) {
@@ -2535,7 +2564,7 @@ extern SUBR(fixed_q) {
     checkArgs(args, "fixed?", 1, NIL);
     pair_GetCar(args.pair, &value);
 
-    if (isType(value, t_fixed)) {
+    if (fromCtor(value, s_fixed)) {
         ASSIGN(result, true_v);
     } else {
         ASSIGN(result, NIL);
@@ -2547,7 +2576,7 @@ extern SUBR(primitive_q) {
     checkArgs(args, "primitive?", 1, NIL);
     pair_GetCar(args.pair, &value);
 
-    if (isType(value, t_primitive)) {
+    if (fromCtor(value, s_primitive)) {
         ASSIGN(result, true_v);
     } else {
         ASSIGN(result, NIL);
@@ -2559,7 +2588,7 @@ extern SUBR(delay_q) {
     checkArgs(args, "delay?", 1, NIL);
     pair_GetCar(args.pair, &value);
 
-    if (isType(value, t_delay)) {
+    if (fromCtor(value, s_delay)) {
         ASSIGN(result, true_v);
     } else {
         ASSIGN(result, NIL);
@@ -2571,7 +2600,7 @@ extern SUBR(lambda_q) {
     checkArgs(args, "lambda?", 1, NIL);
     pair_GetCar(args.pair, &value);
 
-    if (isType(value, t_lambda)) {
+    if (fromCtor(value, s_lambda)) {
         ASSIGN(result, true_v);
     } else {
         ASSIGN(result, NIL);
@@ -2583,7 +2612,7 @@ extern SUBR(form_q) {
     checkArgs(args, "form?", 1, NIL);
     pair_GetCar(args.pair, &value);
 
-    if (isType(value, t_form)) {
+    if (fromCtor(value, s_form)) {
         ASSIGN(result, true_v);
     } else {
         ASSIGN(result, NIL);
@@ -2606,10 +2635,10 @@ extern SUBR(all_q) {
     Node list;
     Node type;
 
-    checkArgs(args, "all?", 1, t_pair, NIL);
+    checkArgs(args, "all?", 1, s_pair, NIL);
     forceArgs(args, &list, &type, 0);
 
-    while (isType(list, t_pair)) {
+    while (isPair(list)) {
         Node value = NIL;
 
         pair_GetCar(list.pair, &value);
@@ -2627,12 +2656,12 @@ extern SUBR(all_q) {
 extern SUBR(dot_q) {
     Node list;
 
-    checkArgs(args, "dot?", 1, t_pair, NIL);
+    checkArgs(args, "dot?", 1, s_pair, NIL);
     forceArgs(args, &list, 0);
 
     ASSIGN(result, NIL);
 
-    if (isType(list, t_pair)) {
+    if (isPair(list)) {
         unsigned count  = 0;
         bool     dotted = false;
         list_State(list.pair, &count, &dotted);
@@ -2719,7 +2748,7 @@ static Node defineFixed(const char* name, Operator eval)
     primitive_Create(label, eval, &prim);
 
     tuple_Create(2, &fixed);
-    setType(fixed, t_fixed);
+    setConstructor(fixed, s_fixed);
 
     tuple_SetItem(fixed, fxd_name, label);
     tuple_SetItem(fixed, fxd_eval, prim);
@@ -2743,7 +2772,7 @@ static Node defineEFixed(const char* neval,  Operator oeval,
     GC_Protect(prim);
 
     tuple_Create(3, &fixed);
-    setType(fixed, t_fixed);
+    setConstructor(fixed, s_fixed);
 
     if (nencode) {
         symbol_Convert(nencode, &label);
@@ -2881,6 +2910,7 @@ void startEnkiLibrary() {
 
     MK_OPR(type-of, type_of);
     MK_OPR(kind-of, kind_of);
+    MK_OPR(ctor-of, ctor_of);
 
     MK_OPR(~,com);
 

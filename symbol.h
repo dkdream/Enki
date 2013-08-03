@@ -38,17 +38,23 @@ extern Symbol s_base;
 extern Symbol s_block;
 extern Symbol s_clink;
 extern Symbol s_current;
+extern Symbol s_delay;
+extern Symbol s_fixed;
+extern Symbol s_forced;
+extern Symbol s_form;
 extern Symbol s_global;
 extern Symbol s_hashcode;
 extern Symbol s_header;
 extern Symbol s_integer;
 extern Symbol s_kind;
+extern Symbol s_lambda;
 extern Symbol s_name;
 extern Symbol s_nil;
 extern Symbol s_node;
 extern Symbol s_opaque;
 extern Symbol s_pair;
 extern Symbol s_pointer;
+extern Symbol s_primitive;
 extern Symbol s_quasiquote;
 extern Symbol s_quote;
 extern Symbol s_rule;
@@ -70,13 +76,15 @@ extern bool symbol_Convert(const char* value, Symbol*);
 extern void check_SymbolTable__(const char*, unsigned);
 extern void init_global_symboltable();
 
-/* macros */
+/******************
+  inline functions
+ ******************/
+
 extern inline const char* symbol_Text(Symbol) __attribute__((always_inline nonnull(1)));
 extern inline const char* symbol_Text(Symbol symbol) {
     if (!symbol) return "";
     return (const char*)(symbol->value);
 }
-
 
 /***************************
  ** end of file

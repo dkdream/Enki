@@ -23,7 +23,8 @@ extern bool pair_Create(const Node car, const Node cdr, Pair* target) {
     darken_Node(car);
     darken_Node(cdr);
 
-    setType(result, t_pair);
+    setConstructor(result, s_pair);
+
     result->car = car;
     result->cdr = cdr;
 
@@ -71,7 +72,7 @@ extern bool list_State(Pair pair, unsigned *count, bool *dotted) {
 
     unsigned at = 0;
     for (; pair ; ++at) {
-        if (!isType(pair, t_pair)) {
+        if (!isPair(pair)) {
             *count  = ++at;
             *dotted = true;
             return true;
@@ -88,7 +89,7 @@ extern bool list_UnDot(Pair pair) {
     if (!pair) return false;
 
     for (; pair ;) {
-        if (isType(pair->cdr, t_pair)) {
+        if (isPair(pair->cdr)) {
             pair = pair->cdr.pair;
             continue;
         }
@@ -103,7 +104,7 @@ extern bool list_UnDot(Pair pair) {
 extern bool list_SetItem(Pair pair, unsigned index, const Node value) {
     if (!pair) return false;
 
-     for (; isType(pair, t_pair) ; --index) {
+     for (; isPair(pair) ; --index) {
          if (0 < index) {
              pair = pair->cdr.pair;
              continue;
@@ -123,7 +124,7 @@ extern bool list_GetItem(Pair pair, unsigned index, Target value) {
 
      darken_Node(pair);
 
-     for (; isType(pair, t_pair) ; --index) {
+     for (; isPair(pair) ; --index) {
          if (0 < index) {
              pair = pair->cdr.pair;
              continue;
@@ -139,7 +140,7 @@ extern bool list_GetItem(Pair pair, unsigned index, Target value) {
 extern bool list_SetTail(Pair pair, unsigned index, const Node value) {
     if (!pair) return false;
 
-     for (; isType(pair, t_pair) ; --index) {
+     for (; isPair(pair) ; --index) {
          if (0 < index) {
              pair = pair->cdr.pair;
              continue;
@@ -159,7 +160,7 @@ extern bool list_GetTail(Pair pair, unsigned index, Target value) {
 
     darken_Node(pair);
 
-     for (; isType(pair, t_pair) ; --index) {
+     for (; isPair(pair) ; --index) {
          if (0 < index) {
              pair = pair->cdr.pair;
              continue;
@@ -177,8 +178,8 @@ extern bool list_SetEnd(Pair pair, const Node value) {
 
     darken_Node(pair);
 
-     for (; isType(pair, t_pair) ;) {
-         if (isType(pair->cdr, t_pair)) {
+     for (; isPair(pair) ;) {
+         if (isPair(pair->cdr)) {
              pair = pair->cdr.pair;
              continue;
          }
@@ -197,8 +198,8 @@ extern bool list_GetEnd(Pair pair, Target value) {
 
     darken_Node(pair);
 
-     for (; isType(pair, t_pair) ;) {
-         if (isType(pair->cdr, t_pair)) {
+     for (; isPair(pair) ;) {
+         if (isPair(pair->cdr)) {
              pair = pair->cdr.pair;
              continue;
          }
@@ -213,8 +214,8 @@ extern bool list_GetEnd(Pair pair, Target value) {
 extern bool alist_Entry(Pair pair, const Node label, Pair* value) {
     if (!pair) return false;
 
-    for (; isType(pair, t_pair) ;) {
-        if (!isType(pair->car, t_pair)) {
+    for (; isPair(pair) ;) {
+        if (!isPair(pair->car)) {
             pair = pair->cdr.pair;
             continue;
         }
@@ -237,8 +238,8 @@ extern bool alist_Entry(Pair pair, const Node label, Pair* value) {
 extern bool alist_Get(Pair pair, const Node label, Target value) {
     if (!pair) return false;
 
-    for (; isType(pair, t_pair) ;) {
-        if (!isType(pair->car, t_pair)) {
+    for (; isPair(pair) ;) {
+        if (!isPair(pair->car)) {
             pair = pair->cdr.pair;
             continue;
         }
@@ -260,8 +261,8 @@ extern bool alist_Get(Pair pair, const Node label, Target value) {
 extern bool alist_Set(Pair pair, const Node label, const Node value) {
     if (!pair) return false;
 
-    for (; isType(pair, t_pair) ;) {
-        if (!isType(pair->car, t_pair)) {
+    for (; isPair(pair) ;) {
+        if (!isPair(pair->car)) {
             pair = pair->cdr.pair;
             continue;
         }
@@ -311,7 +312,7 @@ extern bool list_Map(Operator func, Pair pair, const Node env, Target target) {
         return false;
     }
 
-    if (!isType(pair, t_pair)) {
+    if (!isPair(pair)) {
         func(pair, env, target);
         return true;
     }
@@ -338,7 +339,7 @@ extern bool list_Map(Operator func, Pair pair, const Node env, Target target) {
 
     last = first.pair;
 
-    for (; isType(pair->cdr.pair, t_pair) ;) {
+    for (; isPair(pair->cdr.pair) ;) {
         hold   = 0;
         pair   = pair->cdr.pair;
         input  = pair->car;

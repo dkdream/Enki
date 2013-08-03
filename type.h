@@ -67,23 +67,23 @@ extern Type t_any;
 extern Type t_block;
 extern Type t_buffer;
 extern Type t_comma;
-extern Type t_delay;
-extern Type t_fixed;
-extern Type t_forced;
-extern Type t_form;
+//extern Type t_delay;  // this need to be the type of the delay value
+//extern Type t_fixed;  // this marks a meta-function (if,and,or,bind,set,delay,while,begin,let,lambda)
+//extern Type t_forced; // this need to be the type of the computed value
+//extern Type t_form;   // this marks a syntax-function
 extern Type t_infile;
 extern Type t_integer;
-extern Type t_lambda;
+//extern Type t_lambda; // this need to be removed (use pi-types)
 extern Type t_opaque;
 extern Type t_outfile;
-extern Type t_pair;
+//extern Type t_pair;  // this need to be removed (use sigma-types)
 extern Type t_path;
-extern Type t_primitive;
+//extern Type t_primitive;
 extern Type t_semi;
 extern Type t_symbol;
 extern Type t_text;
 extern Type t_true;
-extern Type t_tuple;
+extern Type t_tuple; // this need to be removed (use sigma-types)
 extern Type t_void;
 
 extern bool sort_Create(Symbol,Sort*);      /* each sort has a unique name */
@@ -161,6 +161,14 @@ extern inline bool isType(const Node value, const Node type) {
     return type_Contains(type.type, value);
 }
 
+extern inline bool fromCtor(const Node value, const Node ctor) __attribute__((always_inline));
+extern inline bool fromCtor(const Node value, const Node ctor) {
+    if (isNil(ctor)) return false;
+    Kind kind = asKind(value);
+    if (!kind) return false;
+    return (kind->constructor.reference == ctor.reference);
+}
+
 extern inline const char* type_ConstantName(Type type) __attribute__((always_inline));
 extern inline const char* type_ConstantName(Type type) {
     if (!type) return "";
@@ -169,6 +177,22 @@ extern inline const char* type_ConstantName(Type type) {
     struct type_constant* tconst = (struct type_constant*) type;
 
     return (const char*)(tconst->name->value);
+}
+
+extern inline bool isSymbol(const Node value) __attribute__((always_inline));
+extern inline bool isSymbol(const Node value) {
+    return isType(value, t_symbol);
+}
+
+extern inline bool isPair(const Node value) __attribute__((always_inline));
+extern inline bool isPair(const Node value) {
+    return fromCtor(value, s_pair);
+}
+
+extern inline bool isTuple(const Node value) __attribute__((always_inline));
+extern inline bool isTuple(const Node value) {
+    //if (fromCtor(value, s_pair)) return true;
+    return fromCtor(value, s_tuple);
 }
 
 /***************************

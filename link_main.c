@@ -38,10 +38,10 @@ int main(int argc, char** argv) {
 
     printf("                  count %u type %p space %p\n",
            sizeof(struct pair)/sizeof(void*),
-           t_pair,
+           s_pair,
            _zero_space);
 
-    enki_test((void*)0, (void*)t_pair, (void*)(sizeof(struct pair)));
+    enki_test((void*)0, (void*)s_pair, (void*)(sizeof(struct pair)));
 
     printf("done\n");
 

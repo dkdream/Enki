@@ -116,6 +116,7 @@ enum gc_color {
 
 struct gc_kind {
     Node type;
+    Node constructor;
     unsigned long count : BITS_PER_WORD - 8 __attribute__((__packed__));
     struct {
         enum gc_color   color : 2;
@@ -249,6 +250,15 @@ extern inline bool setType(const Node value, const Node type) {
     return true;
 }
 
+extern inline bool setConstructor(const Node value, const Node constructor) __attribute__((always_inline));
+extern inline bool setConstructor(const Node value, const Node constructor) {
+    Kind kind = asKind(value);
+    if (!kind) return false;
+    if (kind->constant) return false;
+    kind->constructor = constructor;
+    return true;
+}
+
 extern inline bool setConstant(const Node value) __attribute__((always_inline));
 extern inline bool setConstant(const Node value) {
     Kind kind = asKind(value);
@@ -263,6 +273,13 @@ extern inline Node getType(const Node value) {
     Kind kind = asKind(value);
     if (!kind) return NIL;
     return kind->type;
+}
+
+extern inline Node getConstructor(const Node value) __attribute__((always_inline));
+extern inline Node getConstructor(const Node value) {
+    Kind kind = asKind(value);
+    if (!kind) return NIL;
+    return kind->constructor;
 }
 
 extern inline bool isAtomic(const Node value) __attribute__((always_inline));
@@ -284,8 +301,8 @@ extern inline bool isInside(const Node value) {
 extern inline bool isConstant(const Node value) __attribute__((always_inline));
 extern inline bool isConstant(const Node value) {
     Kind kind = asKind(value);
-    if (!kind) return false;
-    if (kind->inside) return true;
+    if (!kind) return true;
+    if (kind->constant) return true;
     return false;
 }
 

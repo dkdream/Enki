@@ -1,0 +1,14 @@
+(require "boot.ea")
+
+##
+## type HOAS
+##
+
+(define (hoas-global symbol)
+   (type-of (tuple 'global symbol) :hoas))
+
+(define (hoas-lambda func)
+   (type-of (tuple 'lambda func) :hoas))
+
+(define (hoas-app func arg)
+   (type-of (tuple 'app func arg) :hoas))

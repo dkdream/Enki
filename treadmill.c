@@ -563,10 +563,11 @@ extern inline void scan_Node(const Header header) {
         return;
     }
 
+    darken_Node(header->kind.type);
+    darken_Node(header->kind.constructor);
+
     if (header->kind.atom) return;
     if (1 > header->kind.count) return;
-
-    darken_Node(header->kind.type);
 
     Reference *slot = (Reference*) asReference(header);
 

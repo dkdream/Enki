@@ -204,7 +204,8 @@ extern bool sort_Create(Symbol symbol, Sort* target) {
 
     if (!entry) return false;
 
-    entry->kind.type     = (Node)s_sort;
+    entry->kind.type        = (Node)s_sort;
+    entry->kind.constructor = (Node)s_sort;
     entry->kind.constant = 1;
 
     Sort result = (Sort) asReference(entry);
@@ -243,8 +244,9 @@ extern bool make_Axiom(Sort element, Sort class) {
 
     if (!entry) return false;
 
-    entry->kind.type     = (Node)s_axiom;
-    entry->kind.constant = 1;
+    entry->kind.type        = (Node)s_axiom;
+    entry->kind.constructor = (Node)s_axiom;
+    entry->kind.constant    = 1;
 
     Axiom result = (Axiom) asReference(entry);
 
@@ -290,8 +292,9 @@ extern bool make_Rule(Symbol functor, Sort xxx, Sort yyy, Sort kind) {
 
     if (!entry) return false;
 
-    entry->kind.type     = (Node)s_rule;
-    entry->kind.constant = 1;
+    entry->kind.type        = (Node)s_rule;
+    entry->kind.constructor = (Node)s_rule;
+    entry->kind.constant    = 1;
 
     Rule result = (Rule) asReference(entry);
 
@@ -335,8 +338,9 @@ extern bool type_Create(Symbol symbol, Sort sort, Type* target) {
 
     if (!entry) return false;
 
-    entry->kind.type     = (Node) s_base;
-    entry->kind.constant = 1;
+    entry->kind.type        = (Node) s_base;
+    entry->kind.constructor = (Node) s_base;
+    entry->kind.constant    = 1;
 
     TypeCnt result = (TypeCnt) asReference(entry);
 
@@ -387,8 +391,9 @@ static bool branch_Cons(const enum type_code kind,
 
     if (!entry) return false;
 
-    entry->kind.type     = (Node) s_type;
-    entry->kind.constant = 1;
+    entry->kind.type        = (Node) s_type;
+    entry->kind.constructor = (Node) s_type;
+    entry->kind.constant    = 1;
 
     TypeBrn branch = (TypeBrn) asReference(entry);
 
@@ -574,7 +579,8 @@ extern bool type_Index(const unsigned index, const Type at, Type* result) {
 
     if (!entry) return false;
 
-    entry->kind.type     = (Node) s_type;
+    entry->kind.type        = (Node) s_type;
+    entry->kind.constructor = (Node) s_type;
     entry->kind.constant = 1;
 
     TypeInx inx = (TypeInx) asReference(entry);
@@ -629,8 +635,9 @@ extern bool type_Label(const Symbol label, const Type at, Type* result) {
 
     if (!entry) return false;
 
-    entry->kind.type     = (Node) s_type;
-    entry->kind.constant = 1;
+    entry->kind.type        = (Node) s_type;
+    entry->kind.constructor = (Node) s_type;
+    entry->kind.constant    = 1;
 
     TypeLbl field = (TypeLbl) asReference(entry);
 

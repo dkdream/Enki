@@ -20,6 +20,7 @@ extern bool integer_Create(long long value, Integer *target) {
     Integer result = *target;
 
     setType(result, t_integer);
+    setConstructor(result, s_integer);
 
     result->value = value;
 

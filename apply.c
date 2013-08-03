@@ -75,7 +75,7 @@ extern void expand(const Node expr, const Node env, Target result)
         });
 
     for (;;) {
-        if (!isType(list, t_pair)) {
+        if (!isPair(list)) {
             ASSIGN(result, list);
             goto done;
         }
@@ -109,7 +109,7 @@ extern void expand(const Node expr, const Node env, Target result)
             });
 
         // check if the reference is a form
-        if (!isType(value, t_form)) goto list_begin;
+        if (!fromCtor(value, s_form)) goto list_begin;
 
         // apply the form function to the rest of the list
         apply(value, tail, env, &list);
@@ -151,7 +151,7 @@ extern void encode(const Node expr, const Node env, Target result)
             fprintf(stderr, "\n");
         });
 
-    if (!isType(list, t_pair)) {
+    if (!isPair(list)) {
         ASSIGN(result, list);
         goto done;
     }
@@ -168,14 +168,14 @@ extern void encode(const Node expr, const Node env, Target result)
             alist_Get(enki_globals.pair, head, &value);
         }
 
-        if (isType(value, t_primitive)) {
+        if (fromCtor(value, s_primitive)) {
             head = value;
-        } else if (isType(value, t_fixed)) {
+        } else if (fromCtor(value, s_fixed)) {
             head = value;
         }
     }
 
-    if (!isType(head, t_fixed)) goto list_begin;
+    if (!fromCtor(head, s_fixed)) goto list_begin;
 
     Node action = NIL;
 
@@ -219,15 +219,15 @@ extern void eval(const Node expr, const Node env, Target result)
             fprintf(stderr, "\n");
         });
 
-    if (isType(expr, t_pair)) {
+    if (isPair(expr)) {
         evaluator = p_eval_pair;
     }
 
-    if (isType(expr, t_symbol)) {
+    if (isSymbol(expr)) {
         evaluator = p_eval_symbol;
     }
 
-    if (isType(expr, t_forced)) {
+    if (fromCtor(expr, s_forced)) {
         tuple_GetItem(expr.tuple, 0, result);
         goto done;
     }
@@ -271,14 +271,14 @@ extern void apply(Node fun, Node args, const Node env, Target result)
         });
 
     // primitive -> Operator
-    if (isType(fun, t_primitive)) {
+    if (fromCtor(fun, s_primitive)) {
       Operator function = fun.primitive->function;
       function(args, env, result);
       goto done;
     }
 
     // lambda -> p_apply_lambda
-    if (isType(fun, t_lambda)) {
+    if (fromCtor(fun, s_lambda)) {
       if (!pair_Create(fun, args, &(args.pair))) goto error;
       Operator function = p_apply_lambda->function;
       function(args, env, result);
@@ -286,7 +286,7 @@ extern void apply(Node fun, Node args, const Node env, Target result)
     }
 
     // Form -> p_apply_form
-    if (isType(fun, t_form)) {
+    if (fromCtor(fun, s_form)) {
       if (!pair_Create(fun, args, &(args.pair))) goto error;
       Operator function = p_apply_form->function;
       function(args, env, result);
