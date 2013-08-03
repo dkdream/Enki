@@ -91,7 +91,7 @@ extern void expand(const Node expr, const Node env, Target result)
         if (isIdentical(s_type, head))  goto list_done;
 
         // check if the head is a reference
-        if (!isType(head, s_symbol)) goto list_begin;
+        if (!isType(head, t_symbol)) goto list_begin;
 
         Node value = NIL;
 
@@ -161,7 +161,7 @@ extern void encode(const Node expr, const Node env, Target result)
 
     encode(head, env, &head);
 
-    if (isType(head, s_symbol)) {
+    if (isType(head, t_symbol)) {
         Node value = NIL;
         // check if the enviroment
         if (!alist_Get(env.pair, head, &value)) {
@@ -223,7 +223,7 @@ extern void eval(const Node expr, const Node env, Target result)
         evaluator = p_eval_pair;
     }
 
-    if (isType(expr, s_symbol)) {
+    if (isType(expr, t_symbol)) {
         evaluator = p_eval_symbol;
     }
 

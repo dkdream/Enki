@@ -71,6 +71,7 @@ Symbol s_unquote_splicing = 0;
 Symbol s_unsigned;
 Symbol s_word = 0;
 
+static Header empty_symbol = 0;
 
 struct _internal_SymbolRow {
     unsigned lock;
@@ -103,7 +104,7 @@ extern void init_global_symboltable() {
 
     _global_symboltable = result;
 
-    Header empty_symbol = fresh_atom(0, sizeof(struct symbol));
+    empty_symbol = fresh_atom(0, sizeof(struct symbol));
 
     _empty_symbol = (Symbol)asReference(empty_symbol);
 
@@ -163,18 +164,21 @@ extern void init_global_symboltable() {
     MK_SYM(unquote);
     MK_SYM(unsigned);
     MK_SYM(word);
+}
+
+// used by init_global_typetable only
+extern void retype_global_symboltable() {
+    empty_symbol->kind.type = (Node)t_symbol;
 
     int row = _global_symboltable->size;
 
     for ( ; row-- ; ) {
         Header group = _global_symboltable->row[row].first;
         for ( ; group; group = group->after) {
-            group->kind.type = (Node)s_symbol;
+            group->kind.type = (Node)t_symbol;
         }
     }
 }
-
-
 
 extern void final_global_symboltable() {
     if (0 == _global_symboltable) return;
@@ -188,7 +192,7 @@ extern void check_SymbolTable__(const char* filename, unsigned line) {
     for ( ; row-- ; ) {
         Header group = _global_symboltable->row[row].first;
         for ( ; group; group = group->after) {
-            if (isIdentical(group->kind.type, s_symbol)) continue;
+            if (isIdentical(group->kind.type, t_symbol)) continue;
             fprintf(stderr, "%s:%u",filename, line);
             fatal("found a non-symbol in row %d of the symbol-table", row);
         }
@@ -254,7 +258,7 @@ extern bool symbol_Create(TextBuffer value, Symbol *target) {
                  result);
     }
 
-    entry->kind.type     = (Node)s_symbol;
+    entry->kind.type     = (Node)t_symbol;
     entry->kind.constant = 1;
     entry->after         = _global_symboltable->row[row].first;
 

@@ -23,8 +23,6 @@ struct symbol {
     unsigned long value[1];
 };
 
-extern Symbol _empty_symbol;
-extern Symbol s_symbol;
 extern Symbol s_dot;
 extern Symbol s_comma;
 extern Symbol s_colon;

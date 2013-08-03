@@ -109,7 +109,7 @@ extern bool buffer_print(TextBuffer *output, Node node) {
         return true;
     }
 
-    if (isIdentical(type, s_symbol)) {
+    if (isIdentical(type, t_symbol)) {
         buffer_add(output, (const char *) node.symbol->value);
         return true;
     }
@@ -172,7 +172,7 @@ extern bool buffer_print(TextBuffer *output, Node node) {
     }
 
     buffer_add(output, "[");
-    if (isType(type, s_symbol)) {
+    if (isType(type, t_symbol)) {
         echo_string(output, (const char *)type.symbol->value);
     } else {
         if (!isType(type, s_base)) {
@@ -236,7 +236,7 @@ extern bool buffer_dump(TextBuffer *output, Node node) {
         return true;
     }
 
-    if (isIdentical(type, s_symbol)) {
+    if (isIdentical(type, t_symbol)) {
         echo_format(output, "symbol(%llx,", node.symbol->hashcode);
         echo_string(output, (const char *) node.symbol->value);
         buffer_add(output, ")");
@@ -302,7 +302,7 @@ extern bool buffer_dump(TextBuffer *output, Node node) {
     }
 
     buffer_add(output, "[");
-    if (isType(type, s_symbol)) {
+    if (isType(type, t_symbol)) {
         echo_string(output, (const char *)type.symbol->value);
     } else {
         buffer_add(output, "<");
@@ -411,7 +411,7 @@ extern void buffer_prettyPrint(TextBuffer *output, Node node) {
             return;
         }
 
-        if (isIdentical(type, s_symbol)) {
+        if (isIdentical(type, t_symbol)) {
             offset += node.symbol->size + 1;
             echo_string(output, (const char *) node.symbol->value);
             return;
@@ -497,7 +497,7 @@ extern void buffer_prettyPrint(TextBuffer *output, Node node) {
         }
 
         buffer_add(output, "[");
-        if (isType(type, s_symbol)) {
+        if (isType(type, t_symbol)) {
             offset += type.symbol->size + 1;
             echo_string(output, (const char *)type.symbol->value);
         } else {

@@ -17,6 +17,8 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+extern void retype_global_symboltable();
+
 typedef struct type_constant* TypeCnt;
 typedef struct type_index*    TypeInx;
 typedef struct type_label*    TypeLbl;
@@ -35,16 +37,16 @@ struct name {
     Sort sort;
 };
 
-struct axion {
+struct axiom {
     HashCode hashcode;
-    Sort sort;
-    Type type;
+    Sort element;
+    Sort class;
 };
 
 struct rule {
     HashCode hashcode;
-    Symbol   group;
-    Sort in, out, kind;
+    Symbol   functor;
+    Sort xxx, yyy, kind;
 };
 
 struct _internal_Row {
@@ -60,8 +62,9 @@ struct _internal_Table {
 
 static struct _internal_Table *_global_typetable = 0;
 
-Sort void_s = 0;
-Sort zero_s = 0;
+Sort void_s   = 0;
+Sort zero_s   = 0;
+Sort symbol_s = 0;
 
 Type t_any = 0;
 Type t_block = 0;
@@ -80,6 +83,7 @@ Type t_pair = 0;
 Type t_path = 0;
 Type t_primitive = 0;
 Type t_semi = 0;
+Type t_symbol = 0;
 Type t_text = 0;
 Type t_true = 0;
 Type t_tuple = 0;
@@ -95,6 +99,7 @@ static void make_sort(const char* value, Sort* target) {
 
 static void make_basetype(const char* value, Sort sort, Type* target) {
     Symbol symbol = 0;
+
     if (!symbol_Convert(value, &symbol)) return;
 
     type_Create(symbol, sort, target);
@@ -119,8 +124,10 @@ extern void init_global_typetable() {
     _global_typetable = result;
 
     make_sort("Void", &void_s);
-
     make_basetype("void", void_s, &t_void);
+
+    make_sort("Symbol", &symbol_s);
+    make_basetype("symbol", symbol_s, &t_symbol);
 
     make_sort("Zero", &zero_s);
 
@@ -144,6 +151,8 @@ extern void init_global_typetable() {
     MK_BTYPE(text);
     MK_BTYPE(true);
     MK_BTYPE(tuple);
+
+    retype_global_symboltable();
 }
 
 extern void final_global_typetable() {
@@ -211,28 +220,68 @@ extern bool sort_Create(Symbol symbol, Sort* target) {
     return true;
 }
 
-extern bool rule_Create(Symbol symbol, Sort in, Sort out, Sort kind, Rule* target) {
-    if (!symbol) return false;
-    if (!in)     return false;
-    if (!out)    return false;
-    if (!kind)   return false;
+extern bool make_Axiom(Sort element, Sort class) {
+    if (!element) return false;
+    if (!class)   return false;
 
-    HashCode hashcode = symbol->hashcode;
+    HashCode hashcode = class->hashcode;
 
     const int row   = hashcode % _global_typetable->size;
     Header    group = _global_typetable->row[row].first;
+
+    for ( ; group; group = group->after) {
+        if (!isIdentical(group->kind.type, s_axiom)) continue;
+
+        Axiom test = (Axiom) asReference(group);
+
+        if (test->element != element) continue;
+        if (test->class   != class)   continue;
+        return true;
+    }
+
+    Header entry = fresh_atom(0, sizeof(struct axiom));
+
+    if (!entry) return false;
+
+    entry->kind.type     = (Node)s_axiom;
+    entry->kind.constant = 1;
+
+    Axiom result = (Axiom) asReference(entry);
+
+    result->hashcode = hashcode;
+    result->element  = element;
+    result->class    = class;
+
+    entry->after = _global_typetable->row[row].first;
+    _global_typetable->row[row].first = entry;
+
+    return true;
+}
+
+// each rule is for a functor
+// functors:
+//   Pi    - (xxx -> yyy):kind (dependent function types)
+//   Sigma - (xxx, yyy):kind   (dependent tuple types)
+extern bool make_Rule(Symbol functor, Sort xxx, Sort yyy, Sort kind) {
+    if (!functor) return false;
+    if (!xxx)     return false;
+    if (!yyy)     return false;
+    if (!kind)    return false;
+
+    HashCode hashcode = functor->hashcode;
+
+    const int row = hashcode % _global_typetable->size;
+    Header group  = _global_typetable->row[row].first;
 
     for ( ; group; group = group->after) {
         if (!isIdentical(group->kind.type, s_rule)) continue;
 
         Rule test = (Rule) asReference(group);
 
-        if (test->group != symbol) continue;
-        if (test->in    != in)     continue;
-        if (test->out   != out)    continue;
-        if (test->kind  != kind)   continue;
-
-        ASSIGN(target, test);
+        if (test->functor != functor) continue;
+        if (test->xxx     != xxx)     continue;
+        if (test->yyy     != yyy)     continue;
+        if (test->kind    != kind)    continue;
 
         return true;
     }
@@ -247,35 +296,10 @@ extern bool rule_Create(Symbol symbol, Sort in, Sort out, Sort kind, Rule* targe
     Rule result = (Rule) asReference(entry);
 
     result->hashcode = hashcode;
-    result->group    = symbol;
-    result->in       = in;
-    result->out      = out;
+    result->functor  = functor;
+    result->xxx      = xxx;
+    result->yyy      = yyy;
     result->kind     = kind;
-
-    entry->after = _global_typetable->row[row].first;
-    _global_typetable->row[row].first = entry;
-
-    ASSIGN(target, result);
-
-    return true;
-}
-
-extern bool name_Create(Sort sort, Name* target) {
-    if (!sort) return false;
-
-    HashCode hashcode = sort->hashcode;
-    const int row     = hashcode % _global_typetable->size;
-
-    Header entry = fresh_atom(0, sizeof(struct name));
-
-    if (!entry) return false;
-
-    entry->kind.type     = (Node)s_name;
-    entry->kind.constant = 1;
-
-    Name result = (Name) asReference(entry);
-
-    result->sort = sort;
 
     entry->after = _global_typetable->row[row].first;
     _global_typetable->row[row].first = entry;

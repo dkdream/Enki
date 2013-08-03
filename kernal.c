@@ -78,7 +78,7 @@ extern bool opaque_Create(Node type, long size, Reference* target) {
 
     memset(result, 0, size);
 
-    if (isIdentical(type, s_symbol)) return true;
+    if (isIdentical(type, t_symbol)) return true;
 
     setType(result, type);
 
@@ -127,8 +127,10 @@ extern void forceArg(Node arg, Target result) {
     GC_End();
 }
 
-extern void forceArgs(Node args, ...)
+extern int forceArgs(Node args, ...)
 {
+    int count = 0;
+
     GC_Begin(2);
     Node tmp;
 
@@ -137,17 +139,22 @@ extern void forceArgs(Node args, ...)
     va_list ap;
     va_start(ap, args);
 
+    Node *location = va_arg(ap, Node*);
+
     darken_Node(args);
 
     while (isType(args, t_pair)) {
-        Node holding   = NIL;
-        Node *location = va_arg(ap, Node*);
+        ++count;
 
-        if (!location) goto done;
+        if (location) {
+            Node holding   = NIL;
 
-        pair_GetCar(args.pair, &holding);
+            pair_GetCar(args.pair, &holding);
 
-        forceArg(holding, location);
+            forceArg(holding, location);
+
+            location = va_arg(ap, Node*);
+        }
 
         pair_GetCdr(args.pair, &args);
 
@@ -155,42 +162,52 @@ extern void forceArgs(Node args, ...)
     }
 
     for(;;) {
-        Node *location = va_arg(ap, Node*);
         if (!location) goto done;
         *location = NIL;
+        location = va_arg(ap, Node*);
     }
 
  done:
     va_end(ap);
     GC_End();
+
+    return count;
 }
 
-extern void fetchArgs(Node args, ...)
+extern int fetchArgs(Node args, ...)
 {
+    int count = 0;
+
     va_list ap;
     va_start(ap, args);
+
+    Node *location = va_arg(ap, Node*);
 
     darken_Node(args);
 
     while (isType(args, t_pair)) {
-        Node *location = va_arg(ap, Node*);
+        ++count;
 
-        if (!location) goto done;
+        if (location) {
+            pair_GetCar(args.pair, location);
+            location = va_arg(ap, Node*);
+        }
 
-        pair_GetCar(args.pair, location);
         pair_GetCdr(args.pair, &args);
 
         darken_Node(args);
     }
 
     for(;;) {
-        Node *location = va_arg(ap, Node*);
         if (!location) goto done;
         *location = NIL;
+        location = va_arg(ap, Node*);
     }
 
  done:
     va_end(ap);
+
+    return count;
 }
 
 extern void eval_begin(Node body, Node env, Target last)
@@ -316,7 +333,7 @@ extern SUBR(bind)
 
     fetchArgs(args, &symbol, &expr, 0);
 
-    if (!isType(symbol, s_symbol)) {
+    if (!isType(symbol, t_symbol)) {
         fprintf(stderr, "\nerror: non-symbol identifier in set: ");
         dump(stderr, symbol);
         fprintf(stderr, "\n");
@@ -360,7 +377,7 @@ extern SUBR(set)
 
     fetchArgs(args, &symbol, &expr, 0);
 
-    if (!isType(symbol, s_symbol)) {
+    if (!isType(symbol, t_symbol)) {
         fprintf(stderr, "\nerror: non-symbol identifier in set: ");
         dump(stderr, symbol);
         fprintf(stderr, "\n");
@@ -403,7 +420,7 @@ extern SUBR(define)
 
     fetchArgs(args, &symbol, &expr, 0);
 
-    if (!isType(symbol, s_symbol)) {
+    if (!isType(symbol, t_symbol)) {
         fprintf(stderr, "\nerror: non-symbol identifier in define: ");
         dump(stderr, symbol);
         fprintf(stderr, "\n");
@@ -427,17 +444,56 @@ extern SUBR(quote)
 
 extern SUBR(type)
 { //Fixed
-    Node symbol;
-    pair_GetCar(args.pair, &symbol);
+    Node   value;
+    Symbol type;
+    Symbol sort;
 
-    if (isType(symbol, s_symbol)) {
-        type_Create(symbol.symbol, zero_s, result.type);
+    pair_GetCar(args.pair, &value);
+
+    if (isType(value, t_symbol)) {
+        type_Create(value.symbol, zero_s, result.type);
         return;
+    }
+
+    if (isType(value, t_block)) {
+        switch (getCount(value)) {
+        case 0:
+            fatal("invalid block to type: size==0");
+            return;
+
+        case 1:
+            tuple_GetItem(value.tuple, 0, &sort);
+            if (isType(sort, t_symbol)) {
+                sort_Create(sort, result.sort);
+            } else {
+                fatal("named sorts must be symbols");
+            }
+            return;
+
+        case 2:
+            tuple_GetItem(value.tuple, 0, &type);
+            tuple_GetItem(value.tuple, 1, &sort);
+            if (!isType(sort, t_symbol)) {
+                fatal("named sorts must use symbols");
+            }
+            if (!isType(type, t_symbol)) {
+                fatal("named types must use symbols");
+            }
+            {
+                Sort set;
+                sort_Create(sort, &set);
+                type_Create(type, set, result.type);
+            }
+            return;
+
+        default:
+            break;
+        }
     }
 
     // this needs to handle complex types
     // right now its is just like quote
-    ASSIGN(result, symbol);
+    ASSIGN(result, value);
     return;
 }
 
@@ -445,7 +501,7 @@ extern void environ_Let(Node local, Node env, Target result)
 {
     Node symbol;
 
-    if (isType(local, s_symbol)) {
+    if (isType(local, t_symbol)) {
         symbol = local;
     } else if (isType(local, t_pair)) {
         pair_GetCar(local.pair, &symbol);
@@ -494,7 +550,7 @@ extern void eval_binding(Node local, Node env, Target result)
     GC_Protect(type);
     GC_Protect(value);
 
-    if (isType(local, s_symbol)) {
+    if (isType(local, t_symbol)) {
         symbol = local;
         value  = void_v;
         goto done;
@@ -575,7 +631,7 @@ extern void environ_Lambda(Node parameter, Node env, Target result)
 {
     Node symbol = NIL;
 
-    if (isType(parameter, s_symbol)) {
+    if (isType(parameter, t_symbol)) {
         pair_Create(parameter, NIL, result.pair);
         return;
     }
@@ -816,7 +872,7 @@ extern SUBR(eval_symbol)
 
  error:
     GC_End();
-    if (!isType(symbol, s_symbol)) {
+    if (!isType(symbol, t_symbol)) {
         fatal("undefined variable: <non-symbol>");
     } else {
         fatal("undefined variable: %s", symbol_Text(symbol.symbol));
@@ -928,7 +984,7 @@ extern SUBR(apply_lambda)
 
     // bind (rest) parameter to remaining values
     // extending the closure enviroment
-    if (isType(formals, s_symbol)) {
+    if (isType(formals, t_symbol)) {
         pair_Create(formals, vlist, &tmp.pair);
         pair_Create(tmp, cenv, &cenv.pair);
         vlist = NIL;
@@ -1121,13 +1177,37 @@ extern SUBR(type_of)
 
     if (1 < count) {
         fetchArgs(args, &value, &type, 0);
-        if (isIdentical(type, s_symbol)) return;
+        if (!isAType(type)) {
+            fatal("only types can be use to set values\n");
+        }
+        if (isIdentical(type, t_symbol)) {
+            fatal("only symbol may have the symbol type\n");
+        }
+        if (isType(value, t_symbol)) {
+            fatal("symbol can only have the symbol type\n");
+        }
+        if (isAType(value)) {
+            fatal("type can not have their type set\n");
+        }
+        if (isASort(value)) {
+            fatal("sort can not have their type set\n");
+        }
         setType(value, type);
         ASSIGN(result,value);
     } else {
         pair_GetCar(args.pair, &value);
         node_TypeOf(value, result);
     }
+}
+
+extern SUBR(kind_of)
+{
+    Node value;
+
+    checkArgs(args, "kind-of", 1, NIL);
+    forceArgs(args, &value, 0);
+
+    ASSIGN(result, getType(value));
 }
 
 extern SUBR(isA_q)
@@ -1453,7 +1533,7 @@ extern SUBR(tuple) {
 
 extern SUBR(allocate) {
     Node type; Node size;
-    checkArgs(args, "allocate", 2, s_symbol, t_integer);
+    checkArgs(args, "allocate", 2, t_symbol, t_integer);
 
     ASSIGN(result,NIL);
 
@@ -1469,7 +1549,7 @@ extern SUBR(allocate) {
 
     ASSIGN(result,value);
 
-    if (isIdentical(type, s_symbol)) return;
+    if (isIdentical(type, t_symbol)) return;
 
     setType(value, type.symbol);
 }
@@ -1499,7 +1579,7 @@ extern SUBR(concat_text) {
             continue;
         }
 
-        if (isType(text, s_symbol)) {
+        if (isType(text, t_symbol)) {
             buffer_add(&buffer, symbol_Text(text.symbol));
             continue;
         }
@@ -1535,7 +1615,7 @@ extern SUBR(concat_symbol) {
             continue;
         }
 
-        if (isType(text, s_symbol)) {
+        if (isType(text, t_symbol)) {
             buffer_add(&buffer, symbol_Text(text.symbol));
             continue;
         }
@@ -1570,7 +1650,7 @@ extern SUBR(mark_time) {
     while (isType(args, t_pair)) {
         pair_GetCar(args.pair, &value);
         pair_GetCdr(args.pair, &args);
-        if (isType(value, s_symbol)) {
+        if (isType(value, t_symbol)) {
             print(stderr, value);
             prefix = true;
             continue;
@@ -1623,7 +1703,7 @@ extern SUBR(error) {
     Node kind    = NIL;
     Node message = NIL;
 
-    checkArgs(args, "error", 1, s_symbol, t_text);
+    checkArgs(args, "error", 1, t_symbol, t_text);
     forceArgs(args, &kind, &message, 0);
 
     print(stderr, kind);
@@ -1639,7 +1719,7 @@ extern void formatAppendTo(TextBuffer *buffer, Node value) {
 
     if (isNil(type)) return;
 
-    if (isIdentical(type, s_symbol)) {
+    if (isIdentical(type, t_symbol)) {
         buffer_add(buffer, symbol_Text(value.symbol));
         return;
     }
@@ -2043,7 +2123,7 @@ extern SUBR(inode) {
 // size of pointer (in bytes)
 extern SUBR(sizeof) {
     Node kind;
-    checkArgs(args, "sizeof", 1, s_symbol);
+    checkArgs(args, "sizeof", 1, t_symbol);
     forceArgs(args, &kind, 0);
 
     ASSIGN(result, NIL);
@@ -2344,7 +2424,7 @@ extern SUBR(symbol_q) {
     checkArgs(args, "symbol?", 1, NIL);
     pair_GetCar(args.pair, &value);
 
-    if (isType(value, s_symbol)) {
+    if (isType(value, t_symbol)) {
         ASSIGN(result, true_v);
     } else {
         ASSIGN(result, NIL);
@@ -2800,6 +2880,7 @@ void startEnkiLibrary() {
     MK_PRM(fixed);
 
     MK_OPR(type-of, type_of);
+    MK_OPR(kind-of, kind_of);
 
     MK_OPR(~,com);
 

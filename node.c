@@ -24,7 +24,7 @@ extern HashCode node_HashCode(Node node)
 
     Node type = getType(node);
 
-    if (isIdentical(type, s_symbol)) {
+    if (isIdentical(type, t_symbol)) {
         return node.symbol->hashcode;
     }
 
@@ -142,6 +142,11 @@ extern void node_TypeOf(Node value, Target result)
 {
     if (isNil(value)) {
         ASSIGN(result, value);
+        return;
+    }
+
+    if (isAType(value)) {
+        ASSIGN(result, value.type->sort);
         return;
     }
 

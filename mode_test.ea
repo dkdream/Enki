@@ -5,15 +5,18 @@
 (dumpln (~ 1))
 (dumpln "1")
 (dumpln '1)
-(dumpln (type-of '1))
-(dumpln nil)
+(dumpln (type-of 1))
+(dumpln (type-of 'val))
+(dumpln (type-of nil))
+(dumpln (type-of println))
+(dumpln (type-of let))
 
-(assert (iso 'integer   (type-of 1)))
-(assert (iso 'text      (type-of "1")))
-(assert (iso 'symbol    (type-of 'val)))
-(assert (iso nil        (type-of nil)))
-(assert (iso 'primitive (type-of println)))
-(assert (iso 'fixed     (type-of let)))
+(assert (iso 2 :integer   (type-of 1)))
+(assert (iso 2 :text      (type-of "1")))
+(assert (iso 2 'symbol    (type-of 'val)))
+(assert (iso 2 nil        (type-of nil)))
+(assert (iso 2 :primitive (type-of println)))
+(assert (iso 2 :fixed     (type-of let)))
 
 "`word 'word @word .word &word :word let assert"
 

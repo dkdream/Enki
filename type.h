@@ -61,6 +61,7 @@ struct type_branch {
 
 extern Sort void_s;
 extern Sort zero_s;
+extern Sort symbol_s;
 
 extern Type t_any;
 extern Type t_block;
@@ -79,20 +80,22 @@ extern Type t_pair;
 extern Type t_path;
 extern Type t_primitive;
 extern Type t_semi;
+extern Type t_symbol;
 extern Type t_text;
 extern Type t_true;
 extern Type t_tuple;
 extern Type t_void;
 
-extern bool sort_Create(Symbol,Sort*);                /* each sort has a unique name */
-extern bool rule_Create(Symbol,Sort,Sort,Sort,Rule*); /* add a new rule for symbol (pi,sigma) */
-extern bool name_Create(Sort,Name*);                  /* construct a new type variable */
-
+extern bool sort_Create(Symbol,Sort*);      /* each sort has a unique name */
 extern bool type_Create(Symbol,Sort,Type*); /* each type constant in a sort has a unique name */
+
+extern bool make_Axiom(Sort, Sort);
+extern bool make_Rule(Symbol, Sort, Sort, Sort);
 
 /* Forall S, a, b    where a:S and b:S         then union(a,b):S */
 /* Forall S, a, b    where a:S and b:S         then union(a,b) == union(b,a) */
 /* Forall S, a, b, c where a:S and b:S and c:S then union(union(a,b),c) == union(a,union(b,c)) */
+/* currently unions are mono-sorted */
 extern bool type_Union(const Type left, const Type right, Type*);
 
 /* Tuples := index(i,a) | tuple(a,b) where a,b in Tuple */
@@ -133,17 +136,20 @@ extern inline bool sort_Contains(const Type type, const Sort sort) {
 extern inline bool isAType(const Node type) __attribute__((always_inline));
 extern inline bool isAType(const Node type) {
     Kind kind = asKind(type);
-    if (!kind) return false;
+    if (!kind)   return false;
+    if (!s_base) return false; // symbols are constructed before types
     if (!s_type) return false; // symbols are constructed before types
-    return (kind->type.symbol == s_type);
+    if (kind->type.symbol == s_base) return true;
+    if (kind->type.symbol == s_type) return true;
+    return false;
 }
 
 extern inline bool isASort(const Node sort) __attribute__((always_inline));
 extern inline bool isASort(const Node sort) {
     Kind kind = asKind(sort);
-    if (!kind) return false;
-    if (!s_type) return false; // symbols are constructed before sorts
-    return (kind->type.symbol == s_type);
+    if (!kind)   return false;
+    if (!s_sort) return false; // symbols are constructed before sorts
+    return (kind->type.symbol == s_sort);
 }
 
 extern inline bool isType(const Node value, const Node type) __attribute__((always_inline));
