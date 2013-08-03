@@ -195,6 +195,18 @@ extern inline bool isTuple(const Node value) {
     return fromCtor(value, s_tuple);
 }
 
+extern inline bool isText(const Node value) __attribute__((always_inline));
+extern inline bool isText(const Node value) {
+    return isType(value, t_text);
+}
+
+extern inline bool isInteger(const Node value) __attribute__((always_inline));
+extern inline bool isInteger(const Node value) {
+    return isType(value, t_integer);
+}
+
+
+
 /***************************
  ** end of file
  **************************/

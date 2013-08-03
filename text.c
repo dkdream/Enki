@@ -79,6 +79,8 @@ extern bool text_Create(TextBuffer value, Text *target) {
     Text result = *target;
 
     setType(result, t_text);
+    setConstructor(result, s_text);
+    setConstant(result);
 
     result->size     = size;
     result->hashcode = hashcode;

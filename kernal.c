@@ -67,7 +67,7 @@ extern void defineValue(Node symbol, const Node value) {
     GC_End();
 }
 
-extern bool opaque_Create(Node type, long size, Reference* target) {
+extern bool opaque_Create(Node type, Node ctor, long size, Reference* target) {
     if (!node_Allocate(_zero_space,
                        true,
                        size,
@@ -81,6 +81,7 @@ extern bool opaque_Create(Node type, long size, Reference* target) {
     if (isIdentical(type, t_symbol)) return true;
 
     setType(result, type);
+    setConstructor(result, ctor);
 
     return true;
 }
@@ -1938,7 +1939,7 @@ extern SUBR(open_in) {
 
     Reference infile = 0;
 
-    if (!opaque_Create(t_infile, sizeof(struct os_file), &infile)) {
+    if (!opaque_Create(t_infile, s_opaque, sizeof(struct os_file), &infile)) {
         fatal("failed to allocate opaque object");
     }
 
@@ -1961,7 +1962,7 @@ extern SUBR(open_out) {
 
     Reference outfile = 0;
 
-    if (!opaque_Create(t_outfile, sizeof(struct os_file), &outfile)) {
+    if (!opaque_Create(t_outfile, s_opaque, sizeof(struct os_file), &outfile)) {
         fatal("failed to allocate opaque object");
     }
 
@@ -2364,7 +2365,7 @@ extern SUBR(not) {
 extern SUBR(open_buffer) {
     Reference buffer = 0;
 
-    if (!opaque_Create(t_buffer, sizeof(struct text_buffer), &buffer)) {
+    if (!opaque_Create(t_buffer, s_opaque, sizeof(struct text_buffer), &buffer)) {
         fatal("failed to allocate opaque object");
     }
 
@@ -3007,20 +3008,20 @@ void startEnkiLibrary() {
     Reference std_out = 0;
     Reference std_err = 0;
 
-    if (!opaque_Create(t_infile, sizeof(struct os_file), &std_in)) {
+    if (!opaque_Create(t_infile, s_opaque, sizeof(struct os_file), &std_in)) {
         fatal("failed to allocate opaque object: stdin");
     }
     ((OSFile)(std_in))->file = stdin;
     MK_CONST(stdin,std_in);
 
 
-    if (!opaque_Create(t_outfile, sizeof(struct os_file), &std_out)) {
+    if (!opaque_Create(t_outfile, s_opaque, sizeof(struct os_file), &std_out)) {
         fatal("failed to allocate opaque object: stdout");
     }
     ((OSFile)(std_out))->file = stdout;
     MK_CONST(stdout,std_out);
 
-    if (!opaque_Create(t_outfile, sizeof(struct os_file), &std_err)) {
+    if (!opaque_Create(t_outfile, s_opaque, sizeof(struct os_file), &std_err)) {
         fatal("failed to allocate opaque object: stderr");
     }
     ((OSFile)(std_err))->file = stderr;

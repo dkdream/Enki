@@ -51,6 +51,7 @@ Symbol s_node = 0;
 Symbol s_opaque = 0;
 Symbol s_outfile = 0;
 Symbol s_pair = 0;
+Symbol s_path = 0;
 Symbol s_pointer = 0;
 Symbol s_primitive = 0;
 Symbol s_quasiquote = 0;
@@ -143,6 +144,7 @@ extern void init_global_symboltable() {
     MK_SYM(opaque);
     MK_SYM(outfile);
     MK_SYM(pair);
+    MK_SYM(path);
     MK_SYM(pointer);
     MK_SYM(primitive);
     MK_SYM(quasiquote);

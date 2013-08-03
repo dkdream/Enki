@@ -21,6 +21,7 @@ extern bool integer_Create(long long value, Integer *target) {
 
     setType(result, t_integer);
     setConstructor(result, s_integer);
+    setConstant(result);
 
     result->value = value;
 

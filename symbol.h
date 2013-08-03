@@ -53,6 +53,7 @@ extern Symbol s_nil;
 extern Symbol s_node;
 extern Symbol s_opaque;
 extern Symbol s_pair;
+extern Symbol s_path;
 extern Symbol s_pointer;
 extern Symbol s_primitive;
 extern Symbol s_quasiquote;
