@@ -5,10 +5,10 @@
 ##
 
 (define (hoas-global symbol)
-   (type-of (tuple 'global symbol) :hoas))
+   (type-of (ctor-of (tuple symbol) 'global) :hoas))
 
 (define (hoas-lambda func)
-   (type-of (tuple 'lambda func) :hoas))
+   (type-of (ctor-of (tuple func) 'lambda) :hoas))
 
 (define (hoas-app func arg)
-   (type-of (tuple 'app func arg) :hoas))
+   (type-of (ctor-of (tuple func arg) 'app)  :hoas))
