@@ -507,7 +507,7 @@ extern void environ_Let(Node local, Node env, Target result)
         symbol = local;
     } else if (isPair(local)) {
         pair_GetCar(local.pair, &symbol);
-    } else if (isType(local, t_tuple)) {
+    } else if (isTuple(local)) {
         tuple_GetItem(local.tuple, 0, &symbol);
     }
 
@@ -564,7 +564,7 @@ extern void eval_binding(Node local, Node env, Target result)
         goto do_eval;
     }
 
-    if (isType(local, t_tuple)) {
+    if (isTuple(local)) {
         unsigned long count = asKind(local.tuple)->count;
         tuple_GetItem(local.tuple, 0, &symbol);
 
@@ -638,7 +638,7 @@ extern void environ_Lambda(Node parameter, Node env, Target result)
         return;
     }
 
-    if (isType(parameter, t_tuple)) {
+    if (isTuple(parameter)) {
         tuple_GetItem(parameter.tuple, 0, &symbol);
         pair_Create(symbol, NIL, result.pair);
         return;
@@ -2613,7 +2613,7 @@ extern SUBR(form_q) {
     checkArgs(args, "form?", 1, NIL);
     pair_GetCar(args.pair, &value);
 
-    if (fromCtor(value, s_form)) {
+    if (isForm(value)) {
         ASSIGN(result, true_v);
     } else {
         ASSIGN(result, NIL);
@@ -2625,7 +2625,7 @@ extern SUBR(tuple_q) {
     checkArgs(args, "tuple?", 1, NIL);
     pair_GetCar(args.pair, &value);
 
-    if (isType(value, t_tuple)) {
+    if (isTuple(value)) {
         ASSIGN(result, true_v);
     } else {
         ASSIGN(result, NIL);

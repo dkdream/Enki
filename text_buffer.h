@@ -32,16 +32,29 @@ extern inline void buffer_reset(TextBuffer *tbuf) {
     tbuf->position = 0;
 }
 
-extern inline void buffer_append(TextBuffer *tbuf, int chr) __attribute__((always_inline nonnull(1)));
-extern inline void buffer_append(TextBuffer *tbuf, int chr)
-{
-    while ((tbuf->position + 3) > tbuf->size) {
+extern inline unsigned buffer_marker(TextBuffer *tbuf) __attribute__((always_inline nonnull(1)));
+extern inline unsigned buffer_marker(TextBuffer *tbuf) {
+    if (0 > tbuf->position) return 0;
+    return tbuf->position;
+}
+
+extern inline void buffer_extendBy(TextBuffer *tbuf, unsigned count) __attribute__((always_inline nonnull(1)));
+extern inline void buffer_extendBy(TextBuffer *tbuf, unsigned count) {
+
+    while ((tbuf->position + count + 2) > tbuf->size) {
         if (tbuf->buffer) {
             tbuf->buffer = realloc(tbuf->buffer, tbuf->size *= 2);
         } else {
             tbuf->buffer = malloc(tbuf->size = 32);
         }
     }
+}
+
+
+extern inline void buffer_append(TextBuffer *tbuf, int chr) __attribute__((always_inline nonnull(1)));
+extern inline void buffer_append(TextBuffer *tbuf, int chr)
+{
+    buffer_extendBy(tbuf, 1);
 
     tbuf->buffer[tbuf->position++] = chr;
 }
@@ -57,13 +70,7 @@ extern inline void buffer_join(TextBuffer *tbuf, TextBuffer *data)
     if (0 >  len) return;
     if (0 == len) return;
 
-    while ((tbuf->position + len + 2) > tbuf->size) {
-        if (tbuf->buffer) {
-            tbuf->buffer = realloc(tbuf->buffer, tbuf->size *= 2);
-        } else {
-            tbuf->buffer = malloc(tbuf->size = 32);
-        }
-    }
+    buffer_extendBy(tbuf, len);
 
     for ( ; 0 < len; --len) {
         tbuf->buffer[tbuf->position++] = *(string++);
@@ -80,13 +87,7 @@ extern inline void buffer_add(TextBuffer *tbuf, const char *string)
     if (0 >  len) return;
     if (0 == len) return;
 
-    while ((tbuf->position + len + 2) > tbuf->size) {
-        if (tbuf->buffer) {
-            tbuf->buffer = realloc(tbuf->buffer, tbuf->size *= 2);
-        } else {
-            tbuf->buffer = malloc(tbuf->size = 32);
-        }
-    }
+    buffer_extendBy(tbuf, len);
 
     for ( ; 0 < len; --len) {
         tbuf->buffer[tbuf->position++] = *(string++);

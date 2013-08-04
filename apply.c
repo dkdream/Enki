@@ -91,7 +91,7 @@ extern void expand(const Node expr, const Node env, Target result)
         if (isIdentical(s_type, head))  goto list_done;
 
         // check if the head is a reference
-        if (!isType(head, t_symbol)) goto list_begin;
+        if (!isSymbol(head)) goto list_begin;
 
         Node value = NIL;
 
@@ -109,7 +109,7 @@ extern void expand(const Node expr, const Node env, Target result)
             });
 
         // check if the reference is a form
-        if (!fromCtor(value, s_form)) goto list_begin;
+        if (!isForm(value)) goto list_begin;
 
         // apply the form function to the rest of the list
         apply(value, tail, env, &list);
@@ -161,21 +161,21 @@ extern void encode(const Node expr, const Node env, Target result)
 
     encode(head, env, &head);
 
-    if (isType(head, t_symbol)) {
+    if (isSymbol(head)) {
         Node value = NIL;
         // check if the enviroment
         if (!alist_Get(env.pair, head, &value)) {
             alist_Get(enki_globals.pair, head, &value);
         }
 
-        if (fromCtor(value, s_primitive)) {
+        if (isPrimitive(value)) {
             head = value;
-        } else if (fromCtor(value, s_fixed)) {
+        } else if (isFixed(value)) {
             head = value;
         }
     }
 
-    if (!fromCtor(head, s_fixed)) goto list_begin;
+    if (!isFixed(head)) goto list_begin;
 
     Node action = NIL;
 
@@ -227,7 +227,7 @@ extern void eval(const Node expr, const Node env, Target result)
         evaluator = p_eval_symbol;
     }
 
-    if (fromCtor(expr, s_forced)) {
+    if (isForced(expr)) {
         tuple_GetItem(expr.tuple, 0, result);
         goto done;
     }
@@ -271,14 +271,14 @@ extern void apply(Node fun, Node args, const Node env, Target result)
         });
 
     // primitive -> Operator
-    if (fromCtor(fun, s_primitive)) {
+    if (isPrimitive(fun)) {
       Operator function = fun.primitive->function;
       function(args, env, result);
       goto done;
     }
 
     // lambda -> p_apply_lambda
-    if (fromCtor(fun, s_lambda)) {
+    if (isLambda(fun)) {
       if (!pair_Create(fun, args, &(args.pair))) goto error;
       Operator function = p_apply_lambda->function;
       function(args, env, result);
@@ -286,7 +286,7 @@ extern void apply(Node fun, Node args, const Node env, Target result)
     }
 
     // Form -> p_apply_form
-    if (fromCtor(fun, s_form)) {
+    if (isForm(fun)) {
       if (!pair_Create(fun, args, &(args.pair))) goto error;
       Operator function = p_apply_form->function;
       function(args, env, result);

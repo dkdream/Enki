@@ -18,7 +18,9 @@
 #include <error.h>
 #include <stdarg.h>
 
-static inline void echo_format(TextBuffer *output, const char *format, ...) {
+static inline unsigned echo_format(TextBuffer *output, const char *format, ...) {
+    const unsigned start = buffer_marker(output);
+
     char data[200];
 
     va_list ap;
@@ -29,10 +31,18 @@ static inline void echo_format(TextBuffer *output, const char *format, ...) {
     buffer_add(output, data);
 
     va_end(ap);
+
+    const unsigned stop = buffer_marker(output);
+
+    if (stop < start) return 0;
+
+    return stop - start;
 }
 
-static inline void echo_string(TextBuffer *output, const char* text) {
-    if (!text) return;
+static inline unsigned echo_string(TextBuffer *output, const char* text) {
+    if (!text) return 0;
+
+    const unsigned start = buffer_marker(output);
 
     while (*text) {
         int value = *text++;
@@ -76,6 +86,61 @@ static inline void echo_string(TextBuffer *output, const char* text) {
 
         buffer_append(output, value);
     }
+
+ done: {
+        const unsigned stop = buffer_marker(output);
+
+        if (stop < start) return 0;
+
+        return stop - start;
+    }
+}
+
+static inline unsigned echo_type(TextBuffer *output, Node type) {
+    const unsigned start = buffer_marker(output);
+
+    if (isSymbol(type)) {
+        echo_string(output, (const char *)type.symbol->value);
+        goto done;
+    }
+
+    if (isIdentical(type, t_opaque)) {
+        echo_format(output, "<opaque>");
+        goto done;
+    }
+
+    if (!fromCtor(type, s_base)) {
+        echo_format(output, "<type %p>", type.reference);
+        goto done;
+    }
+
+    if (isIdentical(type.type->sort, zero_s)) {
+        echo_format(output, "<%s %s>",
+                    type_ConstantName(type.type),
+                    (const char*)(type.type->sort->name->value));
+        goto done;
+    }
+
+    if (isIdentical(type.type->sort, void_s)) {
+        echo_format(output, "<%s %s>",
+                    type_ConstantName(type.type),
+                    (const char*)(type.type->sort->name->value));
+        goto done;
+    }
+
+    echo_format(output, "<type %p %s %s>",
+                type.reference,
+                type_ConstantName(type.type),
+                (const char*)(type.type->sort->name->value));
+
+
+ done: {
+        const unsigned stop = buffer_marker(output);
+
+        if (stop < start) return 0;
+
+        return stop - start;
+    }
 }
 
 extern bool buffer_print(TextBuffer *output, Node node) {
@@ -98,7 +163,7 @@ extern bool buffer_print(TextBuffer *output, Node node) {
     Node type = getType(node);
     Node ctor = getConstructor(node);
 
-    if (isNil(type)) {
+    if (isNil(type) && isNil(ctor)) {
         if (isAtomic(node)) {
             echo_format(output, "unknown(%p)",
                         node.reference);
@@ -110,17 +175,17 @@ extern bool buffer_print(TextBuffer *output, Node node) {
         return true;
     }
 
-    if (isIdentical(type, t_symbol)) {
+    if (isIdentical(ctor, s_symbol)) {
         buffer_add(output, (const char *) node.symbol->value);
         return true;
     }
 
-    if (isIdentical(type, t_text)) {
+    if (isIdentical(ctor, s_text)) {
         buffer_add(output, (const char *) node.text->value);
         return true;
     }
 
-    if (isIdentical(type, t_integer)) {
+    if (isIdentical(ctor, s_integer)) {
         echo_format(output, "%lld",
                     node.integer->value);
         return true;
@@ -132,7 +197,7 @@ extern bool buffer_print(TextBuffer *output, Node node) {
         return true;
     }
 
-    if (isIdentical(type, s_sort)) {
+    if (isIdentical(ctor, s_sort)) {
         echo_format(output, "sort(%p ", node.reference);
         buffer_add(output, (const char*)(node.sort->name->value));
         buffer_add(output, ")");
@@ -156,7 +221,7 @@ extern bool buffer_print(TextBuffer *output, Node node) {
         return true;
     }
 
-    if (isIdentical(type, t_tuple)) {
+    if (isIdentical(ctor, s_tuple)) {
         echo_format(output, "tuple(%p (size=%d))",
                     node.reference,
                     (unsigned) asKind(node.reference)->count);
@@ -169,30 +234,11 @@ extern bool buffer_print(TextBuffer *output, Node node) {
         buffer_add(output, "{");
         buffer_print(output, node.tuple->item[0]);
         buffer_add(output, "}");
-        return;
+        return true;
     }
 
     buffer_add(output, "[");
-    if (isType(type, t_symbol)) {
-        echo_string(output, (const char *)type.symbol->value);
-    } else {
-        if (!isType(type, s_base)) {
-            echo_format(output, "<type %p>", type.reference);
-        } else if (isIdentical(type.type->sort, zero_s)) {
-            echo_format(output, "<%s %s>",
-                        type_ConstantName(type.type),
-                        (const char*)(type.type->sort->name->value));
-        } else if (isIdentical(type.type->sort, void_s)) {
-            echo_format(output, "<%s %s>",
-                        type_ConstantName(type.type),
-                        (const char*)(type.type->sort->name->value));
-        } else {
-            echo_format(output, "<type %p %s %s>",
-                        type.reference,
-                        type_ConstantName(type.type),
-                        (const char*)(type.type->sort->name->value));
-        }
-    }
+    echo_type(output,type);
 
     if (isAtomic(node)) {
         echo_format(output, "|(%p)",
@@ -226,7 +272,7 @@ extern bool buffer_dump(TextBuffer *output, Node node) {
     Node type = getType(node);
     Node ctor = getConstructor(node);
 
-    if (isNil(type)) {
+    if (isNil(type) && isNil(ctor)) {
         if (isAtomic(node)) {
             echo_format(output, "unknown(%p)",
                         node.reference);
@@ -238,21 +284,21 @@ extern bool buffer_dump(TextBuffer *output, Node node) {
         return true;
     }
 
-    if (isIdentical(type, t_symbol)) {
+    if (isIdentical(ctor, s_symbol)) {
         echo_format(output, "symbol(%llx,", node.symbol->hashcode);
         echo_string(output, (const char *) node.symbol->value);
         buffer_add(output, ")");
         return true;
     }
 
-    if (isIdentical(type, t_text)) {
+    if (isIdentical(ctor, s_text)) {
         echo_format(output, "text(%llx,\"", node.text->hashcode);
         echo_string(output, (const char *) node.text->value);
         buffer_add(output, "\")");
         return true;
     }
 
-    if (isIdentical(type, t_integer)) {
+    if (isIdentical(ctor, s_integer)) {
         echo_format(output, "integer(%lld)", node.integer->value);
         return true;
     }
@@ -263,14 +309,14 @@ extern bool buffer_dump(TextBuffer *output, Node node) {
         return true;
     }
 
-    if (isIdentical(type, s_sort)) {
+    if (isIdentical(ctor, s_sort)) {
         echo_format(output, "sort(%p ", node.reference);
         buffer_add(output, (const char*)(node.sort->name->value));
         buffer_add(output, ")");
         return true;
     }
 
-    if (isIdentical(type, s_base)) {
+    if (isIdentical(ctor, s_base)) {
         echo_format(output, "type(%p ", node.reference);
         buffer_add(output, type_ConstantName(node.type));
         buffer_add(output, " ");
@@ -287,7 +333,7 @@ extern bool buffer_dump(TextBuffer *output, Node node) {
         return true;
     }
 
-    if (isIdentical(type, t_tuple)) {
+    if (isIdentical(ctor, s_tuple)) {
         echo_format(output, "tuple(%p (size=%d))",
                     node.reference,
                     (unsigned) asKind(node)->count);
@@ -304,28 +350,7 @@ extern bool buffer_dump(TextBuffer *output, Node node) {
     }
 
     buffer_add(output, "[");
-    if (isType(type, t_symbol)) {
-        echo_string(output, (const char *)type.symbol->value);
-    } else {
-        buffer_add(output, "<");
-        if (!isType(type, s_base)) {
-            echo_format(output, "type %p", type.reference);
-        } else if (isIdentical(type.type->sort, zero_s)) {
-            buffer_add(output, type_ConstantName(type.type));
-            buffer_add(output, " ");
-            buffer_add(output, (const char*)(type.type->sort->name->value));
-        } else if (isIdentical(type.type->sort, void_s)) {
-            buffer_add(output, type_ConstantName(type.type));
-            buffer_add(output, " ");
-            buffer_add(output, (const char*)(type.type->sort->name->value));
-        } else {
-            echo_format(output, "type %p ", type.reference);
-            buffer_add(output, type_ConstantName(type.type));
-            buffer_add(output, " ");
-            buffer_add(output, (const char*)(type.type->sort->name->value));
-        }
-        buffer_add(output, ">");
-    }
+    echo_type(output, type);
 
     if (isAtomic(node)) {
         echo_format(output, "|(%p)", node.reference);
@@ -394,13 +419,13 @@ extern void buffer_prettyPrint(TextBuffer *output, Node node) {
         }
 
         if (isIdentical(node, true_v)) {
-            offset += 2;
+            offset += 4;
             buffer_add(output, "true");
             return;
         }
 
         if (isIdentical(node, void_v)) {
-            offset += 5;
+            offset += 4;
             buffer_add(output, "void");
             return;
         }
@@ -408,19 +433,23 @@ extern void buffer_prettyPrint(TextBuffer *output, Node node) {
         Node type = getType(node);
         Node ctor = getConstructor(node);
 
-        if (isNil(type)) {
-            offset += 10;
-            echo_format(output, "unknown(%p)", node.reference);
+        if (isNil(type) && isNil(ctor)) {
+            if (isAtomic(node)) {
+                offset += echo_format(output, "unknown(%p)", node.reference);
+            } else {
+                offset += echo_format(output, "unknown(%p (size=%d))",
+                                      node.reference,
+                                      (unsigned) asKind(node)->count);
+            }
             return;
         }
 
-        if (isIdentical(type, t_symbol)) {
-            offset += node.symbol->size + 1;
-            echo_string(output, (const char *) node.symbol->value);
+        if (isIdentical(ctor, s_symbol)) {
+            offset += echo_string(output, (const char *) node.symbol->value);
             return;
         }
 
-        if (isIdentical(type, t_text)) {
+        if (isIdentical(ctor, s_text)) {
             offset += node.text->size + 3;
             buffer_add(output, "\"");
             echo_string(output, (const char *) node.text->value);
@@ -428,9 +457,8 @@ extern void buffer_prettyPrint(TextBuffer *output, Node node) {
             return;
         }
 
-        if (isIdentical(type, t_integer)) {
-            offset += 10;
-            echo_format(output, "%lld", node.integer->value);
+        if (isIdentical(ctor, s_integer)) {
+            offset += echo_format(output, "%lld", node.integer->value);
             return;
         }
 
@@ -441,7 +469,7 @@ extern void buffer_prettyPrint(TextBuffer *output, Node node) {
             return;
         }
 
-        if (isIdentical(type, s_sort)) {
+        if (isIdentical(ctor, s_sort)) {
             offset += 20;
             echo_format(output, "sort(%p ", node.reference);
             buffer_add(output, (const char*)(node.sort->name->value));
@@ -449,7 +477,7 @@ extern void buffer_prettyPrint(TextBuffer *output, Node node) {
             return;
         }
 
-        if (isIdentical(type, s_base)) {
+        if (isIdentical(ctor, s_base)) {
             offset += 20;
             echo_format(output, "type(%p ", node.reference);
             buffer_add(output, type_ConstantName(node.type));
@@ -478,7 +506,7 @@ extern void buffer_prettyPrint(TextBuffer *output, Node node) {
             return;
         }
 
-        if (isIdentical(type, t_tuple)) {
+        if (isIdentical(ctor, s_tuple)) {
             const unsigned max = asKind(node)->count;
             unsigned inx = 0;
             buffer_add(output, "[");
@@ -500,11 +528,17 @@ extern void buffer_prettyPrint(TextBuffer *output, Node node) {
         }
 
         buffer_add(output, "[");
-        if (isType(type, t_symbol)) {
+        offset += echo_type(output, type);
+
+        /*
+        if (isSymbol(type)) {
             offset += type.symbol->size + 1;
             echo_string(output, (const char *)type.symbol->value);
         } else {
-            if (!isType(type, s_base)) {
+            if (isIdentical(type, t_opaque)) {
+                offset += 10;
+                echo_format(output, "<opaque>");
+            } else if (!fromCtor(type, s_base)) {
                 offset += 10;
                 echo_format(output, "<type %p>", type.reference);
             } else if (isIdentical(type.type->sort, zero_s)) {
@@ -530,6 +564,7 @@ extern void buffer_prettyPrint(TextBuffer *output, Node node) {
                 buffer_add(output, ">");
             }
         }
+        */
 
         if (isAtomic(node)) {
             offset += 10;

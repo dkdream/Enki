@@ -65,6 +65,7 @@ static struct _internal_Table *_global_typetable = 0;
 Sort void_s   = 0;
 Sort zero_s   = 0;
 Sort symbol_s = 0;
+Sort opaque_s = 0;
 
 Type t_any = 0;
 Type t_block = 0;
@@ -129,6 +130,9 @@ extern void init_global_typetable() {
     make_sort("Symbol", &symbol_s);
     make_basetype("symbol", symbol_s, &t_symbol);
 
+    make_sort("Opaque", &opaque_s);
+    make_basetype("opaque", opaque_s, &t_opaque);
+
     make_sort("Zero", &zero_s);
 
     MK_BTYPE(any);
@@ -142,7 +146,6 @@ extern void init_global_typetable() {
     MK_BTYPE(infile);
     MK_BTYPE(integer);
     MK_BTYPE(lambda);
-    MK_BTYPE(opaque);
     MK_BTYPE(outfile);
     MK_BTYPE(pair);
     MK_BTYPE(path);
@@ -189,7 +192,7 @@ extern bool sort_Create(Symbol symbol, Sort* target) {
     Header    group = _global_typetable->row[row].first;
 
     for ( ; group; group = group->after) {
-        if (!isIdentical(group->kind.type, s_sort)) continue;
+        if (!isIdentical(group->kind.constructor, s_sort)) continue;
 
         Sort test = (Sort) asReference(group);
 
@@ -231,7 +234,7 @@ extern bool make_Axiom(Sort element, Sort class) {
     Header    group = _global_typetable->row[row].first;
 
     for ( ; group; group = group->after) {
-        if (!isIdentical(group->kind.type, s_axiom)) continue;
+        if (!isIdentical(group->kind.constructor, s_axiom)) continue;
 
         Axiom test = (Axiom) asReference(group);
 
@@ -276,7 +279,7 @@ extern bool make_Rule(Symbol functor, Sort xxx, Sort yyy, Sort kind) {
     Header group  = _global_typetable->row[row].first;
 
     for ( ; group; group = group->after) {
-        if (!isIdentical(group->kind.type, s_rule)) continue;
+        if (!isIdentical(group->kind.constructor, s_rule)) continue;
 
         Rule test = (Rule) asReference(group);
 
@@ -320,7 +323,7 @@ extern bool type_Create(Symbol symbol, Sort sort, Type* target) {
     Header    group = _global_typetable->row[row].first;
 
     for ( ; group; group = group->after) {
-        if (!isIdentical(group->kind.type, s_base)) continue;
+        if (!isIdentical(group->kind.constructor, s_base)) continue;
 
         Type test = (Type) asReference(group);
 
@@ -370,7 +373,7 @@ static bool branch_Cons(const enum type_code kind,
     Header    group = _global_typetable->row[row].first;
 
     for ( ; group; group = group->after) {
-        if (!isIdentical(group->kind.type, s_type)) continue;
+        if (!isIdentical(group->kind.constructor, s_branch)) continue;
 
         Type test = (Type) asReference(group);
 
@@ -392,7 +395,7 @@ static bool branch_Cons(const enum type_code kind,
     if (!entry) return false;
 
     entry->kind.type        = (Node) s_type;
-    entry->kind.constructor = (Node) s_type;
+    entry->kind.constructor = (Node) s_branch;
     entry->kind.constant    = 1;
 
     TypeBrn branch = (TypeBrn) asReference(entry);
@@ -499,7 +502,9 @@ static bool union_Merge(TypeBrn left, TypeBrn right, Type* result) {
 
 /*
  * build unions a list of non unions
- * ie: union(a,b,c) == union(a,union(b,c))
+ * union(a,a)   == a
+ * union(a,b)   == union(b,a)
+ * union(a,b,c) == union(a,union(b,c))
  */
 extern bool type_Union(Type left, Type right, Type* result) {
     if (!left)  return false;
@@ -516,7 +521,7 @@ extern bool type_Union(Type left, Type right, Type* result) {
 
     unsigned option = 0;
 
-    option += (left->code == tc_union)  ? 1 : 0;
+    option += (left->code  == tc_union) ? 1 : 0;
     option += (right->code == tc_union) ? 2 : 0;
 
     Type hold;
@@ -558,7 +563,7 @@ extern bool type_Index(const unsigned index, const Type at, Type* result) {
     Header    group = _global_typetable->row[row].first;
 
     for ( ; group; group = group->after) {
-        if (!isIdentical(group->kind.type, s_type)) continue;
+        if (!isIdentical(group->kind.constructor, s_index)) continue;
 
         Type test = (Type) asReference(group);
 
@@ -580,7 +585,7 @@ extern bool type_Index(const unsigned index, const Type at, Type* result) {
     if (!entry) return false;
 
     entry->kind.type        = (Node) s_type;
-    entry->kind.constructor = (Node) s_type;
+    entry->kind.constructor = (Node) s_index;
     entry->kind.constant = 1;
 
     TypeInx inx = (TypeInx) asReference(entry);
@@ -598,7 +603,27 @@ extern bool type_Index(const unsigned index, const Type at, Type* result) {
     return true;
 }
 
+static bool tuple_Cons(const Type left, const Type right, Type* result) {
+    const Sort sort = left->sort;
+    return branch_Cons(tc_tuple,
+                       sort,
+                       left,
+                       right,
+                       result);
+}
+
+/* Tuples := index(i,a) | tuple(a,b) where a,b in Tuple */
+/* tuple(a,b) == tuple(b,a) */
+/* tuple(a,tuple(b,c)) == tuple(tuple(a,b),c) */
 extern bool type_Tuple(const Type left, const Type right, Type* result) {
+    if (!left)  return false;
+    if (!right) return false;
+
+    unsigned option = 0;
+
+    option += (left->code == tc_union)  ? 1 : 0;
+    option += (right->code == tc_union) ? 2 : 0;
+
     return false;
 }
 
@@ -614,7 +639,7 @@ extern bool type_Label(const Symbol label, const Type at, Type* result) {
     Header    group = _global_typetable->row[row].first;
 
     for ( ; group; group = group->after) {
-        if (!isIdentical(group->kind.type, s_type)) continue;
+        if (!isIdentical(group->kind.constructor, s_label)) continue;
 
         Type test = (Type) asReference(group);
 
@@ -636,7 +661,7 @@ extern bool type_Label(const Symbol label, const Type at, Type* result) {
     if (!entry) return false;
 
     entry->kind.type        = (Node) s_type;
-    entry->kind.constructor = (Node) s_type;
+    entry->kind.constructor = (Node) s_label;
     entry->kind.constant    = 1;
 
     TypeLbl field = (TypeLbl) asReference(entry);

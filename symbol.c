@@ -31,7 +31,8 @@ Symbol s_bsat = 0;
 Symbol s_axiom = 0;
 Symbol s_base = 0;
 Symbol s_block = 0;
-Symbol s_clink;
+Symbol s_branch = 0;
+Symbol s_clink = 0;
 Symbol s_current = 0;
 Symbol s_delay = 0;
 Symbol s_expression = 0;
@@ -41,9 +42,11 @@ Symbol s_form = 0;
 Symbol s_global = 0;
 Symbol s_hashcode;
 Symbol s_header = 0;
+Symbol s_index = 0;
 Symbol s_infile = 0;
 Symbol s_integer = 0;
 Symbol s_kind = 0;
+Symbol s_label = 0;
 Symbol s_lambda = 0;
 Symbol s_name = 0;
 Symbol s_nil = 0;
@@ -65,6 +68,7 @@ Symbol s_text = 0;
 Symbol s_true = 0;
 Symbol s_tuple = 0;
 Symbol s_type = 0;
+Symbol s_union = 0;
 Symbol s_unquote = 0;
 Symbol s_unquote_splicing = 0;
 Symbol s_unsigned;
@@ -109,7 +113,8 @@ extern void init_global_symboltable() {
 
     MK_SYM(symbol); // must be first;
 
-    empty_symbol->kind.type = (Node)s_symbol;
+    empty_symbol->kind.type        = (Node)t_symbol;
+    empty_symbol->kind.constructor = (Node)s_symbol;
 
     symbol_Convert(".", &s_dot);
     symbol_Convert(",", &s_comma);
@@ -125,6 +130,7 @@ extern void init_global_symboltable() {
     MK_SYM(axiom);
     MK_SYM(base);
     MK_SYM(block);
+    MK_SYM(branch);
     MK_SYM(clink);
     MK_SYM(current);
     MK_SYM(delay);
@@ -134,9 +140,11 @@ extern void init_global_symboltable() {
     MK_SYM(global);
     MK_SYM(hashcode);
     MK_SYM(header);
+    MK_SYM(index);
     MK_SYM(infile);
     MK_SYM(integer);
     MK_SYM(kind);
+    MK_SYM(label);
     MK_SYM(lambda);
     MK_SYM(name);
     MK_SYM(nil);
@@ -158,6 +166,7 @@ extern void init_global_symboltable() {
     MK_SYM(true);
     MK_SYM(tuple);
     MK_SYM(type);
+    MK_SYM(union);
     MK_SYM(unquote);
     MK_SYM(unsigned);
     MK_SYM(word);
@@ -172,7 +181,8 @@ extern void retype_global_symboltable() {
     for ( ; row-- ; ) {
         Header group = _global_symboltable->row[row].first;
         for ( ; group; group = group->after) {
-            group->kind.type = (Node)t_symbol;
+            group->kind.type        = (Node)t_symbol;
+            group->kind.constructor = (Node)s_symbol;
         }
     }
 }

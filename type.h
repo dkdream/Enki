@@ -62,6 +62,7 @@ struct type_branch {
 extern Sort void_s;
 extern Sort zero_s;
 extern Sort symbol_s;
+extern Sort opaque_s;
 
 extern Type t_any;
 extern Type t_block;
@@ -179,11 +180,6 @@ extern inline const char* type_ConstantName(Type type) {
     return (const char*)(tconst->name->value);
 }
 
-extern inline bool isSymbol(const Node value) __attribute__((always_inline));
-extern inline bool isSymbol(const Node value) {
-    return isType(value, t_symbol);
-}
-
 extern inline bool isPair(const Node value) __attribute__((always_inline));
 extern inline bool isPair(const Node value) {
     return fromCtor(value, s_pair);
@@ -197,15 +193,43 @@ extern inline bool isTuple(const Node value) {
 
 extern inline bool isText(const Node value) __attribute__((always_inline));
 extern inline bool isText(const Node value) {
-    return isType(value, t_text);
+    return fromCtor(value, s_text);
 }
 
 extern inline bool isInteger(const Node value) __attribute__((always_inline));
 extern inline bool isInteger(const Node value) {
-    return isType(value, t_integer);
+    return fromCtor(value, s_integer);
 }
 
+extern inline bool isForm(const Node value) __attribute__((always_inline));
+extern inline bool isForm(const Node value) {
+    return fromCtor(value, s_form);
+}
 
+extern inline bool isLambda(const Node value) __attribute__((always_inline));
+extern inline bool isLambda(const Node value) {
+    return fromCtor(value, s_lambda);
+}
+
+extern inline bool isPrimitive(const Node value) __attribute__((always_inline));
+extern inline bool isPrimitive(const Node value) {
+    return fromCtor(value, s_primitive);
+}
+
+extern inline bool isForced(const Node value) __attribute__((always_inline));
+extern inline bool isForced(const Node value) {
+    return fromCtor(value, s_forced);
+}
+
+extern inline bool isFixed(const Node value) __attribute__((always_inline));
+extern inline bool isFixed(const Node value) {
+    return fromCtor(value, s_fixed);
+}
+
+extern inline bool isSymbol(const Node value) __attribute__((always_inline));
+extern inline bool isSymbol(const Node value) {
+    return fromCtor(value, s_symbol);
+}
 
 /***************************
  ** end of file

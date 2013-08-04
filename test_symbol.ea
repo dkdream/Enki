@@ -1,4 +1,4 @@
 
 (define test (concat-symbol 'one 'two 3 "four" 5))
 
-(println (type-of test) " " test)
+(println (type-of test) " " (ctor-of test) " " test)
