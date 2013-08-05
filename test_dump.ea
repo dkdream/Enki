@@ -13,15 +13,34 @@ dump
 
 (define ttest [1 2 3 4])
 
-(assert (iso 10 :integer         (type-of 1)))
+(dumpln 'x0 :integer (type-of 1))
+(assert (iso 10 :integer (type-of 1)))
+
+(dumpln 'x1  :text (type-of "1"))
 (assert (iso 10 :text            (type-of "1")))
+
+(dumpln 'x2 :{symbol Symbol} (type-of 'val))
 (assert (iso 10 :{symbol Symbol} (type-of 'val)))
+
+(dumpln 'x3)
 (assert (iso 10 nil              (type-of nil)) "nil is not type nil")
+
+(dumpln 'x4)
 (assert (iso 10 'primitive       (ctor-of println)))
+
+(dumpln 'x5)
 (assert (iso 10 'fixed           (ctor-of let)))
+
+(dumpln 'x6)
 (assert (iso 10 'tuple           (ctor-of ttest)))
+
+(dumpln 'x7)
 (assert (iso 10 ttest            (ctor-of (type-of ttest :iseq) 'fooness)))
+
+(dumpln 'x8)
 (assert (iso 10 'fooness         (ctor-of ttest)
+
+(dumpln 'x9)
 (assert (iso 10 :iseq            (type-of ttest)))
 
 (define fooness 'fooness)

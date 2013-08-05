@@ -479,7 +479,7 @@ static bool readList(FILE *fp, int delim, Target result)
 
 // [...] - tuple
 // {...} - block
-static bool readTuple(FILE *fp, Node type, Node ctor, int delim, Target result)
+static bool readTuple(FILE *fp, Node ctor, int delim, Target result)
 {
     GC_Begin(7);
 
@@ -526,7 +526,6 @@ static bool readTuple(FILE *fp, Node type, Node ctor, int delim, Target result)
     if (!list_State(head, &size, &dotted))    goto failure;
     if (!tuple_Create(size, result.tuple))    goto failure;
     if (!tuple_Fill(*result.tuple, head))     goto failure;
-    if (!setType(*result.tuple, type))        goto failure;
     if (!setConstructor(*result.tuple, ctor)) goto failure;
 
  done:
@@ -750,10 +749,10 @@ extern bool readExpr(FILE *fp, Target result)
             return readList(fp, ')', result);
 
         case '[':
-            return readTuple(fp, t_tuple, s_tuple, ']', result);
+            return readTuple(fp, s_tuple, ']', result);
 
         case '{':
-            return readTuple(fp, t_block, s_block, '}', result);
+            return readTuple(fp, s_block, '}', result);
 
         case ',':
             ASSIGN(result, s_comma);

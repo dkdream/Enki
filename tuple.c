@@ -23,7 +23,7 @@ extern bool tuple_Create(unsigned size, Tuple* target) {
 
     Tuple result = (*target);
 
-    setType(result, t_tuple);
+    setType(result, t_opaque);
     setConstructor(result, s_tuple);
 
     unsigned inx = 0;

@@ -452,12 +452,12 @@ extern SUBR(type)
 
     pair_GetCar(args.pair, &value);
 
-    if (isType(value, t_symbol)) {
+    if (isSymbol(value)) {
         type_Create(value.symbol, zero_s, result.type);
         return;
     }
 
-    if (isType(value, t_block)) {
+    if (isBlock(value)) {
         switch (getCount(value)) {
         case 0:
             fatal("invalid block to type: size==0");

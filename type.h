@@ -75,7 +75,7 @@ extern Type t_comma;
 extern Type t_infile;
 extern Type t_integer;
 //extern Type t_lambda; // this need to be removed (use pi-types)
-extern Type t_opaque;
+extern Type t_opaque; // all raw collections are this type
 extern Type t_outfile;
 //extern Type t_pair;  // this need to be removed (use sigma-types)
 extern Type t_path;
@@ -84,7 +84,7 @@ extern Type t_semi;
 extern Type t_symbol;
 extern Type t_text;
 extern Type t_true;
-extern Type t_tuple; // this need to be removed (use sigma-types)
+//extern Type t_tuple; // this need to be removed (use sigma-types)
 extern Type t_void;
 
 extern bool sort_Create(Symbol,Sort*);      /* each sort has a unique name */
@@ -187,7 +187,6 @@ extern inline bool isPair(const Node value) {
 
 extern inline bool isTuple(const Node value) __attribute__((always_inline));
 extern inline bool isTuple(const Node value) {
-    //if (fromCtor(value, s_pair)) return true;
     return fromCtor(value, s_tuple);
 }
 
@@ -229,6 +228,11 @@ extern inline bool isFixed(const Node value) {
 extern inline bool isSymbol(const Node value) __attribute__((always_inline));
 extern inline bool isSymbol(const Node value) {
     return fromCtor(value, s_symbol);
+}
+
+extern inline bool isBlock(const Node value) __attribute__((always_inline));
+extern inline bool isBlock(const Node value) {
+    return fromCtor(value, s_block);
 }
 
 /***************************
