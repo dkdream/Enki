@@ -11,6 +11,8 @@
 #include "apply.h"
 #include "type.h"
 
+extern Type t_pair;  // this need to be removed (use sigma-types)
+
 extern bool pair_Create(const Node car, const Node cdr, Pair* target) {
     if (!node_Allocate(_zero_space,
                        false,
@@ -23,6 +25,7 @@ extern bool pair_Create(const Node car, const Node cdr, Pair* target) {
     darken_Node(car);
     darken_Node(cdr);
 
+    setType(result, t_pair);
     setConstructor(result, s_pair);
 
     result->car = car;

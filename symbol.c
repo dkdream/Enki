@@ -15,6 +15,7 @@
 #include <string.h>
 #include <stdio.h>
 
+extern Type t_symbol;
 /* */
 Symbol _empty_symbol = 0;
 Symbol s_symbol = 0;

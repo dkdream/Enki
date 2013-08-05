@@ -10,6 +10,8 @@
 #include "treadmill.h"
 #include "type.h"
 
+extern Type t_integer;
+
 extern bool integer_Create(long long value, Integer *target) {
     if (!node_Allocate(_zero_space,
                        true,

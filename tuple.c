@@ -12,6 +12,8 @@
 
 #include <stdarg.h>
 
+extern Type t_tuple;
+
 extern bool tuple_Create(unsigned size, Tuple* target) {
     if (1 > size) return false;
 
@@ -23,7 +25,7 @@ extern bool tuple_Create(unsigned size, Tuple* target) {
 
     Tuple result = (*target);
 
-    setType(result, t_opaque);
+    setType(result, t_tuple);
     setConstructor(result, s_tuple);
 
     unsigned inx = 0;

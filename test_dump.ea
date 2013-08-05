@@ -14,10 +14,10 @@ dump
 (define ttest [1 2 3 4])
 
 (dumpln 'x0 :integer (type-of 1))
-(assert (iso 10 :integer (type-of 1)))
+##(assert (iso 10 :integer (type-of 1)))
 
 (dumpln 'x1  :text (type-of "1"))
-(assert (iso 10 :text            (type-of "1")))
+(assert (iso 10 :text (type-of "1")))
 
 (dumpln 'x2 :{symbol Symbol} (type-of 'val))
 (assert (iso 10 :{symbol Symbol} (type-of 'val)))

@@ -23,16 +23,17 @@ extern HashCode node_HashCode(Node node)
     if (!node.reference) return 0;
 
     Node type = getType(node);
+    Node ctor = getConstructor(node);
 
-    if (isIdentical(type, t_symbol)) {
+    if (isIdentical(ctor, s_symbol)) {
         return node.symbol->hashcode;
     }
 
-    if (isIdentical(type, t_text)) {
+    if (isIdentical(ctor, s_text)) {
         return node.text->hashcode;
     }
 
-    if (isIdentical(type, t_integer)) {
+    if (isIdentical(ctor, s_integer)) {
         return node.integer->value;
     }
 
@@ -65,17 +66,19 @@ bool node_Match(Node left, Node right)
     if (0 == right.reference) return false;
 
     Node type = getType(left);
+    Node ctor = getConstructor(left);
 
-    if (!isIdentical(type, getType(right))) return false;
+    if (!isIdentical(type, getType(right)))        return false;
+    if (!isIdentical(ctor, getConstructor(right))) return false;
 
-    if (isIdentical(type, t_text)) {
+    if (isIdentical(ctor, s_text)) {
         if (left.text->size != right.text->size) return false;
         return 0 == memcmp(left.text->value,
                            right.text->value,
                            left.text->size);
     }
 
-    if (isIdentical(type, t_integer)) {
+    if (isIdentical(ctor, s_integer)) {
         return left.integer->value == right.integer->value;
     }
 
@@ -98,27 +101,29 @@ bool node_Iso(long depth, Node left, Node right)
     if (0 == right.reference) return false;
 
     Node type = getType(left);
+    Node ctor = getConstructor(left);
 
     if (!isIdentical(type, getType(right))) return false;
+    if (!isIdentical(ctor, getConstructor(right))) return false;
 
     if (1 > depth) return true;
 
-    if (isIdentical(type, t_text)) {
+    if (isIdentical(ctor, s_text)) {
         if (left.text->size != right.text->size) return false;
         return 0 == memcmp(left.text->value,
                            right.text->value,
                            left.text->size);
     }
 
-    if (isIdentical(type, t_integer)) {
+    if (isIdentical(ctor, s_integer)) {
         return left.integer->value == right.integer->value;
     }
 
     if (isAtomic(left)) {
-      return false;
+        return false;
     }
     if (isAtomic(right)) {
-      return false;
+        return false;
     }
 
     const unsigned lhs_max = asKind(left)->count;
