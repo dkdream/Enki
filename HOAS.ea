@@ -4,11 +4,37 @@
 ## type HOAS
 ##
 
+## name in global scope
 (define (hoas-global symbol)
    (type-of (ctor-of (tuple symbol) 'global) :hoas))
 
+## (lambda ...)
 (define (hoas-lambda func)
    (type-of (ctor-of (tuple func) 'lambda) :hoas))
 
+## (func arg)
 (define (hoas-app func arg)
    (type-of (ctor-of (tuple func arg) 'app)  :hoas))
+
+##-- (delay exp)
+## create a lazy value (call-by-need, memoized value)
+##
+## the thunk it holds is evaluated and memoized when
+## o. the value is need in a condition (cond,if,unless,..)
+## o. a field is needed from that value (car,cdr,...)
+## o. the value is need by a foreign function (c,c++,...)
+##
+## the thunk it holds is evaluated but NOT memoized when
+## o. it is an argument of 'effect'
+##
+## a delay value can be use to simulate
+## call-by-name (using effect)
+## call-by-need (default)
+## 
+
+##-- (effect exp)
+## return the value of the expression
+## if the expression is a delay
+##   evaluate it and return its value
+## if the expression is a value
+##   return the value
