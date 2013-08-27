@@ -114,6 +114,16 @@ static inline unsigned echo_type(TextBuffer *output, Node type) {
         goto done;
     }
 
+    if (!fromCtor(type, s_index)) {
+        echo_format(output, "<type-index %p>", type.reference);
+        goto done;
+    }
+
+    if (!fromCtor(type, s_label)) {
+        echo_format(output, "<type-label %p>", type.reference);
+        goto done;
+    }
+
     if (isIdentical(type.type->sort, zero_s)) {
         echo_format(output, "<%s %s>",
                     type_ConstantName(type.type),
@@ -204,11 +214,30 @@ extern bool buffer_print(TextBuffer *output, Node node) {
         return true;
     }
 
-    if (isIdentical(type, s_base)) {
+    if (isIdentical(ctor, s_base)) {
         echo_format(output, "type(%p ", node.reference);
         buffer_add(output, type_ConstantName(node.type));
         buffer_add(output, " ");
-        buffer_add(output, (const char*)(node.type->sort->name->value));
+        buffer_add(output, type_SortName(node.type));
+        buffer_add(output, ")");
+        return true;
+    }
+
+    if (isIdentical(ctor, s_index)) {
+        echo_format(output, "type(%p ", node.reference);
+        echo_format(output, "%u : %p ",
+                    type_IndexOffset(node.type),
+                    type_IndexSlot(node.type));
+        buffer_add(output, type_SortName(node.type));
+        buffer_add(output, ")");
+        return true;
+    }
+
+    if (isIdentical(ctor, s_label)) {
+        echo_format(output, "type(%p ", node.reference);
+        buffer_add(output, type_LabelName(node.type));
+        echo_format(output, " : %p ", type_LabelSlot(node.type));
+        buffer_add(output, type_SortName(node.type));
         buffer_add(output, ")");
         return true;
     }
@@ -320,7 +349,26 @@ extern bool buffer_dump(TextBuffer *output, Node node) {
         echo_format(output, "type(%p ", node.reference);
         buffer_add(output, type_ConstantName(node.type));
         buffer_add(output, " ");
-        buffer_add(output, (const char*)(node.type->sort->name->value));
+        buffer_add(output, type_SortName(node.type));
+        buffer_add(output, ")");
+        return true;
+    }
+
+    if (isIdentical(ctor, s_index)) {
+        echo_format(output, "type(%p ", node.reference);
+        echo_format(output, "%u : %p ",
+                    type_IndexOffset(node.type),
+                    type_IndexSlot(node.type));
+        buffer_add(output, type_SortName(node.type));
+        buffer_add(output, ")");
+        return true;
+    }
+
+    if (isIdentical(ctor, s_label)) {
+        echo_format(output, "type(%p ", node.reference);
+        buffer_add(output, type_LabelName(node.type));
+        echo_format(output, " : %p ", type_LabelSlot(node.type));
+        buffer_add(output, type_SortName(node.type));
         buffer_add(output, ")");
         return true;
     }
@@ -482,7 +530,29 @@ extern void buffer_prettyPrint(TextBuffer *output, Node node) {
             echo_format(output, "type(%p ", node.reference);
             buffer_add(output, type_ConstantName(node.type));
             buffer_add(output, " ");
-            buffer_add(output, (const char*)(node.type->sort->name->value));
+            buffer_add(output, type_SortName(node.type));
+            buffer_add(output, ")");
+            return;
+        }
+
+        if (isIdentical(ctor, s_index)) {
+            offset += 20;
+            echo_format(output, "type(%p ", node.reference);
+            echo_format(output, "%u : %p ",
+                        type_IndexOffset(node.type),
+                        type_IndexSlot(node.type));
+            buffer_add(output, type_SortName(node.type));
+            buffer_add(output, ")");
+            return;
+        }
+
+        if (isIdentical(ctor, s_label)) {
+            offset += 20;
+            echo_format(output, "type(%p ", node.reference);
+            buffer_add(output, type_LabelName(node.type));
+            echo_format(output, " : %p ",
+                        type_LabelSlot(node.type));
+            buffer_add(output, type_SortName(node.type));
             buffer_add(output, ")");
             return;
         }

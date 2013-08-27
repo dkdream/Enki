@@ -1608,23 +1608,23 @@ extern SUBR(ctor) {
 
     list_State(args.pair, &size, &dotted);
 
-    if (dotted)   fatal("dotted list in: ctor");
-    if (1 > size) fatal("no ctor name in: ctor");
-    if (2 > size) fatal("no type in: ctor");
-    if (3 > size) fatal("no value in: ctor");
+    if (dotted)   fatal("ctor: with a dotted list");
+    if (1 > size) fatal("ctor: no label");
+    if (2 > size) fatal("ctor: no type");
+    if (3 > size) fatal("ctor: no initial values");
 
     Node label;
     Node type;
 
     pair_GetCar(args.pair, &label);
 
-    if (!isSymbol(label)) fatal("ctor name must be a symbol");
+    if (!isSymbol(label)) fatal("ctor: label must be a symbol");
 
     pair_GetCdr(args.pair, &args);
 
     pair_GetCar(args.pair, &type);
 
-    if (!isAType(type)) fatal("ctor type must be a type");
+    if (!isAType(type)) fatal("ctor: type must be a type");
 
     pair_GetCdr(args.pair, &args);
 
@@ -2755,6 +2755,36 @@ extern SUBR(true_q) {
     }
 }
 
+extern SUBR(field) {
+    Node label;
+    Node type;
+
+    checkArgs(args, "field", 2, NIL, NIL);
+    fetchArgs(args, &label, &type, 0);
+
+
+    if (!isSymbol(label)) fatal("field: no label");
+    if (!isAType(type)) fatal("field: no type");
+
+    type_Label(label.symbol, type.type, result.type);
+}
+
+extern SUBR(index) {
+    Node offset;
+    Node type;
+
+    checkArgs(args, "index", 2, NIL, NIL);
+    fetchArgs(args, &offset, &type, 0);
+
+
+    if (!isInteger(offset)) fatal("index: no offset");
+    if (!isAType(type)) fatal("index: no type");
+
+    if (offset.integer->value < 0) fatal("index: offset is lessthen zero");
+
+    type_Index(offset.integer->value, type.type, result.type);
+}
+
 /***************************************************************
  ***************************************************************
  ***************************************************************
@@ -3066,6 +3096,9 @@ void startEnkiLibrary() {
     MK_OPR(fixed-encoder,fixed_encoder);
     MK_OPR(fixed-evaluator,fixed_evaluator);
     MK_OPR(forced-value,forced_value);
+
+    MK_PRM(field);
+    MK_PRM(index);
 
     Reference std_in  = 0;
     Reference std_out = 0;

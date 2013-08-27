@@ -163,6 +163,13 @@ extern inline bool fromCtor(const Node value, const Node ctor) {
     return (kind->constructor.reference == ctor.reference);
 }
 
+extern inline const char* type_SortName(Type type) __attribute__((always_inline));
+extern inline const char* type_SortName(Type type) {
+    if (!type) return "";
+
+    return (const char*)(type->sort->name->value);
+}
+
 extern inline const char* type_ConstantName(Type type) __attribute__((always_inline));
 extern inline const char* type_ConstantName(Type type) {
     if (!type) return "";
@@ -171,6 +178,46 @@ extern inline const char* type_ConstantName(Type type) {
     struct type_constant* tconst = (struct type_constant*) type;
 
     return (const char*)(tconst->name->value);
+}
+
+extern inline const char* type_LabelName(Type type) __attribute__((always_inline));
+extern inline const char* type_LabelName(Type type) {
+    if (!type) return "";
+    if (type->code != tc_label) return "";
+
+    struct type_label* tlabel = (struct type_label*) type;
+
+    return (const char*)(tlabel->label->value);
+}
+
+extern inline const Type type_LabelSlot(Type type) __attribute__((always_inline));
+extern inline const Type type_LabelSlot(Type type) {
+    if (!type) return 0;
+    if (type->code != tc_label) return 0;
+
+    struct type_label* tlabel = (struct type_label*) type;
+
+    return tlabel->slot;
+}
+
+extern inline const unsigned type_IndexOffset(Type type) __attribute__((always_inline));
+extern inline const unsigned type_IndexOffset(Type type) {
+    if (!type) return 0;
+    if (type->code != tc_index) return 0;
+
+    struct type_index* tindex = (struct type_index*) type;
+
+    return (tindex->index);
+}
+
+extern inline const Type type_IndexSlot(Type type) __attribute__((always_inline));
+extern inline const Type type_IndexSlot(Type type) {
+    if (!type) return 0;
+    if (type->code != tc_index) return 0;
+
+    struct type_index* tindex = (struct type_index*) type;
+
+    return tindex->slot;
 }
 
 extern inline bool isPair(const Node value) __attribute__((always_inline));

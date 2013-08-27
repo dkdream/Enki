@@ -392,7 +392,7 @@ static bool branch_Cons(const enum type_code kind,
 
     if (!entry) return false;
 
-    entry->kind.type        = (Node) s_type;
+    entry->kind.type        = (Node) s_branch;
     entry->kind.constructor = (Node) s_branch;
     entry->kind.constant    = 1;
 
@@ -582,7 +582,7 @@ extern bool type_Index(const unsigned index, const Type at, Type* result) {
 
     if (!entry) return false;
 
-    entry->kind.type        = (Node) s_type;
+    entry->kind.type        = (Node) s_index;
     entry->kind.constructor = (Node) s_index;
     entry->kind.constant = 1;
 
@@ -658,7 +658,7 @@ extern bool type_Label(const Symbol label, const Type at, Type* result) {
 
     if (!entry) return false;
 
-    entry->kind.type        = (Node) s_type;
+    entry->kind.type        = (Node) s_label;
     entry->kind.constructor = (Node) s_label;
     entry->kind.constant    = 1;
 
