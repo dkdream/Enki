@@ -67,23 +67,29 @@ Sort zero_s   = 0;
 Sort symbol_s = 0;
 Sort opaque_s = 0;
 
-Type t_any = 0;
+
+#if 0
 Type t_block = 0;
-Type t_buffer = 0;
 Type t_comma = 0;
 Type t_delay = 0;
 Type t_fixed = 0;
 Type t_forced = 0;
 Type t_form = 0;
-Type t_infile = 0;
-Type t_integer = 0;
 Type t_lambda = 0;
-Type t_opaque = 0;
-Type t_outfile = 0;
-Type t_pair = 0;
 Type t_path = 0;
 Type t_primitive = 0;
 Type t_semi = 0;
+#endif
+
+Type t_any = 0;
+Type t_buffer = 0;
+Type t_false = 0;
+Type t_infile = 0;
+Type t_integer = 0;
+Type t_nil = 0;
+Type t_opaque = 0;
+Type t_outfile = 0;
+Type t_pair = 0;
 Type t_symbol = 0;
 Type t_text = 0;
 Type t_true = 0;
@@ -125,7 +131,6 @@ extern void init_global_typetable() {
     _global_typetable = result;
 
     make_sort("Void", &void_s);
-    make_basetype("void", void_s, &t_void);
 
     make_sort("Symbol", &symbol_s);
     make_basetype("symbol", symbol_s, &t_symbol);
@@ -136,24 +141,17 @@ extern void init_global_typetable() {
     make_sort("Zero", &zero_s);
 
     MK_BTYPE(any);
-    MK_BTYPE(block);
     MK_BTYPE(buffer);
-    MK_BTYPE(comma);
-    MK_BTYPE(delay);
-    MK_BTYPE(fixed);
-    MK_BTYPE(forced);
-    MK_BTYPE(form);
+    MK_BTYPE(false);
     MK_BTYPE(infile);
     MK_BTYPE(integer);
-    MK_BTYPE(lambda);
+    MK_BTYPE(nil);
     MK_BTYPE(outfile);
     MK_BTYPE(pair);
-    MK_BTYPE(path);
-    MK_BTYPE(primitive);
-    MK_BTYPE(semi);
     MK_BTYPE(text);
     MK_BTYPE(true);
     MK_BTYPE(tuple);
+    MK_BTYPE(void);
 
     retype_global_symboltable();
 }

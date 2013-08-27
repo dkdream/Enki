@@ -444,16 +444,55 @@ extern SUBR(quote)
     pair_GetCar(args.pair, result);
 }
 
+extern SUBR(encode_type) {
+    Node value;
+
+    pair_GetCar(args.pair, &value);
+
+    if (isSymbol(value)) {
+        ASSIGN(result, args);
+        return;
+    }
+
+    if (isBlock(value)) {
+        ASSIGN(result, args);
+        return;
+    }
+
+    if (isPair(value)) {
+        encode(value, env, &value);
+#if 0
+        fprintf(stderr, "type [");
+        prettyPrint(stderr, value);
+        fprintf(stderr, "]\n");
+#endif
+        pair_Create(value, NIL, result.pair);
+        return;
+    }
+
+    ASSIGN(result, args);
+}
+
 extern SUBR(type)
 { //Fixed
     Node   value;
     Symbol type;
     Symbol sort;
+    Pair   entry;
 
     pair_GetCar(args.pair, &value);
 
     if (isSymbol(value)) {
-        type_Create(value.symbol, zero_s, result.type);
+        // lookup symbol in the current enviroment
+        if (!alist_Entry(env.pair, value.symbol, &entry)) {
+            // lookup symbol in the global enviroment
+            if (!alist_Entry(enki_globals.pair,  value.symbol, &entry)) {
+                // construct a new sort Zero type value.
+                type_Create(value.symbol, zero_s, result.type);
+                return;
+            }
+        }
+        pair_GetCdr(entry, result);
         return;
     }
 
@@ -491,6 +530,10 @@ extern SUBR(type)
         default:
             break;
         }
+    }
+
+    if (isPair(value)) {
+        eval(value, env, &value);
     }
 
     // this needs to handle complex types
@@ -638,12 +681,6 @@ extern void environ_Lambda(Node parameter, Node env, Target result)
         return;
     }
 
-    if (isTuple(parameter)) {
-        tuple_GetItem(parameter.tuple, 0, &symbol);
-        pair_Create(symbol, NIL, result.pair);
-        return;
-    }
-
     pair_Create(parameter, NIL, result.pair);
 }
 
@@ -661,7 +698,7 @@ extern SUBR(encode_lambda) {
     pair_GetCdr(args.pair, &body);
 
     /*
-    ** given args=(formal . body)
+    ** given args=(formals . body)
     **
     ** (set lenv (map box formal))
     ** (set-end lenv env)
@@ -681,9 +718,98 @@ extern SUBR(encode_lambda) {
 
 extern SUBR(lambda)
 {
+    /*
+    ** given args=(formals . body)
+    */
+
+#if 0
+    fprintf(stderr, "lambda [");
+    prettyPrint(stderr, args);
+    fprintf(stderr, "]\n");
+#endif
+
     pair_Create(args, env, result.pair);
-//    setType(*result.reference, t_lambda);
     setConstructor(*result.reference, s_lambda);
+}
+
+extern SUBR(apply_lambda)
+{
+    GC_Begin(3);
+    Node cenv, tmp;
+
+    GC_Protect(cenv);
+    GC_Protect(tmp);
+
+    Node fun, arguments;
+
+    pair_GetCar(args.pair, &fun); //(fun . arguments)
+    pair_GetCdr(args.pair, &arguments);
+
+    Node defn;
+
+    pair_GetCar(fun.pair, &defn); // (formals . body)
+    pair_GetCdr(fun.pair, &cenv); // retreve the closure enviroment
+
+    Node formals, body;
+
+    pair_GetCar(defn.pair, &formals);
+    pair_GetCdr(defn.pair, &body);
+
+    Node vars  = formals;
+    Node vlist = arguments;
+
+    // bind parameters to values
+    // extending the closure enviroment
+    while (isPair(formals)) {
+        Node var = NIL;
+        Node val = NIL;
+
+        if (!isPair(vlist)) {
+            fprintf(stderr, "\nerror: too few arguments params: ");
+            prettyPrint(stderr, vars);
+            fprintf(stderr, " args: ");
+            prettyPrint(stderr, arguments);
+            fprintf(stderr, "\n");
+            fflush(stderr);
+            GC_End();
+            fatal(0);
+        }
+
+        pair_GetCar(formals.pair, &var);
+        pair_GetCar(vlist.pair,   &val);
+
+        pair_GetCdr(formals.pair, &formals);
+        pair_GetCdr(vlist.pair,   &vlist);
+
+        pair_Create(var, val, &tmp.pair);
+        pair_Create(tmp, cenv, &cenv.pair);
+    }
+
+    // bind (rest) parameter to remaining values
+    // extending the closure enviroment
+    if (isSymbol(formals)) {
+        pair_Create(formals, vlist, &tmp.pair);
+        pair_Create(tmp, cenv, &cenv.pair);
+        vlist = NIL;
+    }
+
+    // check --
+    if (!isNil(vlist)) {
+        fprintf(stderr, "\nerror: too many arguments params: ");
+        prettyPrint(stderr, vars);
+        fprintf(stderr, " args: ");
+        prettyPrint(stderr, arguments);
+        fprintf(stderr, "\n");
+        fflush(stderr);
+        GC_End();
+        fatal(0);
+    }
+
+    // process the body of the lambda
+    // and return the last value
+    eval_begin(body, cenv, result);
+
+    GC_End();
 }
 
 extern SUBR(delay)
@@ -928,86 +1054,6 @@ extern SUBR(eval_pair)
 
  done:
     popTrace();
-
-    GC_End();
-}
-
-extern SUBR(apply_lambda)
-{
-    GC_Begin(3);
-    Node cenv, tmp;
-
-    GC_Protect(cenv);
-    GC_Protect(tmp);
-
-    Node fun, arguments;
-
-    pair_GetCar(args.pair, &fun); //(fun . arguments)
-    pair_GetCdr(args.pair, &arguments);
-
-    Node defn;
-
-    pair_GetCar(fun.pair, &defn); //((formals) . body)
-    pair_GetCdr(fun.pair, &cenv); // retreve the closure enviroment
-
-    Node formals, body;
-
-    pair_GetCar(defn.pair, &formals);
-    pair_GetCdr(defn.pair, &body);
-
-    Node vars  = formals;
-    Node vlist = arguments;
-
-    // bind parameters to values
-    // extending the closure enviroment
-    while (isPair(formals)) {
-        Node var = NIL;
-        Node val = NIL;
-
-        if (!isPair(vlist)) {
-            fprintf(stderr, "\nerror: too few arguments params: ");
-            prettyPrint(stderr, vars);
-            fprintf(stderr, " args: ");
-            prettyPrint(stderr, arguments);
-            fprintf(stderr, "\n");
-            fflush(stderr);
-            GC_End();
-            fatal(0);
-        }
-
-        pair_GetCar(formals.pair, &var);
-        pair_GetCar(vlist.pair,   &val);
-
-        pair_GetCdr(formals.pair, &formals);
-        pair_GetCdr(vlist.pair,   &vlist);
-
-        pair_Create(var, val, &tmp.pair);
-        pair_Create(tmp, cenv, &cenv.pair);
-    }
-
-    // bind (rest) parameter to remaining values
-    // extending the closure enviroment
-    if (isSymbol(formals)) {
-        pair_Create(formals, vlist, &tmp.pair);
-        pair_Create(tmp, cenv, &cenv.pair);
-        vlist = NIL;
-    }
-
-    // check --
-    if (!isNil(vlist)) {
-        fprintf(stderr, "\nerror: too many arguments params: ");
-        prettyPrint(stderr, vars);
-        fprintf(stderr, " args: ");
-        prettyPrint(stderr, arguments);
-        fprintf(stderr, "\n");
-        fflush(stderr);
-        GC_End();
-        fatal(0);
-    }
-
-    // process the body of the lambda
-    // and return the last value
-    eval_begin(body, cenv, result);
 
     GC_End();
 }
@@ -2836,7 +2882,7 @@ void startEnkiLibrary() {
     void_v = (Node)init_atom(&enki_void, 0);
 
     setType(true_v, t_true);
-    setType(void_v, t_void);
+    setType(void_v, t_false);
 
     pair_Create(NIL,NIL, &enki_globals.pair);
 
@@ -2852,7 +2898,7 @@ void startEnkiLibrary() {
 
     MK_FXD(define);
     MK_EFXD(quote,list);
-    MK_EFXD(type,list);
+    MK_EFXD(type,encode_type);
 
     MK_FXD(if);
     MK_FXD(and);

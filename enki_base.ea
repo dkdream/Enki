@@ -1,0 +1,181 @@
+#{
+<core> = <object>
+       | <name>
+       | <quote>
+       | <type>
+       | (define <name> <core>)
+       | (<formula> <arguments> <core>)
+       | (delay <type> <core>)
+       | (effect <core>)
+       | (syntax <core>)
+       | (assert <core>)
+       | (ctor <name> <type> <core>*)
+       | (<scope> <locals> <assigns> <core>)
+       | (<branch> <core> <core> <core>)
+       | (case <core> <condition>* <else>)
+       | (<core> <core>*)
+
+<formula> := lambda | pi | sigma | any | all | subset
+<branch>  := if | unless
+<scope>   := let | fix
+
+<object> := a literal value
+<name>   := a name 
+
+<quote> = '<core>
+<type>  = :<core>
+
+<locals> = ( <local>+ )
+<local>  = <name> <type>?
+         | _      <type>?
+
+<assigns> = <assign>+
+<assign>  = (bind <name> <core>)
+
+<arguments> = ()
+            | <local>
+            | ( <local>+ )
+            | ( <local>+ . <local> )
+
+condition = (<name> <arguments> <core>)
+else      = ( _ <core>)
+
+quote   := construct a AST
+form    := construct a AST tranformer value
+lambda  := construct a value function
+pi      := construct a dependent product
+sigma   := construct a dependent coproduct
+any     := construct a dependent union
+all     := construct a dependent intersection
+subset  := construct a subset type
+if      := construct if conditional
+define  := define/update global name
+let     := declare a local scope assigned from outer scope
+fix     := declare a local scope assigned from inner scope
+delay   := construct a delayed thunk
+effect  := evaluate a delayed thunk without updating it
+syntax  := construct a syntax function
+assert  := assert a predictate is true
+ctor    := construct a value with type <type> and constructor <symbol> and elements <core>*
+case    := de-construct a value by constructor
+
+}#
+
+## - - - - - - - - - - - - - - - - - - - - - 
+
+## (sigma  (a [A]) (B a)) == { (a, b) | a \in A && b \in (B a) }
+## (pi     (a [A]) (B a)) == { f      | f \subset (sigma (a [A]) (B a)) && f \in Function }
+## (any    (a [A]) (B a)) == { b      | b \in Union{x \in A}(B x) }
+## (all    (a [A]) (B a)) == { b      | b \in Intercection{x \in A}(B x) }
+## (subset (a [A]) (B a)) == { a      | #(B a) > 0 }
+
+## - - - - - - - - - - - - - - - - - - - - - 
+
+(define List :(or :pair :nil))
+(define cadr (lambda (x :pair) (car (cdr x))))
+(define cddr (lambda (x :pair) (cdr (cdr x))))
+
+(define concat-list (lambda (x :List y :List)
+                       (if (pair? x)
+                             (cons (car x) (concat-list (cdr x) y))
+                          y)))
+
+(define expand-quote
+   (fix (qq-list qq-element qq-object)
+        (bind qq-list (lambda (l)
+                         (unless (pair? l)
+                            (list 'quote l)
+                            (let (obj rst)
+                               (bind obj (car l))
+                               (bind rst (cdr l))
+                               (if (and (pair? obj)
+                                        (== (car obj) 'unquote-splicing))
+                                     (let (value)
+                                        (bind value (cadr obj))
+                                        (if rst
+                                              (list 'concat-list value (qq-list rst))
+                                           value))
+                                  (list 'cons
+                                        (qq-object obj)
+                                        (qq-list rst)))))))
+
+      (bind qq-element (lambda (l :pair)
+                         (let ((head (car l)))
+                            (if (== head 'unquote)
+                                  (cadr l)
+                               (qq-list l)))))
+
+      (bind qq-object (lambda (object)
+                        (if (pair? object)
+                              (qq-element object)
+                           (list 'quote object))))
+      qq-object))
+
+(define quasiquote (form expand-quote))
+
+(define %define-with (lambda (%define)
+                        (lambda (pattern . body)
+                           (if (pair? pattern)
+                                 (let ((name (car pattern))
+                                       (args (cdr pattern)))
+                                    `(\%define \name (lambda \args \@body)))
+                              `(\%define \pattern \@body)))))
+
+(define %define-kind (lambda (%define %kind)
+                        (lambda (pattern . body)
+                           (if (pair? pattern)
+                                 (let ((name (car pattern))
+                                       (args (cdr pattern)))
+                                    `(\%define \name (\%kind (lambda \args \@body))))
+                              `(\%define \pattern (\%kind \@body))))))
+
+(define expand-define (%define-with define))
+(define expand-bind   (%define-with bind))
+(define expand-macro  (%define-kind define form))
+
+(define define (form expand-define))
+(define bind   (form expand-bind))
+(define macro  (form expand-macro))
+
+## (rec var exp) -> (let ([var '()]) (set! var exp))
+(macro (rec var exp)
+   `(let ((\var '())) (set \var \exp)))
+
+## (when test exp ... ) -> (if test (begin exp ... ) '())
+(macro (when test . body)
+   `(if \test (begin \@body) '()))
+
+## (unless test exp ... ) -> (if test '() (begin exp ... ))
+(macro (unless test . body)
+   `(if \test '() \@body))
+
+## (record (var ... ) (val ...) exp ... ) -> (apply (lambda (var ... ) (begin exp ... )) val)
+(macro (record vars vals . body)
+   `(apply (lambda \vars \@body) vals))
+
+(define (expand-cond clauses)
+   (if (pair? clauses)
+         (let ((head (car clauses))
+               (tail (cdr clauses)))
+            (if (pair? head)
+                  (let ((test (car head))
+                        (seq  (cdr head)))
+                     (if (== test 'else)
+                           `(begin \@seq)
+                        (if (pair? seq)
+                              `(if \test 
+                                     (begin \@seq)
+                                  (cond \@tail))
+                           `(or \test (cond \@tail)))))))))
+
+(macro (cond . clauses)
+   (expand-cond clauses))
+
+
+#{
+## (recur f ([var init] ... ) exp ... ) -> ((rec f (lambda (var ... ) (begin exp ... ))) init ... )
+(macro (recur name bindings . body)
+   (let ((vars (map car binding))
+         (vals (map cdr binding)))
+      `((rec \name (lambda vars \@body)) \@vals)))
+}#

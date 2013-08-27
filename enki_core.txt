@@ -1,0 +1,66 @@
+<core> = <object>
+       | <name>
+       | <quote>
+       | <type>
+       | (formula <arguments> <core>)
+       | (if <core> <core> <core>)
+       | (define <name> <core>)
+       | (let <locals> <assigns> <core>)
+       | (fix <locals> <assigns> <core>)
+       | (delay <type> <core>)
+       | (effect <core>)
+       | (syntax <core>)
+       | (ctor <name> <type> <core>*)
+       | (case <core> <condition>* <else>)
+       | (<core> <core>*)
+
+formula = lambda | pi | sigma | any | all | subset
+
+<object> := a literal value
+<name>   := a name 
+
+<quote> = '<core>
+<type>  = :<core>
+
+<locals> = ( <local>+ )
+<local>  = <name> <type>?
+         | _      <type>?
+
+<assigns> = <assign>+
+<assign>  = (set <name> <core>)
+
+<arguments> = ()
+            | <local>
+            | ( <local>+ )
+            | ( <local>+ . <local> )
+
+condition = (<name> <arguments> <core>)
+else      = ( _ <core>)
+
+quote   := construct a AST
+form    := construct a AST tranformer value
+lambda  := construct a value function
+pi      := construct a dependent product
+sigma   := construct a dependent coproduct
+any     := construct a dependent union
+all     := construct a dependent intersection
+subset  := construct a subset type
+if      := construct if conditional
+define  := define/update global name
+let     := declare a local scope assigned from outer scope
+fix     := declare a local scope assigned from inner scope
+delay   := construct a delayed thunk
+effect  := evaluate a delayed thunk without updating it
+syntax  := construct a syntax function
+ctor    := construct a value with type <type> and constructor <symbol> and elements <core>*
+case    := de-construct a value by constructor
+
+- - - - - - - - - - - - - - - - - - - - - 
+
+(sigma  (a [A]) (B a)) == { (a, b) | a \in A && b \in (B a) }
+(pi     (a [A]) (B a)) == { f      | f \subset (sigma (a [A]) (B a)) && f \in Function }
+(any    (a [A]) (B a)) == { b      | b \in Union{x \in A}(B x) }
+(all    (a [A]) (B a)) == { b      | b \in Intercection{x \in A}(B x) }
+(subset (a [A]) (B a)) == { a      | #(B a) > 0 }
+
+- - - - - - - - - - - - - - - - - - - - - 

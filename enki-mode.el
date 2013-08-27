@@ -9,10 +9,11 @@
        "(" (regexp-opt
             '(
               "define"
-              "lambda"
-              "macro"
+              "lambda" "pi" "sigma" "any" "all" "subset"
+              "delay" "syntax" "ctor"
               "bind"
               "set"
+              "macro"
               ) t)
        "\\>")
       '(1 font-lock-keyword-face))
@@ -32,7 +33,11 @@
                     "cond"
                     "if"
                     "let"
+                    "fix"
                     "or"
+                    "case"
+                    "effect"
+                    "_"
                     ) t)
 	     "\\>")
 	    1)

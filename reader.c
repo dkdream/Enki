@@ -322,97 +322,6 @@ static bool readSymbol(FILE *fp, int first, Target result);
 static bool skipBlock(FILE *fp, const int delim);
 static bool skipComment(FILE *fp);
 
-static bool list2type(Pair list, Node type) {
-    Tuple tuple;
-    unsigned size;
-    bool     dotted;
-
-    if (!list_State(list, &size, &dotted)) goto failure;
-    if (1 > size) return true;
-
-    if (!tuple_Create(size, &tuple)) goto failure;
-    if (!tuple_Fill(tuple, list))    goto failure;
-    if (!setType(tuple, type))       goto failure;
-
-    if (!dotted) {
-        if (!pair_SetCar(list, tuple)) goto failure;
-        if (!pair_SetCdr(list, NIL))   goto failure;
-    } else {
-        Node end;
-        if (!list_GetEnd(list, &end))  goto failure;
-        if (!pair_SetCar(list, tuple)) goto failure;
-        if (!pair_SetCdr(list, end))   goto failure;
-    }
-
-    return true;
-
- failure:
-    fatal("%s", "unable to convert list to typed tuple");
-    return false;
-}
-
-static bool readGroup(FILE *fp, Node type, Target result)
-{
-    GC_Begin(7);
-
-    const char *error = 0;
-    unsigned size;
-    bool     dotted;
-
-    Node  first;
-    Pair  head;
-    Pair  tail;
-    Node  hold;
-    Tuple tuple;
-
-    GC_Protect(first);
-    GC_Protect(head);
-    GC_Protect(tail);
-    GC_Protect(hold);
-    GC_Protect(tuple);
-
-    if (!readExpr(fp, &(first.reference))) {
-        ASSIGN(result, NIL);
-        GC_End();
-        return false;
-    }
-
-    if (!pair_Create(first, NIL, &head)) goto failure;
-
-    tail = head;
-
-    for (;;) {
-        if (!readExpr(fp, &(hold.reference))) goto eof;
-        if (!pair_Create(hold, NIL, &(hold.pair))) goto failure;
-        if (!pair_SetCdr(tail, hold)) goto failure;
-        tail = hold.pair;
-    }
-
-  eof:
-    if (!list_State(head, &size, &dotted)) goto failure;
-    if (2 > size) {
-        ASSIGN(result, first);
-        goto done;
-    }
-
-    if (!tuple_Create(size, &tuple)) goto failure;
-    if (!tuple_Fill(tuple, head))    goto failure;
-    if (!setType(tuple, type))       goto failure;
-    ASSIGN(result, tuple);
-
-  done:
-    GC_End();
-    return true;
-
-  failure:
-    if (!error) {
-        fatal("%s", error);
-    }
-
-    GC_End();
-    return false;
-}
-
 // (...)
 static bool readList(FILE *fp, int delim, Target result)
 {
@@ -815,7 +724,6 @@ extern bool readExpr(FILE *fp, Target result)
               if (isPair(*(result.reference))) {
                   if (!list_UnDot(*(result.pair))) return false;
                   if (!tuple_Convert(*(result.pair), result.tuple)) return false;
-                  setType(*(result.tuple), t_path);
                   setConstructor(*(result.tuple), s_path);
               }
               return rtn;

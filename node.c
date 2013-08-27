@@ -146,7 +146,7 @@ bool node_Iso(long depth, Node left, Node right)
 extern void node_TypeOf(Node value, Target result)
 {
     if (isNil(value)) {
-        ASSIGN(result, value);
+        ASSIGN(result, t_nil);
         return;
     }
 
