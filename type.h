@@ -64,21 +64,21 @@ extern Sort zero_s;   // the sort of values
 extern Sort symbol_s; // the sort of symbols
 extern Sort opaque_s; // the sort of opaque types
 
-//extern Type t_integer; -- move inside of integer.c
-//extern Type t_pair;  -- move inside of pair.c
-//extern Type t_symbol; -- move inside of symbol.c
-//extern Type t_text; -- move inside of text.c
-//extern Type t_tuple; -- move inside of tuple.c
+extern Type t_integer; // the type of integer values
+extern Type t_pair;    // the union of all pairs types
+extern Type t_symbol;  // the union of all symbol types
+extern Type t_text;    // the union of all text types
+extern Type t_tuple;   // the union of all tuple types
 
-extern Type t_any;    // the union of all type of sort Zero
-extern Type t_buffer;
-extern Type t_false;  // the type of the value void
-extern Type t_infile;
-extern Type t_nil;    // the type of the value nil
-extern Type t_opaque; // all raw collections are this type
-extern Type t_outfile;
-extern Type t_true;  // the type of the value true
-extern Type t_void;  // the intersection of all type of sort Zero
+extern Type t_any;     // the union of all type of sort Zero
+extern Type t_buffer;  // the type of a c-text-buffer
+extern Type t_false;   // the type of the value void
+extern Type t_infile;  // the type of a c-os-infile
+extern Type t_nil;     // the type of the value nil
+extern Type t_opaque;  // all raw collections are this type
+extern Type t_outfile; // the type of a c-os-infile
+extern Type t_true;    // the type of the value true
+extern Type t_void;    // the intersection of all type of sort Zero
 
 extern bool sort_Create(Symbol,Sort*);      /* each sort has a unique name */
 extern bool type_Create(Symbol,Sort,Type*); /* each type constant in a sort has a unique name */

@@ -17,10 +17,10 @@
                                         (== (car obj) 'unquote-splicing))
                                      (let ((value (cadr obj)))
                                         (if rst
-                                              (list 'concat-list value (qq-list rst))
+                                              (new-list 'concat-list value (qq-list rst))
                                            value))
-                                  (list 'cons (qq-object obj) (qq-list rst))))
-                         (list 'quote l))))
+                                  (new-list 'cons (qq-object obj) (qq-list rst))))
+                         (new-list 'quote l))))
       (bind qq-element (lambda (l)
                          (let ((head (car l)))
                             (if (== head 'unquote)
@@ -29,7 +29,7 @@
       (bind qq-object (lambda (object)
                         (if (pair? object)
                               (qq-element object)
-                           (list 'quote object))))
+                           (new-list 'quote object))))
       qq-object))
 
 (define quasiquote (form expand-quote))

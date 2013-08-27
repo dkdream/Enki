@@ -450,53 +450,14 @@ extern SUBR(encode_type) {
     pair_GetCar(args.pair, &value);
 
     if (isSymbol(value)) {
-        ASSIGN(result, args);
+        ASSIGN(result, value);
         return;
     }
 
     if (isBlock(value)) {
-        ASSIGN(result, args);
-        return;
-    }
+        Symbol type;
+        Symbol sort;
 
-    if (isPair(value)) {
-        encode(value, env, &value);
-#if 0
-        fprintf(stderr, "type [");
-        prettyPrint(stderr, value);
-        fprintf(stderr, "]\n");
-#endif
-        pair_Create(value, NIL, result.pair);
-        return;
-    }
-
-    ASSIGN(result, args);
-}
-
-extern SUBR(type)
-{ //Fixed
-    Node   value;
-    Symbol type;
-    Symbol sort;
-    Pair   entry;
-
-    pair_GetCar(args.pair, &value);
-
-    if (isSymbol(value)) {
-        // lookup symbol in the current enviroment
-        if (!alist_Entry(env.pair, value.symbol, &entry)) {
-            // lookup symbol in the global enviroment
-            if (!alist_Entry(enki_globals.pair,  value.symbol, &entry)) {
-                // construct a new sort Zero type value.
-                type_Create(value.symbol, zero_s, result.type);
-                return;
-            }
-        }
-        pair_GetCdr(entry, result);
-        return;
-    }
-
-    if (isBlock(value)) {
         switch (getCount(value)) {
         case 0:
             fatal("invalid block to type: size==0");
@@ -528,17 +489,54 @@ extern SUBR(type)
             return;
 
         default:
-            break;
+            fatal("invalid block to type: size>2");
         }
+        return;
     }
 
     if (isPair(value)) {
-        eval(value, env, &value);
+        encode(value, env, result);
+        return;
+    }
+
+    ASSIGN(result, args);
+}
+
+extern SUBR(type)
+{ //Fixed
+    Node value;
+
+    if (isSymbol(args)) {
+        Pair entry;
+        // lookup symbol in the current enviroment
+        if (!alist_Entry(env.pair, args.symbol, &entry)) {
+            // lookup symbol in the global enviroment
+            if (!alist_Entry(enki_globals.pair,  args.symbol, &entry)) {
+                fatal("undefined variable: %s", symbol_Text(args.symbol));
+            }
+        }
+        pair_GetCdr(entry, result);
+        return;
+    }
+
+    if (isAType(args)) {
+        ASSIGN(result, args);
+        return;
+    }
+
+    if (isASort(args)) {
+        ASSIGN(result, args);
+        return;
+    }
+
+    if (isPair(args)) {
+        eval(args, env, result);
+        return;
     }
 
     // this needs to handle complex types
     // right now its is just like quote
-    ASSIGN(result, value);
+    ASSIGN(result, args);
     return;
 }
 
@@ -1604,27 +1602,47 @@ extern SUBR(tuple) {
     GC_End();
 }
 
-extern SUBR(allocate) {
-    Node type; Node size;
-    checkArgs(args, "allocate", 2, NIL, s_integer);
+extern SUBR(ctor) {
+    unsigned size = 0;
+    bool     dotted = false;
 
-    ASSIGN(result,NIL);
+    list_State(args.pair, &size, &dotted);
 
-    forceArgs(args, &type, &size, 0);
+    if (dotted)   fatal("dotted list in: ctor");
+    if (1 > size) fatal("no ctor name in: ctor");
+    if (2 > size) fatal("no type in: ctor");
+    if (3 > size) fatal("no value in: ctor");
 
-    long slots = size.integer->value;
+    Node label;
+    Node type;
 
-    if (1 > slots) return;
+    pair_GetCar(args.pair, &label);
 
-    Tuple value;
+    if (!isSymbol(label)) fatal("ctor name must be a symbol");
 
-    tuple_Create(slots, &value);
+    pair_GetCdr(args.pair, &args);
 
-    ASSIGN(result,value);
+    pair_GetCar(args.pair, &type);
 
-    if (isAType(type)) return;
+    if (!isAType(type)) fatal("ctor type must be a type");
 
-    setType(value, type.symbol);
+    pair_GetCdr(args.pair, &args);
+
+    GC_Begin(2);
+
+    Node tuple;
+
+    GC_Protect(tuple);
+
+    tuple_Create(size - 2, &tuple.tuple);
+    tuple_Fill(tuple.tuple, args.pair);
+
+    setType(tuple, type);
+    setConstructor(tuple, label.symbol);
+
+    ASSIGN(result, tuple);
+
+    GC_End();
 }
 
 extern SUBR(force) {
@@ -2892,6 +2910,12 @@ void startEnkiLibrary() {
     MK_CONST(void,void_v);
     MK_CONST(nil,NIL);
 
+    MK_CONST(integer,t_integer);
+    MK_CONST(pair,t_pair);
+    MK_CONST(symbol,t_symbol);
+    MK_CONST(text,t_text);
+    MK_CONST(tuple,t_tuple);
+
     MK_CONST(Zero,zero_s);
 
     MK_PRM(system_check);
@@ -2976,9 +3000,8 @@ void startEnkiLibrary() {
     MK_PRM(level);
     MK_PRM(element);
     MK_PRM(cons);
-    MK_PRM(list);
-    MK_PRM(tuple);
-    MK_PRM(allocate);
+    MK_OPR(new-list,list);
+    MK_OPR(new-tuple,tuple);
 
     MK_PRM(force);
     MK_OPR(concat-text,concat_text);
@@ -3016,6 +3039,7 @@ void startEnkiLibrary() {
     MK_OPR(alloc-cycle,alloc_cycle);
     MK_OPR(scan-cycle,scan_cycle);
     MK_PRM(length);
+    MK_PRM(ctor);
 
     MK_OPR(eof-in,eof_in);
 

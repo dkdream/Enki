@@ -88,7 +88,7 @@ extern void expand(const Node expr, const Node env, Target result)
 
         // deal with quoted values
         if (isIdentical(s_quote, head)) goto list_done;
-        if (isIdentical(s_type, head))  goto list_done;
+        if (isIdentical(s_type, head))  goto list_begin;
 
         // check if the head is a reference
         if (!isSymbol(head)) goto list_begin;

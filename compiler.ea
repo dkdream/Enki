@@ -173,14 +173,14 @@
 (define scr   edi)
 
 ## x86 addressing modes:
-(define (const x)         (list "$" x))
-(define (indirect x)      (list "(" x ")"))
-(define (offset x offset) (list offset (indirect x)))
-(define (absolute x)      (list "*" x))
+(define (const x)         (new-list "$" x))
+(define (indirect x)      (new-list "(" x ")"))
+(define (offset x offset) (new-list offset (indirect x)))
+(define (absolute x)      (new-list "*" x))
 
 ## Use this one inside of "indirect" or "offset".
 (define (index-register base index size)
-   (list base "," index "," size))
+   (new-list base "," index "," size))
 
 (define (arg index) 
    (offset frame (* -4 (++ index))))
@@ -209,11 +209,11 @@
 (define label-prefix        "K")
 (define (new-label)
    (define label-index-counter (++ label-index-counter))
-   (list label-prefix "_" (format "@{s}" label-index-counter)))
+   (new-list label-prefix "_" (format "@{s}" label-index-counter)))
 
 #thom# string need to be converted to a c-string
 (define (asm-represent-string string) 
-   (list "\"" string "\""))
+   (new-list "\"" string "\""))
 
 (define (ascii string) 
    (insn ".ascii " (asm-represent-string string)))
@@ -365,7 +365,7 @@
    (make-iseq (caller-save) nil `((call \name))))
 
 (define (call-indirect register)
-   (make-iseq (caller-save) (list register) `((call (indirect \name)))))
+   (make-iseq (caller-save) (new-list register) `((call (indirect \name)))))
 
 (define (jump-label name)
    (make-iseq '() '() `((jmp \name))))
@@ -384,10 +384,10 @@
          (if (and (needs?   first-reg seq2)
                   (changes? first-reg seq1))
                (preserving (cdr regs)
-                           (make-iseq (union (list first-reg)
+                           (make-iseq (union (new-list first-reg)
                                              (iseq-inputs seq1))
                                       (delta (iseq-modified seq1)
-                                             (list first-reg))
+                                             (new-list first-reg))
                             (append `((save \first-reg))
                                     (iseq-code seq1)
                                     `((restore \first-reg))))

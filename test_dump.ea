@@ -38,19 +38,19 @@ dump
 (assert (iso 10 'tuple           (ctor-of ttest)))
 
 (dumpln 'x7)
-(assert (iso 10 ttest            (ctor-of (type-of ttest :iseq) 'fooness)))
+(assert (iso 10 ttest            (ctor-of (type-of ttest :{iseq Zero}) 'fooness)))
 
 (dumpln 'x8)
 (assert (iso 10 'fooness         (ctor-of ttest)))
 
 (dumpln 'x9)
-(assert (iso 10 :iseq            (type-of ttest)))
+(assert (iso 10 :{iseq Zero}     (type-of ttest)))
 
 (define fooness 'fooness)
 
 (assert (iso 10 :{symbol Symbol} (type-of fooness)))
 
-(define barness :barness)
+(define barness :{barness Zero})
 
 (assert (iso 10 :{Zero} (type-of barness)))
 
