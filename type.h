@@ -16,11 +16,7 @@
 #include "symbol.h"
 #include "treadmill.h"
 #include "hashcode.h"
-
-struct sort {
-    HashCode hashcode;
-    Symbol   name;
-};
+#include "primitive.h"
 
 enum type_code {
     tc_constant,
@@ -32,32 +28,61 @@ enum type_code {
     tc_all,    // type_branch (intersection of types)
 };
 
+// s_sort is a sort (sort constant)
+struct sort {
+    HashCode hashcode;
+    Symbol   name;
+};
+
+// s_axiom is a axiom pair (c:s)
+struct axiom {
+    HashCode hashcode;
+    Sort element;
+    Sort class;
+};
+
+// s_rule is a rule  triple (in=s1,out=s2,kind=s3)
+struct rule {
+    HashCode hashcode;
+    Symbol   functor;
+    Sort xxx, yyy, kind;
+};
+
 struct type {
     HashCode hashcode; Sort sort; enum type_code code;
     HashCode marker[0];
 };
 
+// s_base is a base type
 struct type_constant {
     HashCode hashcode; Sort sort; enum type_code code;
     Symbol name;
 };
 
+// s_index is an indexed type
 struct type_index {
     HashCode hashcode; Sort sort; enum type_code code;
     unsigned index;
     Type     slot;
 };
 
+// s_label is an labeled type
 struct type_label {
     HashCode hashcode; Sort sort; enum type_code code;
     Symbol label;
     Type   slot;
 };
 
+// s_branch is a branch type (any,tuple,record,all)
 struct type_branch {
     HashCode hashcode; Sort sort; enum type_code code;
     Type left;
     Type right;
+};
+
+// s_name is a variable reference used in a formula
+struct name {
+    Sort sort;
 };
 
 extern Sort void_s;   // the sort with NO types
@@ -124,6 +149,11 @@ extern bool type_Record(const Type left, const Type right, Type*);
  * all(all(a,b),c) == all(a,all(b,c))
  */
 extern bool type_All(const Type left, const Type right, Type*);
+
+/*
+ * walk a type tree and call func for each node
+ */
+extern bool type_Map(Operator func, const Node type, const Node env, Target target);
 
 
 extern bool type_Pi(Type*, ...);             /* Pi(var:type...):type      dependent-functions*/

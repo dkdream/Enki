@@ -24,31 +24,6 @@ typedef struct type_index*    TypeInx;
 typedef struct type_label*    TypeLbl;
 typedef struct type_branch*   TypeBrn;
 
-
-//  s_sort   is a sort         (sort constant)
-//  s_axiom  is a axiom pair   (c:s)
-//  s_rule   is a rule  triple (in=s1,out=s2,kind=s3)
-//  s_base   is a base type    (type constant)
-//  s_branch is a branch type  (any,tuple,record,
-
-//  s_name  is a variable reference used in a formula
-
-struct name {
-    Sort sort;
-};
-
-struct axiom {
-    HashCode hashcode;
-    Sort element;
-    Sort class;
-};
-
-struct rule {
-    HashCode hashcode;
-    Symbol   functor;
-    Sort xxx, yyy, kind;
-};
-
 struct _internal_Row {
     unsigned lock;
     Header   first;
@@ -939,6 +914,116 @@ extern bool type_Record(const Type left, const Type right, Type* result) {
     }
 
     return false;
+}
+
+static bool axiom_Map(Operator func,  const Axiom  node, const Node env, Target target);
+static bool rule_Map(Operator  func,  const Rule   node, const Node env, Target target);
+static bool index_Map(Operator func,  const Index  node, const Node env, Target target);
+static bool label_Map(Operator func,  const Label  node, const Node env, Target target);
+
+static bool branch_Map(Operator func, const Branch node, const Node env,
+                       Pair begin, Pair *end, Target result);
+
+extern bool type_Map(Operator func, const Node node, const Node env, Target target) {
+    if (isNil(node)) {
+        ASSIGN(target, NIL);
+        return true;
+    }
+
+    if (!func) {
+        fatal("\nerror: type_Map applied to a null function");
+        return false;
+    }
+
+    Node ctor = getConstructor(node);
+
+    if (isIdentical(ctor, s_sort)) {
+        func(node, env, target);
+        return true;
+    }
+#if 0
+    if (isIdentical(ctor, s_axiom)) {
+        return axiom_Map(func, node.axiom, env, target);
+    }
+
+    if (isIdentical(ctor, s_rule)) {
+        return rule_Map(func, node.rule, env, target);
+    }
+#endif
+    if (isIdentical(ctor, s_base)) {
+        func(node, env, target);
+        return true;
+    }
+#if 0
+    if (isIdentical(ctor, s_index)) {
+        return index_Map(func, node.index, env, target);
+    }
+
+    if (isIdentical(ctor, s_label)) {
+        return label_Map(func, node.label, env, target);
+    }
+#endif
+    if (isIdentical(ctor, s_branch)) {
+        return branch_Map(func, node.branch, env, 0, 0, target);
+    }
+
+    fatal("\nerror: type_Map applied to a non type obj");
+    return false;
+}
+
+
+static bool branch_Map(Operator func, const Branch branch, const Node env,
+                       Pair begin, Pair* end, Target result)
+{
+    enum type_code code = branch->code;
+
+    GC_Begin(8);
+
+    Node left;
+    Node right;
+
+    Pair first;
+    Pair last;
+    Node input;
+    Node output;
+    Pair hold;
+
+    GC_Protect(left);
+    GC_Protect(right);
+
+    GC_Protect(first);
+    GC_Protect(last);
+
+    if (branch->right->code == code) {
+        if (!end) {
+            end = &last;
+        }
+        if (!branch_Map(func, (Branch)(branch->right), env, begin, &last, &right)) goto error;
+        begin = right.pair;
+    } else {
+        func(branch->right, env, &right);
+        if (!pair_Create(right, NIL, &last)) goto error;
+        if (end) {
+            if (!pair_SetCdr(*end, last)) goto error;
+        } else if (!begin) {
+            begin = last;
+        }
+    }
+
+    if (branch->left->code == code) {
+        if (!branch_Map(func, (Branch)(branch->left), env, begin, end, result)) goto error;
+    } else {
+        func(branch->left, env, &left);
+        if (!pair_Create(left, begin, result)) goto error;
+    }
+
+    GC_End();
+    return true;
+
+ error:
+    GC_End();
+    return false;
+
 }
 
 extern bool type_Pi(Type* target, ...) {

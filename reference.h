@@ -34,37 +34,46 @@ typedef unsigned long      Size;
 
 typedef void *Reference;
 /*    */
-typedef struct integer   *Integer;
-typedef struct pair      *Pair;
-typedef struct primitive *Primitive;
-typedef struct symbol    *Symbol;
-typedef struct text      *Text;
-typedef struct tuple     *Tuple;
-typedef struct type      *Type;
-typedef struct sort      *Sort;
-typedef struct axiom     *Axiom;
-typedef struct rule      *Rule;
-typedef struct name      *Name;
+typedef struct integer       *Integer;
+typedef struct pair          *Pair;
+typedef struct primitive     *Primitive;
+typedef struct symbol        *Symbol;
+typedef struct text          *Text;
+typedef struct tuple         *Tuple;
+typedef struct sort          *Sort;
+typedef struct axiom         *Axiom;
+typedef struct rule          *Rule;
+typedef struct type          *Type;
+typedef struct type_constant *Constant;
+typedef struct type_index    *Index;
+typedef struct type_label    *Label;
+typedef struct type_branch   *Branch;
+typedef struct name          *Name;
 
 /*    */
 
 union  __attribute__ ((__transparent_union__ __packed__))
 node {
-    long          value;
+    long      value;
     /**/
-    Reference     reference;
+    Reference reference;
     /**/
-    Integer       integer;
-    Pair          pair;
-    Primitive     primitive;
-    Symbol        symbol;
-    Text          text;
-    Tuple         tuple;
-    Type          type;
-    Sort          sort;
-    Axiom         axiom;
-    Rule          rule;
-    Name          name;
+    Integer   integer;
+    Pair      pair;
+    Primitive primitive;
+    Symbol    symbol;
+    Text      text;
+    Tuple     tuple;
+    /**/
+    Sort      sort;
+    Axiom     axiom;
+    Rule      rule;
+    Type      type;
+    Constant  constant;
+    Index     index;
+    Label     label;
+    Branch    branch;
+    Name      name;
     /**/
 };
 
@@ -72,23 +81,28 @@ typedef union node Node;
 
 union __attribute__ ((__transparent_union__ __packed__))
 node_target {
-    long          *value;
+    long      *value;
     /**/
-    Reference     *reference;
+    Reference *reference;
     /**/
-    Integer       *integer;
-    Pair          *pair;
-    Primitive     *primitive;
-    Symbol        *symbol;
-    Text          *text;
-    Tuple         *tuple;
-    Type          *type;
-    Sort          *sort;
-    Axiom         *axiom;
-    Rule          *rule;
-    Name          *name;
+    Integer   *integer;
+    Pair      *pair;
+    Primitive *primitive;
+    Symbol    *symbol;
+    Text      *text;
+    Tuple     *tuple;
     /**/
-    Node          *node;
+    Sort      *sort;
+    Axiom     *axiom;
+    Rule      *rule;
+    Type      *type;
+    Constant  *constant;
+    Index     *index;
+    Label     *label;
+    Branch    *branch;
+    Name      *name;
+    /**/
+    Node      *node;
     /**/
 };
 
