@@ -26,9 +26,10 @@ enum type_code {
     tc_constant,
     tc_index,
     tc_label,
-    tc_union,  // type_branch
-    tc_tuple,  // type_branch
-    tc_record, // type_branch
+    tc_any,    // type_branch (union of types )
+    tc_tuple,  // type_branch (indexed collection of types )
+    tc_record, // type_branch (labeled collection of types )
+    tc_all,    // type_branch (intersection of types)
 };
 
 struct type {
@@ -86,23 +87,43 @@ extern bool type_Create(Symbol,Sort,Type*); /* each type constant in a sort has 
 extern bool make_Axiom(Sort, Sort);
 extern bool make_Rule(Symbol, Sort, Sort, Sort);
 
-/* Forall S, a, b    where a:S and b:S         then union(a,b):S */
-/* Forall S, a, b    where a:S and b:S         then union(a,b) == union(b,a) */
-/* Forall S, a, b, c where a:S and b:S and c:S then union(union(a,b),c) == union(a,union(b,c)) */
-/* currently unions are mono-sorted */
-extern bool type_Union(const Type left, const Type right, Type*);
+/* Any := type | any(a,b) where a,b in Any
+ * any(a,void) == any(void,a) == a
+ * any(index(i,a),index(i,b)) == index(i,any(a,b))
+ * any(label(i,a),label(i,b)) == label(i,any(a,b))
+ * any(a,a) == a
+ * any(a,b) == any(b,a)
+ * any(any(a,b),c) == any(a,any(b,c))
+ */
+extern bool type_Any(const Type left, const Type right, Type*);
 
-/* Tuples := index(i,a) | tuple(a,b) where a,b in Tuple */
-/* tuple(a,b) == tuple(b,a) */
-/* tuple(a,tuple(b,c)) == tuple(tuple(a,b),c) */
+/* Tuples := index(i,a) | tuple(a,b) where a,b in Tuple
+ *
+ * tuple(index(i,a),index(i,b)) == index(i,any(a,b))
+ * tuple(index(i,a),index(i,a)) == index(i,a)
+ * tuple(a,b) == tuple(b,a)
+ * tuple(a,tuple(b,c)) == tuple(tuple(a,b),c)
+ */
 extern bool type_Index(const unsigned index, const Type at, Type*);
 extern bool type_Tuple(const Type left, const Type right, Type*);
 
-/* Record := label(i,a) | record(a,b) where a,b in Record */
-/* record(a,b) == record(b,a) */
-/* record(a,record(b,c)) == record(record(a,b),c) */
+/* Record := label(i,a) | record(a,b) where a,b in Record
+ *
+ * record(label(i,a),label(i,b)) == label(i,any(a,b))
+ * record(label(i,a),label(i,a)) == label(i,a)
+ * record(a,b) == record(b,a)
+ * record(a,record(b,c)) == record(record(a,b),c)
+ */
 extern bool type_Label(const Symbol label, const Type at, Type*);
 extern bool type_Record(const Type left, const Type right, Type*);
+
+/* All := type | all(a,b) where a,b in All
+ *
+ * all(a,a) == a
+ * all(a,b) == all(b,a)
+ * all(all(a,b),c) == all(a,all(b,c))
+ */
+extern bool type_All(const Type left, const Type right, Type*);
 
 
 extern bool type_Pi(Type*, ...);             /* Pi(var:type...):type      dependent-functions*/
@@ -127,14 +148,31 @@ extern inline bool sort_Contains(const Type type, const Sort sort) {
     return (type->sort == sort);
 }
 
+extern inline bool isATypeObj(const Node node) __attribute__((always_inline));
+extern inline bool isATypeObj(const Node node) {
+    if (isNil(node)) return false;
+    Node ctor = getConstructor(node);
+    if (!s_sort) return false; // symbols are constructed before types
+    if (isIdentical(ctor, s_sort)) return true;
+    if (isIdentical(ctor, s_axiom)) return true;
+    if (isIdentical(ctor, s_rule)) return true;
+    if (isIdentical(ctor, s_base)) return true;
+    if (isIdentical(ctor, s_branch)) return true;
+    if (isIdentical(ctor, s_index)) return true;
+    if (isIdentical(ctor, s_label)) return true;
+    return false;
+}
+
 extern inline bool isAType(const Node type) __attribute__((always_inline));
 extern inline bool isAType(const Node type) {
     Kind kind = asKind(type);
     if (!kind)   return false;
     if (!s_base) return false; // symbols are constructed before types
-    if (!s_type) return false; // symbols are constructed before types
-    if (kind->type.symbol == s_base) return true;
-    if (kind->type.symbol == s_type) return true;
+    if (kind->constructor.symbol == s_base)   return true;
+    if (kind->constructor.symbol == s_branch) return true;
+    if (kind->constructor.symbol == s_index)  return true;
+    if (kind->constructor.symbol == s_label)  return true;
+
     return false;
 }
 
@@ -161,6 +199,12 @@ extern inline bool fromCtor(const Node value, const Node ctor) {
     Kind kind = asKind(value);
     if (!kind) return false;
     return (kind->constructor.reference == ctor.reference);
+}
+
+extern inline const char* sort_Name(Sort sort) __attribute__((always_inline));
+extern inline const char* sort_Name(Sort sort) {
+    if (!sort) return "";
+    return (const char*)(sort->name->value);
 }
 
 extern inline const char* type_SortName(Type type) __attribute__((always_inline));

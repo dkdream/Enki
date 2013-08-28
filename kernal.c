@@ -2755,34 +2755,72 @@ extern SUBR(true_q) {
     }
 }
 
-extern SUBR(field) {
+extern SUBR(Any) {
+    Node left;
+    Node right;
+
+    checkArgs(args, "Any", 2, NIL, NIL);
+    fetchArgs(args, &left, &right, 0);
+
+    if (!isAType(left))  fatal("Any: left is not a type");
+    if (!isAType(right)) fatal("Any: right is not a type");
+
+    type_Any(left.type, right.type, result.type);
+}
+
+extern SUBR(Field) {
     Node label;
     Node type;
 
-    checkArgs(args, "field", 2, NIL, NIL);
+    checkArgs(args, "Field", 2, NIL, NIL);
     fetchArgs(args, &label, &type, 0);
 
-
-    if (!isSymbol(label)) fatal("field: no label");
-    if (!isAType(type)) fatal("field: no type");
+    if (!isSymbol(label)) fatal("Field: no label");
+    if (!isAType(type)) fatal("Field: no type");
 
     type_Label(label.symbol, type.type, result.type);
 }
 
-extern SUBR(index) {
+extern SUBR(Index) {
     Node offset;
     Node type;
 
-    checkArgs(args, "index", 2, NIL, NIL);
+    checkArgs(args, "Index", 2, NIL, NIL);
     fetchArgs(args, &offset, &type, 0);
 
 
-    if (!isInteger(offset)) fatal("index: no offset");
-    if (!isAType(type)) fatal("index: no type");
+    if (!isInteger(offset)) fatal("Index: no offset");
+    if (!isAType(type)) fatal("Index: no type");
 
-    if (offset.integer->value < 0) fatal("index: offset is lessthen zero");
+    if (offset.integer->value < 0) fatal("Index: offset is lessthen zero");
 
     type_Index(offset.integer->value, type.type, result.type);
+}
+
+extern SUBR(Tuple) {
+    Node left;
+    Node right;
+
+    checkArgs(args, "Tuple", 2, NIL, NIL);
+    fetchArgs(args, &left, &right, 0);
+
+    if (!isAType(left))  fatal("Tuple: left is not a type");
+    if (!isAType(right)) fatal("Tuple: right is not a type");
+
+    type_Tuple(left.type, right.type, result.type);
+}
+
+extern SUBR(Record) {
+    Node left;
+    Node right;
+
+    checkArgs(args, "Record", 2, NIL, NIL);
+    fetchArgs(args, &left, &right, 0);
+
+    if (!isAType(left))  fatal("Record: left is not a type");
+    if (!isAType(right)) fatal("Record: right is not a type");
+
+    type_Record(left.type, right.type, result.type);
 }
 
 /***************************************************************
@@ -3097,8 +3135,11 @@ void startEnkiLibrary() {
     MK_OPR(fixed-evaluator,fixed_evaluator);
     MK_OPR(forced-value,forced_value);
 
-    MK_PRM(field);
-    MK_PRM(index);
+    MK_PRM(Any);
+    MK_PRM(Field);
+    MK_PRM(Index);
+    MK_PRM(Tuple);
+    MK_PRM(Record);
 
     Reference std_in  = 0;
     Reference std_out = 0;

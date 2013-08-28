@@ -96,53 +96,76 @@ static inline unsigned echo_string(TextBuffer *output, const char* text) {
     }
 }
 
-static inline unsigned echo_type(TextBuffer *output, Node type) {
+static inline unsigned echo_type(TextBuffer *output, Node node) {
     const unsigned start = buffer_marker(output);
 
-    if (isSymbol(type)) {
-        echo_string(output, (const char *)type.symbol->value);
+    if (isSymbol(node)) {
+        echo_string(output, (const char *)node.symbol->value);
         goto done;
     }
 
-    if (isIdentical(type, t_opaque)) {
+    if (isIdentical(node, t_opaque)) {
         echo_format(output, "<opaque>");
         goto done;
     }
 
-    if (!fromCtor(type, s_base)) {
-        echo_format(output, "<type %p>", type.reference);
+    if (fromCtor(node, s_sort)) {
+        echo_format(output, "<sort ");
+        echo_string(output, sort_Name(node.sort));
+        echo_format(output, ">");
         goto done;
     }
 
-    if (!fromCtor(type, s_index)) {
-        echo_format(output, "<type-index %p>", type.reference);
+    if (fromCtor(node, s_base)) {
+        if (isIdentical(node.type->sort, void_s)) {
+            echo_format(output, "<%s %s>",
+                        type_ConstantName(node.type),
+                        type_SortName(node.type));
+            goto done;
+        }
+
+        if (isIdentical(node.type->sort, opaque_s)) {
+            echo_format(output, "<%s %s>",
+                        type_ConstantName(node.type),
+                        type_SortName(node.type));
+            goto done;
+        }
+
+        if (isIdentical(node.type->sort, zero_s)) {
+            echo_format(output, "<%s %s>",
+                        type_ConstantName(node.type),
+                        type_SortName(node.type));
+            goto done;
+        }
+
+        echo_format(output, "<type ");
+        echo_string(output, type_ConstantName(node.type));
+        echo_format(output, " ");
+        echo_string(output, type_SortName(node.type));
+        echo_format(output, ">");
         goto done;
     }
 
-    if (!fromCtor(type, s_label)) {
-        echo_format(output, "<type-label %p>", type.reference);
+    if (fromCtor(node, s_index)) {
+        echo_format(output, "<index %u = ", type_IndexOffset(node.type));
+        echo_type(output, type_IndexSlot(node.type));
+        echo_format(output, ">");
         goto done;
     }
 
-    if (isIdentical(type.type->sort, zero_s)) {
-        echo_format(output, "<%s %s>",
-                    type_ConstantName(type.type),
-                    (const char*)(type.type->sort->name->value));
-        goto done;
-    }
-
-    if (isIdentical(type.type->sort, void_s)) {
-        echo_format(output, "<%s %s>",
-                    type_ConstantName(type.type),
-                    (const char*)(type.type->sort->name->value));
+    if (fromCtor(node, s_label)) {
+        echo_format(output, "<label ");
+        echo_string(output, type_LabelName(node.type));
+        echo_format(output, " = ");
+        echo_type(output, type_LabelSlot(node.type));
+        echo_format(output, ">");
         goto done;
     }
 
     echo_format(output, "<type %p %s %s>",
-                type.reference,
-                type_ConstantName(type.type),
-                (const char*)(type.type->sort->name->value));
-
+                node.reference,
+                type_ConstantName(node.type),
+                type_SortName(node.type));
 
  done: {
         const unsigned stop = buffer_marker(output);
@@ -207,38 +230,8 @@ extern bool buffer_print(TextBuffer *output, Node node) {
         return true;
     }
 
-    if (isIdentical(ctor, s_sort)) {
-        echo_format(output, "sort(%p ", node.reference);
-        buffer_add(output, (const char*)(node.sort->name->value));
-        buffer_add(output, ")");
-        return true;
-    }
-
-    if (isIdentical(ctor, s_base)) {
-        echo_format(output, "type(%p ", node.reference);
-        buffer_add(output, type_ConstantName(node.type));
-        buffer_add(output, " ");
-        buffer_add(output, type_SortName(node.type));
-        buffer_add(output, ")");
-        return true;
-    }
-
-    if (isIdentical(ctor, s_index)) {
-        echo_format(output, "type(%p ", node.reference);
-        echo_format(output, "%u : %p ",
-                    type_IndexOffset(node.type),
-                    type_IndexSlot(node.type));
-        buffer_add(output, type_SortName(node.type));
-        buffer_add(output, ")");
-        return true;
-    }
-
-    if (isIdentical(ctor, s_label)) {
-        echo_format(output, "type(%p ", node.reference);
-        buffer_add(output, type_LabelName(node.type));
-        echo_format(output, " : %p ", type_LabelSlot(node.type));
-        buffer_add(output, type_SortName(node.type));
-        buffer_add(output, ")");
+    if (isATypeObj(node)) {
+        echo_type(output, node);
         return true;
     }
 
@@ -338,38 +331,8 @@ extern bool buffer_dump(TextBuffer *output, Node node) {
         return true;
     }
 
-    if (isIdentical(ctor, s_sort)) {
-        echo_format(output, "sort(%p ", node.reference);
-        buffer_add(output, (const char*)(node.sort->name->value));
-        buffer_add(output, ")");
-        return true;
-    }
-
-    if (isIdentical(ctor, s_base)) {
-        echo_format(output, "type(%p ", node.reference);
-        buffer_add(output, type_ConstantName(node.type));
-        buffer_add(output, " ");
-        buffer_add(output, type_SortName(node.type));
-        buffer_add(output, ")");
-        return true;
-    }
-
-    if (isIdentical(ctor, s_index)) {
-        echo_format(output, "type(%p ", node.reference);
-        echo_format(output, "%u : %p ",
-                    type_IndexOffset(node.type),
-                    type_IndexSlot(node.type));
-        buffer_add(output, type_SortName(node.type));
-        buffer_add(output, ")");
-        return true;
-    }
-
-    if (isIdentical(ctor, s_label)) {
-        echo_format(output, "type(%p ", node.reference);
-        buffer_add(output, type_LabelName(node.type));
-        echo_format(output, " : %p ", type_LabelSlot(node.type));
-        buffer_add(output, type_SortName(node.type));
-        buffer_add(output, ")");
+    if (isATypeObj(node)) {
+        echo_type(output, node);
         return true;
     }
 
@@ -517,43 +480,8 @@ extern void buffer_prettyPrint(TextBuffer *output, Node node) {
             return;
         }
 
-        if (isIdentical(ctor, s_sort)) {
-            offset += 20;
-            echo_format(output, "sort(%p ", node.reference);
-            buffer_add(output, (const char*)(node.sort->name->value));
-            buffer_add(output, ")");
-            return;
-        }
-
-        if (isIdentical(ctor, s_base)) {
-            offset += 20;
-            echo_format(output, "type(%p ", node.reference);
-            buffer_add(output, type_ConstantName(node.type));
-            buffer_add(output, " ");
-            buffer_add(output, type_SortName(node.type));
-            buffer_add(output, ")");
-            return;
-        }
-
-        if (isIdentical(ctor, s_index)) {
-            offset += 20;
-            echo_format(output, "type(%p ", node.reference);
-            echo_format(output, "%u : %p ",
-                        type_IndexOffset(node.type),
-                        type_IndexSlot(node.type));
-            buffer_add(output, type_SortName(node.type));
-            buffer_add(output, ")");
-            return;
-        }
-
-        if (isIdentical(ctor, s_label)) {
-            offset += 20;
-            echo_format(output, "type(%p ", node.reference);
-            buffer_add(output, type_LabelName(node.type));
-            echo_format(output, " : %p ",
-                        type_LabelSlot(node.type));
-            buffer_add(output, type_SortName(node.type));
-            buffer_add(output, ")");
+        if (isATypeObj(node)) {
+            offset += echo_type(output, node);
             return;
         }
 
@@ -599,42 +527,6 @@ extern void buffer_prettyPrint(TextBuffer *output, Node node) {
 
         buffer_add(output, "[");
         offset += echo_type(output, type);
-
-        /*
-        if (isSymbol(type)) {
-            offset += type.symbol->size + 1;
-            echo_string(output, (const char *)type.symbol->value);
-        } else {
-            if (isIdentical(type, t_opaque)) {
-                offset += 10;
-                echo_format(output, "<opaque>");
-            } else if (!fromCtor(type, s_base)) {
-                offset += 10;
-                echo_format(output, "<type %p>", type.reference);
-            } else if (isIdentical(type.type->sort, zero_s)) {
-                offset += 20;
-                buffer_add(output, "<");
-                buffer_add(output, type_ConstantName(type.type));
-                buffer_add(output, " ");
-                buffer_add(output, (const char*)(type.type->sort->name->value));
-                buffer_add(output, ">");
-            } else if (isIdentical(type.type->sort, void_s)) {
-                offset += 20;
-                buffer_add(output, "<");
-                buffer_add(output, type_ConstantName(type.type));
-                buffer_add(output, " ");
-                buffer_add(output, (const char*)(type.type->sort->name->value));
-                buffer_add(output, ">");
-            } else {
-                offset += 20;
-                echo_format(output, "<type %p ", type.reference);
-                buffer_add(output, type_ConstantName(type.type));
-                buffer_add(output, " ");
-                buffer_add(output, (const char*)(type.type->sort->name->value));
-                buffer_add(output, ">");
-            }
-        }
-        */
 
         if (isAtomic(node)) {
             offset += 10;
