@@ -19,10 +19,11 @@
 
 extern void retype_global_symboltable();
 
-typedef struct type_constant* TypeCnt;
-typedef struct type_index*    TypeInx;
-typedef struct type_label*    TypeLbl;
-typedef struct type_branch*   TypeBrn;
+typedef enum {
+    ic_found,
+    ic_added,
+    ic_error,
+} insert_code;
 
 struct _internal_Row {
     unsigned lock;
@@ -228,13 +229,13 @@ extern bool make_Axiom(Sort element, Sort class) {
 
 // each rule is for a functor
 // functors:
-//   Pi    - (xxx -> yyy):kind (dependent function types)
-//   Sigma - (xxx, yyy):kind   (dependent tuple types)
-extern bool make_Rule(Symbol functor, Sort xxx, Sort yyy, Sort kind) {
+//   Pi    - (xxx -> yyy):zzz (dependent function types)
+//   Sigma - (xxx, yyy):zzz   (dependent tuple types)
+extern bool make_Rule(Symbol functor, Sort xxx, Sort yyy, Sort zzz) {
     if (!functor) return false;
     if (!xxx)     return false;
     if (!yyy)     return false;
-    if (!kind)    return false;
+    if (!zzz)    return false;
 
     HashCode hashcode = functor->hashcode;
 
@@ -249,7 +250,7 @@ extern bool make_Rule(Symbol functor, Sort xxx, Sort yyy, Sort kind) {
         if (test->functor != functor) continue;
         if (test->xxx     != xxx)     continue;
         if (test->yyy     != yyy)     continue;
-        if (test->kind    != kind)    continue;
+        if (test->zzz     != zzz)    continue;
 
         return true;
     }
@@ -268,7 +269,7 @@ extern bool make_Rule(Symbol functor, Sort xxx, Sort yyy, Sort kind) {
     result->functor  = functor;
     result->xxx      = xxx;
     result->yyy      = yyy;
-    result->kind     = kind;
+    result->zzz      = zzz;
 
     entry->after = _global_typetable->row[row].first;
     _global_typetable->row[row].first = entry;
@@ -293,7 +294,7 @@ extern bool type_Create(Symbol symbol, Sort sort, Type* target) {
         if (test->sort != sort)        continue;
         if (test->code != tc_constant) continue;
 
-        if (((TypeCnt)test)->name != symbol)      continue;
+        if (((Constant)test)->name != symbol)      continue;
 
         ASSIGN(target, test);
 
@@ -308,7 +309,7 @@ extern bool type_Create(Symbol symbol, Sort sort, Type* target) {
     entry->kind.constructor = (Node) s_base;
     entry->kind.constant    = 1;
 
-    TypeCnt result = (TypeCnt) asReference(entry);
+    Constant result = (Constant) asReference(entry);
 
     result->hashcode = hashcode;
     result->sort     = sort;
@@ -327,10 +328,10 @@ static long entry_Index(const Type entry) {
     if (!entry) return 0;
     switch (entry->code) {
     case tc_index:
-        return (long)(((TypeInx) entry)->index);
+        return (long)(((Index) entry)->index);
 
     case tc_label:
-        return (long)(((TypeLbl) entry)->label);
+        return (long)(((Label) entry)->label);
 
     default:
         return (long)(entry);
@@ -341,6 +342,7 @@ static bool entry_Greater(const Type left, const Type right) {
     return entry_Index(left) > entry_Index(right);
 }
 
+#if 0
 static bool match_Tag(const Type left, const Type right, Type* result) {
     if (!left) return false;
     if (!right) return false;
@@ -348,8 +350,8 @@ static bool match_Tag(const Type left, const Type right, Type* result) {
     if (left->code != right->code) return false;
 
     if (left->code == tc_index) {
-        TypeInx lindex = ((TypeInx) left);
-        TypeInx rindex = ((TypeInx) right);
+        Index lindex = ((Index) left);
+        Index rindex = ((Index) right);
 
         if (lindex->index != rindex->index) return false;
         if (lindex->slot == rindex->slot) {
@@ -365,8 +367,8 @@ static bool match_Tag(const Type left, const Type right, Type* result) {
     }
 
     if (left->code == tc_label) {
-        TypeLbl llabel = ((TypeLbl) left);
-        TypeLbl rlabel = ((TypeLbl) right);
+        Label llabel = ((Label) left);
+        Label rlabel = ((Label) right);
 
         if (llabel->label != rlabel->label) return false;
 
@@ -384,15 +386,27 @@ static bool match_Tag(const Type left, const Type right, Type* result) {
 
     return false;
 }
+#endif
 
 static bool branch_Cons(const enum type_code kind,
                         const Sort sort,
+                        const Type here,
                         const Type left,
-                        const Type right,
+                        const Tyoe right,
                         Type* result)
 {
-    const HashCode hashcode = hash_merge(left->hashcode,
-                                         right->hashcode);
+    HashCode temp  = here->hashcode;
+
+    {
+        if (left) {
+            temp = hash_merge(temp, left->hashcode);
+        }
+        if (right) {
+            temp = hash_merge(temp, right->hashcode);
+        }
+    }
+
+    const HashCode hashcode = temp;
 
     const int row   = hashcode % _global_typetable->size;
     Header    group = _global_typetable->row[row].first;
@@ -405,14 +419,14 @@ static bool branch_Cons(const enum type_code kind,
         if (test->sort != sort) continue;
         if (test->code != kind) continue;
 
-        TypeBrn branch = (TypeBrn) test;
+        Branch branch = (Branch) test;
 
-        if (isIdentical(branch->left, left)) {
-            if (isIdentical(branch->right, right)) {
-                ASSIGN(result, test);
-                return true;
-            }
-        }
+        if (branch->left  != here)  continue;
+        if (branch->left  != left)  continue;
+        if (branch->right != right) continue;
+
+        ASSIGN(result, test);
+        return;
     }
 
     Header entry = fresh_atom(0, sizeof(struct type_branch));
@@ -423,11 +437,12 @@ static bool branch_Cons(const enum type_code kind,
     entry->kind.constructor = (Node) s_branch;
     entry->kind.constant    = 1;
 
-    TypeBrn branch = (TypeBrn) asReference(entry);
+    Branch branch = (Branch) asReference(entry);
 
     branch->hashcode = hashcode;
     branch->sort     = sort;
     branch->code     = kind;
+    branch->here     = here;
     branch->left     = left;
     branch->right    = right;
 
@@ -438,7 +453,128 @@ static bool branch_Cons(const enum type_code kind,
     return true;
 }
 
-static bool any_IsMember(TypeBrn set, Type type) {
+static insert_code insert_Tree(const Type at, const Branch tree, Branch* result) {
+    Type here  = tree->here;
+    Type left  = tree->left;
+    Type right = tree->right;
+
+    if (at == here)  goto found;
+    if (at == left)  goto found;
+    if (at == right) goto found;
+
+    const bool greater = entry_Greater(at, here);
+
+    if (greater) {
+        bool ok;
+        if (right) {
+            if (right->code == tree->code) {
+                goto add_right;
+            } else {
+                if (entry_Greater(at, right)) {
+                     ok = branch_Cons(tree->code,
+                                      tree->sort,
+                                      at,
+                                      tree,
+                                      0,
+                                      result);
+                } else {
+                }
+            }
+        } else {
+            ok = branch_Cons(tree->code,
+                             tree->sort,
+                             tree->here,
+                             left,
+                             at,
+                             result);
+        }
+    } else {
+        if (!left) {
+        }
+    }
+
+    unsigned option  = 0;
+
+    option += (left->code  == tree->code) ? 1 : 0;
+    option += (right->code == tree->code) ? 2 : 0;
+
+    switch (option) {
+    case 0: goto bottom;
+    case 1: break;
+    case 2: break;
+    case 3: goto middle;
+    }
+
+  bottom:
+    {
+        bool ok;
+
+        if (greater) {
+            ok = branch_Cons(tree->code,
+                             tree->sort,
+                             tree->at,
+                             left,
+                             added,
+                             result);
+        } else {
+            ok = branch_Cons(tree->code,
+                             tree->sort,
+                             tree->at,
+                             added,
+                             left,
+                             result);
+        }
+
+        if (!ok) goto error;
+    }
+
+  middle:
+    {
+        Branch      added;
+        insert_code code;
+
+        if (greater) {
+            code = insert_Tree(at, right, &added);
+        } else {
+            code = insert_Tree(at, left, &added);
+        }
+
+        switch (code) {
+        case ic_error: goto error;
+        case ic_found: goto found;
+        case ic_added: break;
+        }
+
+        bool ok;
+        if (greater) {
+            ok = branch_Cons(tree->code,
+                             tree->sort,
+                             tree->at,
+                             left,
+                             added,
+                             result);
+        } else {
+            ok = branch_Cons(tree->code,
+                             tree->sort,
+                             tree->at,
+                             added,
+                             left,
+                             result);
+        }
+        if (!ok) goto error;
+        return ic_added:
+    }
+
+  error:
+    return bc_error;
+
+  found:
+    ASSIGN(result, tree);
+    return bc_found;
+}
+
+static bool any_IsMember(Branch set, Type type) {
+#if 0
     for (; set ;) {
         Type left  = set->left;
         Type right = set->right;
@@ -446,16 +582,17 @@ static bool any_IsMember(TypeBrn set, Type type) {
         if (isIdentical(left, type)) return true;
 
         if (right->code == tc_any) {
-            set = (TypeBrn) right;
+            set = (Branch) right;
             continue;
         }
 
         return isIdentical(right,type);
     }
-
+#endif
     return false;
 }
 
+#if 0
 static bool any_Cons(const Type left, const Type right, Type* result) {
     if (match_Tag(left,right,result)) return true;
 
@@ -467,7 +604,7 @@ static bool any_Cons(const Type left, const Type right, Type* result) {
                        result);
 }
 
-static bool any_Add(const Type left, TypeBrn right, Type* result) {
+static bool any_Add(const Type left, Branch right, Type* result) {
     Type hold;
     Type rleft  = right->left;
     Type rright = right->right;
@@ -489,7 +626,7 @@ static bool any_Add(const Type left, TypeBrn right, Type* result) {
     }
 
     if (right->code == tc_any) {
-        if (!any_Add(left, (TypeBrn) rright, &hold)) return false;
+        if (!any_Add(left, (Branch) rright, &hold)) return false;
     } else {
         if (left < rright) {
             if (!any_Cons(left, rright, &hold)) return false;
@@ -501,7 +638,7 @@ static bool any_Add(const Type left, TypeBrn right, Type* result) {
     return any_Cons(rleft, hold, result);
 }
 
-static bool any_Merge(TypeBrn left, TypeBrn right, Type* result) {
+static bool any_Merge(Branch left, Branch right, Type* result) {
     Type hold;
     Type lleft  = left->left;
     Type rleft  = right->left;
@@ -559,17 +696,18 @@ extern bool type_Any(const Type left, const Type right, Type* result) {
         return any_Cons(left, right, result);
 
     case 1: /* left == tc_any, right != tc_any */
-        return any_Add(right, (TypeBrn)left, result);
+        return any_Add(right, (Branch)left, result);
 
     case 2: /* left != tc_any, right == tc_any */
-        return any_Add(left, (TypeBrn)right, result);
+        return any_Add(left, (Branch)right, result);
 
     case 3:
-        return any_Merge((TypeBrn) left, (TypeBrn) right, result);
+        return any_Merge((Branch) left, (Branch) right, result);
     }
 
     return false;
 }
+#endif
 
 extern bool type_Index(const unsigned index, const Type at, Type* result) {
     if (!at) return false;
@@ -589,7 +727,7 @@ extern bool type_Index(const unsigned index, const Type at, Type* result) {
         if (test->sort != sort)     continue;
         if (test->code != tc_index) continue;
 
-        TypeInx inx = (TypeInx) test;
+        Index inx = (Index) test;
 
         if (index == inx->index) {
             if (isIdentical(inx->slot, at)) {
@@ -607,7 +745,7 @@ extern bool type_Index(const unsigned index, const Type at, Type* result) {
     entry->kind.constructor = (Node) s_index;
     entry->kind.constant = 1;
 
-    TypeInx inx = (TypeInx) asReference(entry);
+    Index inx = (Index) asReference(entry);
 
     inx->hashcode = hashcode;
     inx->sort     = sort;
@@ -622,6 +760,7 @@ extern bool type_Index(const unsigned index, const Type at, Type* result) {
     return true;
 }
 
+#if 0
 static bool tuple_Cons(const Type left, const Type right, Type* result) {
     if (match_Tag(left,right,result)) return true;
 
@@ -633,7 +772,7 @@ static bool tuple_Cons(const Type left, const Type right, Type* result) {
                        result);
 }
 
-static bool tuple_Add(const Type left, TypeBrn right, Type* result) {
+static bool tuple_Add(const Type left, Branch right, Type* result) {
     Type hold;
     Type rleft  = right->left;
     Type rright = right->right;
@@ -655,7 +794,7 @@ static bool tuple_Add(const Type left, TypeBrn right, Type* result) {
     }
 
     if (right->code == tc_any) {
-        if (!tuple_Add(left, (TypeBrn) rright, &hold)) return false;
+        if (!tuple_Add(left, (Branch) rright, &hold)) return false;
     } else {
         if (left < rright) {
             if (!tuple_Cons(left, rright, &hold)) return false;
@@ -667,7 +806,7 @@ static bool tuple_Add(const Type left, TypeBrn right, Type* result) {
     return tuple_Cons(rleft, hold, result);
 }
 
-static bool tuple_Merge(TypeBrn left, TypeBrn right, Type* result) {
+static bool tuple_Merge(Branch left, Branch right, Type* result) {
     Type hold;
     Type lleft  = left->left;
     Type rleft  = right->left;
@@ -732,17 +871,18 @@ extern bool type_Tuple(const Type left, const Type right, Type* result) {
         return tuple_Cons(left, right, result);
 
     case 1: /* left == tc_tuple, right != tc_tuple */
-        return tuple_Add(right, (TypeBrn)left, result);
+        return tuple_Add(right, (Branch)left, result);
 
     case 2: /* left != tc_tuple, right == tc_tuple */
-        return tuple_Add(left, (TypeBrn)right, result);
+        return tuple_Add(left, (Branch)right, result);
 
     case 3:
-        return tuple_Merge((TypeBrn) left, (TypeBrn) right, result);
+        return tuple_Merge((Branch) left, (Branch) right, result);
     }
 
     return false;
 }
+#endif
 
 extern bool type_Label(const Symbol label, const Type at, Type* result) {
     if (!label) return false;
@@ -763,7 +903,7 @@ extern bool type_Label(const Symbol label, const Type at, Type* result) {
         if (test->sort != sort)     continue;
         if (test->code != tc_label) continue;
 
-        TypeLbl field = (TypeLbl) test;
+        Label field = (Label) test;
 
         if (isIdentical(field->label,label)) {
             if (isIdentical(field->slot, at)) {
@@ -781,7 +921,7 @@ extern bool type_Label(const Symbol label, const Type at, Type* result) {
     entry->kind.constructor = (Node) s_label;
     entry->kind.constant    = 1;
 
-    TypeLbl field = (TypeLbl) asReference(entry);
+    Label field = (Label) asReference(entry);
 
     field->hashcode = hashcode;
     field->sort     = sort;
@@ -796,6 +936,7 @@ extern bool type_Label(const Symbol label, const Type at, Type* result) {
     return true;
 }
 
+#if 0
 static bool record_Cons(const Type left, const Type right, Type* result) {
     if (match_Tag(left,right,result)) return true;
 
@@ -807,7 +948,7 @@ static bool record_Cons(const Type left, const Type right, Type* result) {
                        result);
 }
 
-static bool record_Add(const Type left, TypeBrn right, Type* result) {
+static bool record_Add(const Type left, Branch right, Type* result) {
     Type hold;
     Type rleft  = right->left;
     Type rright = right->right;
@@ -822,16 +963,24 @@ static bool record_Add(const Type left, TypeBrn right, Type* result) {
         return true;
     }
 
+    fprintf(stderr, "adding ");
+    print(stderr, left);
+    fprintf(stderr, " to ");
+    print(stderr, right);
+    fprintf(stderr, "\n");
+
     /* (left != rleft) && (left != rright) */
 
-    if (left < rleft) {
+
+
+    if (entry_Greater(left, rleft)) {
         return record_Cons(left, (Type) right, result);
     }
 
-    if (right->code == tc_any) {
-        if (!record_Add(left, (TypeBrn) rright, &hold)) return false;
+    if (right->code == tc_label) {
+        if (!record_Add(left, (Branch) rright, &hold)) return false;
     } else {
-        if (left < rright) {
+        if (entry_Greater(left, rright)) {
             if (!record_Cons(left, rright, &hold)) return false;
         } else {
             if (!record_Cons(rright, left, &hold)) return false;
@@ -841,10 +990,16 @@ static bool record_Add(const Type left, TypeBrn right, Type* result) {
     return record_Cons(rleft, hold, result);
 }
 
-static bool record_Merge(TypeBrn left, TypeBrn right, Type* result) {
+static bool record_Merge(Branch left, Branch right, Type* result) {
     Type hold;
     Type lleft  = left->left;
     Type rleft  = right->left;
+
+    fprintf(stderr, "merging ");
+    print(stderr, left);
+    fprintf(stderr, " to ");
+    print(stderr, right);
+    fprintf(stderr, "\n");
 
     if (lleft == rleft) {
         /* head == lleft & head == rleft */
@@ -904,77 +1059,136 @@ extern bool type_Record(const Type left, const Type right, Type* result) {
         return record_Cons(left, right, result);
 
     case 1: /* left == tc_record, right != tc_record */
-        return record_Add(right, (TypeBrn)left, result);
+        return record_Add(right, (Branch)left, result);
 
     case 2: /* left != tc_record, right == tc_record */
-        return record_Add(left, (TypeBrn)right, result);
+        return record_Add(left, (Branch)right, result);
 
     case 3:
-        return record_Merge((TypeBrn) left, (TypeBrn) right, result);
+        return record_Merge((Branch) left, (Branch) right, result);
     }
 
     return false;
 }
-
-static bool axiom_Map(Operator func,  const Axiom  node, const Node env, Target target);
-static bool rule_Map(Operator  func,  const Rule   node, const Node env, Target target);
-static bool index_Map(Operator func,  const Index  node, const Node env, Target target);
-static bool label_Map(Operator func,  const Label  node, const Node env, Target target);
-
-static bool branch_Map(Operator func, const Branch node, const Node env,
-                       Pair begin, Pair *end, Target result);
-
-extern bool type_Map(Operator func, const Node node, const Node env, Target target) {
-    if (isNil(node)) {
-        ASSIGN(target, NIL);
-        return true;
-    }
-
-    if (!func) {
-        fatal("\nerror: type_Map applied to a null function");
-        return false;
-    }
-
-    Node ctor = getConstructor(node);
-
-    if (isIdentical(ctor, s_sort)) {
-        func(node, env, target);
-        return true;
-    }
-#if 0
-    if (isIdentical(ctor, s_axiom)) {
-        return axiom_Map(func, node.axiom, env, target);
-    }
-
-    if (isIdentical(ctor, s_rule)) {
-        return rule_Map(func, node.rule, env, target);
-    }
 #endif
-    if (isIdentical(ctor, s_base)) {
-        func(node, env, target);
-        return true;
-    }
-#if 0
-    if (isIdentical(ctor, s_index)) {
-        return index_Map(func, node.index, env, target);
-    }
 
-    if (isIdentical(ctor, s_label)) {
-        return label_Map(func, node.label, env, target);
-    }
-#endif
-    if (isIdentical(ctor, s_branch)) {
-        return branch_Map(func, node.branch, env, 0, 0, target);
-    }
+static bool axiom_Map(Operator func, const Axiom node, const Node env, Target target) {
+   GC_Begin(4);
 
-    fatal("\nerror: type_Map applied to a non type obj");
+   Node element;
+   Node class;
+   Pair tail;
+
+   GC_Protect(element);
+   GC_Protect(class);
+   GC_Protect(tail);
+
+   func(node->element, env, &element);
+   func(node->class, env, &class);
+
+   if (!pair_Create(class, NIL, &tail)) goto error;
+   if (!pair_Create(element, tail, target.pair)) goto error;
+
+   GC_End();
+   return true;
+
+ error:
+    GC_End();
     return false;
 }
 
+static bool rule_Map(Operator  func, const Rule node, const Node env, Target target) {
+   GC_Begin(8);
+
+   Node functor;
+   Node xxx;
+   Node yyy;
+   Node zzz;
+   Pair tail;
+   Pair hold;
+
+   GC_Protect(functor);
+   GC_Protect(xxx);
+   GC_Protect(yyy);
+   GC_Protect(zzz);
+   GC_Protect(hold);
+
+   func(node->functor, env, &functor);
+   func(node->xxx, env, &xxx);
+   func(node->yyy, env, &yyy);
+   func(node->zzz, env, &zzz);
+
+   if (!pair_Create(zzz, NIL,  &hold)) goto error;
+   if (!pair_Create(yyy, hold, &tail)) goto error;
+   if (!pair_Create(xxx, tail, &hold)) goto error;
+   if (!pair_Create(functor, hold, target.pair)) goto error;
+
+   GC_End();
+   return true;
+
+ error:
+    GC_End();
+    return false;
+}
+
+static bool index_Map(Operator func, const Index node, const Node env, Target target) {
+   GC_Begin(5);
+
+   Integer hold;
+   Node    index;
+   Node    slot;
+   Pair    tail;
+
+   GC_Protect(hold);
+   GC_Protect(index);
+   GC_Protect(slot);
+   GC_Protect(tail);
+
+   if (!integer_Create(node->index, &hold)) goto error;
+
+   func(hold, env, &index);
+   func(node->slot, env, &slot);
+
+   if (!pair_Create(slot, NIL, &tail)) goto error;
+   if (!pair_Create(index, tail, target.pair)) goto error;
+
+   GC_End();
+    return true;
+
+ error:
+    GC_End();
+    return false;
+}
+
+static bool label_Map(Operator func, const Label node, const Node env, Target target) {
+   GC_Begin(4);
+
+   Node label;
+   Node slot;
+   Pair tail;
+
+   GC_Protect(label);
+   GC_Protect(slot);
+   GC_Protect(tail);
+
+   func(node->label, env, &label);
+   func(node->slot, env, &slot);
+
+   if (!pair_Create(slot, NIL, &tail)) goto error;
+   if (!pair_Create(label, tail, target.pair)) goto error;
+
+   GC_End();
+    return true;
+
+ error:
+    GC_End();
+    return false;
+}
 
 static bool branch_Map(Operator func, const Branch branch, const Node env,
                        Pair begin, Pair* end, Target result)
 {
+#if 0
     enum type_code code = branch->code;
 
     GC_Begin(8);
@@ -1022,9 +1236,58 @@ static bool branch_Map(Operator func, const Branch branch, const Node env,
 
  error:
     GC_End();
-    return false;
+#endif
 
+    return false;
 }
+
+extern bool type_Map(Operator func, const Node node, const Node env, Target target) {
+    if (isNil(node)) {
+        ASSIGN(target, NIL);
+        return true;
+    }
+
+    if (!func) {
+        fatal("\nerror: type_Map applied to a null function");
+        return false;
+    }
+
+    Node ctor = getConstructor(node);
+
+    if (isIdentical(ctor, s_sort)) {
+        func(node, env, target);
+        return true;
+    }
+
+    if (isIdentical(ctor, s_axiom)) {
+        return axiom_Map(func, node.axiom, env, target);
+    }
+
+    if (isIdentical(ctor, s_rule)) {
+        return rule_Map(func, node.rule, env, target);
+    }
+
+    if (isIdentical(ctor, s_base)) {
+        func(node, env, target);
+        return true;
+    }
+
+    if (isIdentical(ctor, s_index)) {
+        return index_Map(func, node.index, env, target);
+    }
+
+    if (isIdentical(ctor, s_label)) {
+        return label_Map(func, node.label, env, target);
+    }
+
+    if (isIdentical(ctor, s_branch)) {
+        return branch_Map(func, node.branch, env, 0, 0, target);
+    }
+
+    fatal("\nerror: type_Map applied to a non type obj");
+    return false;
+}
+
 
 extern bool type_Pi(Type* target, ...) {
     return false;

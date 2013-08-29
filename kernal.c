@@ -2823,6 +2823,19 @@ extern SUBR(Record) {
     type_Record(left.type, right.type, result.type);
 }
 
+static void mirror(Node local, Node env, Target result) {
+    ASSIGN(result, local);
+}
+
+extern SUBR(Unfold) {
+    Node type;
+
+    checkArgs(args, "Unfold", 1, NIL);
+    fetchArgs(args, &type, 0);
+
+    type_Map(mirror, type, env, result);
+}
+
 /***************************************************************
  ***************************************************************
  ***************************************************************
@@ -3140,6 +3153,7 @@ void startEnkiLibrary() {
     MK_PRM(Index);
     MK_PRM(Tuple);
     MK_PRM(Record);
+    MK_PRM(Unfold);
 
     Reference std_in  = 0;
     Reference std_out = 0;

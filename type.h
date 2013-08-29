@@ -45,37 +45,43 @@ struct axiom {
 struct rule {
     HashCode hashcode;
     Symbol   functor;
-    Sort xxx, yyy, kind;
+    Sort xxx, yyy, zzz;
 };
 
 struct type {
-    HashCode hashcode; Sort sort; enum type_code code;
+    HashCode hashcode; enum type_code code;
+    Sort sort;
     HashCode marker[0];
 };
 
 // s_base is a base type
 struct type_constant {
-    HashCode hashcode; Sort sort; enum type_code code;
+    HashCode hashcode; enum type_code code;
+    Sort sort;
     Symbol name;
 };
 
 // s_index is an indexed type
 struct type_index {
-    HashCode hashcode; Sort sort; enum type_code code;
+    HashCode hashcode; enum type_code code;
+    Sort     sort;
     unsigned index;
     Type     slot;
 };
 
 // s_label is an labeled type
 struct type_label {
-    HashCode hashcode; Sort sort; enum type_code code;
+    HashCode hashcode; enum type_code code;
+    Sort   sort;
     Symbol label;
     Type   slot;
 };
 
 // s_branch is a branch type (any,tuple,record,all)
 struct type_branch {
-    HashCode hashcode; Sort sort; enum type_code code;
+    HashCode hashcode; enum type_code code;
+    Sort sort;
+    Type here;
     Type left;
     Type right;
 };
