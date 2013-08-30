@@ -25,6 +25,12 @@ typedef enum {
     ic_error,
 } insert_code;
 
+typedef enum {
+    cc_lesser  = -1,
+    cc_equal   = 0,
+    cc_greater = 1,
+} compare_code;
+
 struct _internal_Row {
     unsigned lock;
     Header   first;
@@ -324,391 +330,6 @@ extern bool type_Create(Symbol symbol, Sort sort, Type* target) {
     return true;
 }
 
-static long entry_Index(const Type entry) {
-    if (!entry) return 0;
-    switch (entry->code) {
-    case tc_index:
-        return (long)(((Index) entry)->index);
-
-    case tc_label:
-        return (long)(((Label) entry)->label);
-
-    default:
-        return (long)(entry);
-    }
-}
-
-static bool entry_Greater(const Type left, const Type right) {
-    return entry_Index(left) > entry_Index(right);
-}
-
-#if 0
-static bool match_Tag(const Type left, const Type right, Type* result) {
-    if (!left) return false;
-    if (!right) return false;
-
-    if (left->code != right->code) return false;
-
-    if (left->code == tc_index) {
-        Index lindex = ((Index) left);
-        Index rindex = ((Index) right);
-
-        if (lindex->index != rindex->index) return false;
-        if (lindex->slot == rindex->slot) {
-            *result = left;
-            return true;
-        }
-
-        Type hold;
-
-        if (!type_Any(lindex->slot,rindex->slot, &hold)) return false;
-
-        return type_Index(lindex->index, hold, result);
-    }
-
-    if (left->code == tc_label) {
-        Label llabel = ((Label) left);
-        Label rlabel = ((Label) right);
-
-        if (llabel->label != rlabel->label) return false;
-
-        if (llabel->slot == rlabel->slot) {
-            *result = left;
-            return true;
-        }
-
-        Type hold;
-
-        if (!type_Any(llabel->slot,rlabel->slot, &hold)) return false;
-
-        return type_Label(llabel->label, hold, result);
-    }
-
-    return false;
-}
-#endif
-
-static bool branch_Cons(const enum type_code kind,
-                        const Sort sort,
-                        const Type here,
-                        const Type left,
-                        const Tyoe right,
-                        Type* result)
-{
-    HashCode temp  = here->hashcode;
-
-    {
-        if (left) {
-            temp = hash_merge(temp, left->hashcode);
-        }
-        if (right) {
-            temp = hash_merge(temp, right->hashcode);
-        }
-    }
-
-    const HashCode hashcode = temp;
-
-    const int row   = hashcode % _global_typetable->size;
-    Header    group = _global_typetable->row[row].first;
-
-    for ( ; group; group = group->after) {
-        if (!isIdentical(group->kind.constructor, s_branch)) continue;
-
-        Type test = (Type) asReference(group);
-
-        if (test->sort != sort) continue;
-        if (test->code != kind) continue;
-
-        Branch branch = (Branch) test;
-
-        if (branch->left  != here)  continue;
-        if (branch->left  != left)  continue;
-        if (branch->right != right) continue;
-
-        ASSIGN(result, test);
-        return;
-    }
-
-    Header entry = fresh_atom(0, sizeof(struct type_branch));
-
-    if (!entry) return false;
-
-    entry->kind.type        = (Node) s_branch;
-    entry->kind.constructor = (Node) s_branch;
-    entry->kind.constant    = 1;
-
-    Branch branch = (Branch) asReference(entry);
-
-    branch->hashcode = hashcode;
-    branch->sort     = sort;
-    branch->code     = kind;
-    branch->here     = here;
-    branch->left     = left;
-    branch->right    = right;
-
-    entry->after = _global_typetable->row[row].first;
-    _global_typetable->row[row].first = entry;
-
-    ASSIGN(result, branch);
-    return true;
-}
-
-static insert_code insert_Tree(const Type at, const Branch tree, Branch* result) {
-    Type here  = tree->here;
-    Type left  = tree->left;
-    Type right = tree->right;
-
-    if (at == here)  goto found;
-    if (at == left)  goto found;
-    if (at == right) goto found;
-
-    const bool greater = entry_Greater(at, here);
-
-    if (greater) {
-        bool ok;
-        if (right) {
-            if (right->code == tree->code) {
-                goto add_right;
-            } else {
-                if (entry_Greater(at, right)) {
-                     ok = branch_Cons(tree->code,
-                                      tree->sort,
-                                      at,
-                                      tree,
-                                      0,
-                                      result);
-                } else {
-                }
-            }
-        } else {
-            ok = branch_Cons(tree->code,
-                             tree->sort,
-                             tree->here,
-                             left,
-                             at,
-                             result);
-        }
-    } else {
-        if (!left) {
-        }
-    }
-
-    unsigned option  = 0;
-
-    option += (left->code  == tree->code) ? 1 : 0;
-    option += (right->code == tree->code) ? 2 : 0;
-
-    switch (option) {
-    case 0: goto bottom;
-    case 1: break;
-    case 2: break;
-    case 3: goto middle;
-    }
-
-  bottom:
-    {
-        bool ok;
-
-        if (greater) {
-            ok = branch_Cons(tree->code,
-                             tree->sort,
-                             tree->at,
-                             left,
-                             added,
-                             result);
-        } else {
-            ok = branch_Cons(tree->code,
-                             tree->sort,
-                             tree->at,
-                             added,
-                             left,
-                             result);
-        }
-
-        if (!ok) goto error;
-    }
-
-  middle:
-    {
-        Branch      added;
-        insert_code code;
-
-        if (greater) {
-            code = insert_Tree(at, right, &added);
-        } else {
-            code = insert_Tree(at, left, &added);
-        }
-
-        switch (code) {
-        case ic_error: goto error;
-        case ic_found: goto found;
-        case ic_added: break;
-        }
-
-        bool ok;
-        if (greater) {
-            ok = branch_Cons(tree->code,
-                             tree->sort,
-                             tree->at,
-                             left,
-                             added,
-                             result);
-        } else {
-            ok = branch_Cons(tree->code,
-                             tree->sort,
-                             tree->at,
-                             added,
-                             left,
-                             result);
-        }
-        if (!ok) goto error;
-        return ic_added:
-    }
-
-  error:
-    return bc_error;
-
-  found:
-    ASSIGN(result, tree);
-    return bc_found;
-}
-
-static bool any_IsMember(Branch set, Type type) {
-#if 0
-    for (; set ;) {
-        Type left  = set->left;
-        Type right = set->right;
-
-        if (isIdentical(left, type)) return true;
-
-        if (right->code == tc_any) {
-            set = (Branch) right;
-            continue;
-        }
-
-        return isIdentical(right,type);
-    }
-#endif
-    return false;
-}
-
-#if 0
-static bool any_Cons(const Type left, const Type right, Type* result) {
-    if (match_Tag(left,right,result)) return true;
-
-    const Sort sort = left->sort;
-    return branch_Cons(tc_any,
-                       sort,
-                       left,
-                       right,
-                       result);
-}
-
-static bool any_Add(const Type left, Branch right, Type* result) {
-    Type hold;
-    Type rleft  = right->left;
-    Type rright = right->right;
-
-    if (left == rleft) {
-        ASSIGN(result, right);
-        return true;
-    }
-
-    if (left == rright) {
-        ASSIGN(result, right);
-        return true;
-    }
-
-    /* (left != rleft) && (left != rright) */
-
-    if (left < rleft) {
-        return any_Cons(left, (Type) right, result);
-    }
-
-    if (right->code == tc_any) {
-        if (!any_Add(left, (Branch) rright, &hold)) return false;
-    } else {
-        if (left < rright) {
-            if (!any_Cons(left, rright, &hold)) return false;
-        } else {
-            if (!any_Cons(rright, left, &hold)) return false;
-        }
-    }
-
-    return any_Cons(rleft, hold, result);
-}
-
-static bool any_Merge(Branch left, Branch right, Type* result) {
-    Type hold;
-    Type lleft  = left->left;
-    Type rleft  = right->left;
-
-    if (lleft == rleft) {
-        /* head == lleft & head == rleft */
-        if (!type_Any(left->right, right->right, &hold)) return false;
-        return any_Cons(rleft, hold, result);
-    }
-
-    if (lleft < rleft) {
-        /* head == lleft */
-        if (!type_Any(left->right, (Type)right, &hold)) return false;
-        return any_Cons(lleft, hold, result);
-    }
-
-    if (lleft > rleft) {
-        /* head == rleft */
-        if (!type_Any(right->right, (Type)left, &hold)) return false;
-        return any_Cons(rleft, hold, result);
-    }
-
-    return false;
-}
-
-/*
- * build anys a list of non anys
- * any(a,a)   == a
- * any(a,b)   == any(b,a)
- * any(a,b,c) == any(a,any(b,c))
- */
-extern bool type_Any(const Type left, const Type right, Type* result) {
-    if (!left)  return false;
-    if (!right) return false;
-
-    /* forall(A) any(A,A) == A */
-    if (isIdentical(left,right)) {
-        ASSIGN(result, left);
-        return true;
-    }
-
-    unsigned option = 0;
-
-    option += (left->code  == tc_any) ? 1 : 0;
-    option += (right->code == tc_any) ? 2 : 0;
-
-    Type hold;
-
-    switch (option) {
-    case 0:
-        /* enforce address order of any members */
-        if (entry_Greater(left, right)) {
-            return any_Cons(right, left, result);
-        }
-        return any_Cons(left, right, result);
-
-    case 1: /* left == tc_any, right != tc_any */
-        return any_Add(right, (Branch)left, result);
-
-    case 2: /* left != tc_any, right == tc_any */
-        return any_Add(left, (Branch)right, result);
-
-    case 3:
-        return any_Merge((Branch) left, (Branch) right, result);
-    }
-
-    return false;
-}
-#endif
-
 extern bool type_Index(const unsigned index, const Type at, Type* result) {
     if (!at) return false;
 
@@ -759,130 +380,6 @@ extern bool type_Index(const unsigned index, const Type at, Type* result) {
     ASSIGN(result, inx);
     return true;
 }
-
-#if 0
-static bool tuple_Cons(const Type left, const Type right, Type* result) {
-    if (match_Tag(left,right,result)) return true;
-
-    const Sort sort = left->sort;
-    return branch_Cons(tc_tuple,
-                       sort,
-                       left,
-                       right,
-                       result);
-}
-
-static bool tuple_Add(const Type left, Branch right, Type* result) {
-    Type hold;
-    Type rleft  = right->left;
-    Type rright = right->right;
-
-    if (left == rleft) {
-        ASSIGN(result, right);
-        return true;
-    }
-
-    if (left == rright) {
-        ASSIGN(result, right);
-        return true;
-    }
-
-    /* (left != rleft) && (left != rright) */
-
-    if (left < rleft) {
-        return tuple_Cons(left, (Type) right, result);
-    }
-
-    if (right->code == tc_any) {
-        if (!tuple_Add(left, (Branch) rright, &hold)) return false;
-    } else {
-        if (left < rright) {
-            if (!tuple_Cons(left, rright, &hold)) return false;
-        } else {
-            if (!tuple_Cons(rright, left, &hold)) return false;
-        }
-    }
-
-    return tuple_Cons(rleft, hold, result);
-}
-
-static bool tuple_Merge(Branch left, Branch right, Type* result) {
-    Type hold;
-    Type lleft  = left->left;
-    Type rleft  = right->left;
-
-    if (lleft == rleft) {
-        /* head == lleft & head == rleft */
-        if (!type_Tuple(left->right, right->right, &hold)) return false;
-        return tuple_Cons(rleft, hold, result);
-    }
-
-    if (lleft < rleft) {
-        /* head == lleft */
-        if (!type_Tuple(left->right, (Type)right, &hold)) return false;
-        return tuple_Cons(lleft, hold, result);
-    }
-
-    if (lleft > rleft) {
-        /* head == rleft */
-        if (!type_Tuple(right->right, (Type)left, &hold)) return false;
-        return tuple_Cons(rleft, hold, result);
-    }
-
-    return false;
-}
-
-/*
- * Tuples := index(i,a) | tuple(a,b) where a,b in Tuple
- *
- * tuple(a,a) == a
- * tuple(a,b) == tuple(b,a)
- * tuple(a,tuple(b,c)) == tuple(tuple(a,b),c)
- */
-extern bool type_Tuple(const Type left, const Type right, Type* result) {
-    if (!left)  return false;
-    if (!right) return false;
-
-
-    if (left->code != tc_index) {
-        if (left->code != tc_tuple) return false;
-    }
-
-    if (right->code != tc_index) {
-        if (right->code != tc_tuple) return false;
-    }
-
-    if (isIdentical(left,right)) {
-        ASSIGN(result, left);
-        return true;
-    }
-
-    unsigned option = 0;
-
-    option += (left->code  == tc_tuple) ? 1 : 0;
-    option += (right->code == tc_tuple) ? 2 : 0;
-
-    switch (option) {
-    case 0:
-        /* enforce order of tuple members */
-        if (entry_Greater(left, right)) {
-            return tuple_Cons(right, left, result);
-        }
-        return tuple_Cons(left, right, result);
-
-    case 1: /* left == tc_tuple, right != tc_tuple */
-        return tuple_Add(right, (Branch)left, result);
-
-    case 2: /* left != tc_tuple, right == tc_tuple */
-        return tuple_Add(left, (Branch)right, result);
-
-    case 3:
-        return tuple_Merge((Branch) left, (Branch) right, result);
-    }
-
-    return false;
-}
-#endif
 
 extern bool type_Label(const Symbol label, const Type at, Type* result) {
     if (!label) return false;
@@ -936,88 +433,440 @@ extern bool type_Label(const Symbol label, const Type at, Type* result) {
     return true;
 }
 
-#if 0
-static bool record_Cons(const Type left, const Type right, Type* result) {
-    if (match_Tag(left,right,result)) return true;
+// compare (left, right) :=
+//    (left <  right) -> cc_lesser
+//    (left == right) -> cc_equal
+//    (left  > right) -> cc_greater
+static compare_code entry_Compare(const Type left, const Type right) {
+    if (left == right) return cc_equal;
 
-    const Sort sort = left->sort;
-    return branch_Cons(tc_record,
-                       sort,
-                       left,
-                       right,
-                       result);
-}
+    if (!right) return cc_greater;
+    if (!left)  return cc_lesser;
 
-static bool record_Add(const Type left, Branch right, Type* result) {
-    Type hold;
-    Type rleft  = right->left;
-    Type rright = right->right;
-
-    if (left == rleft) {
-        ASSIGN(result, right);
-        return true;
+    if (left->code != right->code) {
+        return (left->code < right->code) ? cc_lesser : cc_greater;
     }
 
-    if (left == rright) {
-        ASSIGN(result, right);
-        return true;
-    }
-
-    fprintf(stderr, "adding ");
-    print(stderr, left);
-    fprintf(stderr, " to ");
-    print(stderr, right);
-    fprintf(stderr, "\n");
-
-    /* (left != rleft) && (left != rright) */
-
-
-
-    if (entry_Greater(left, rleft)) {
-        return record_Cons(left, (Type) right, result);
-    }
-
-    if (right->code == tc_label) {
-        if (!record_Add(left, (Branch) rright, &hold)) return false;
-    } else {
-        if (entry_Greater(left, rright)) {
-            if (!record_Cons(left, rright, &hold)) return false;
+    switch (left->code) {
+    case tc_index: {
+        const Index lleft  = (Index) left;
+        const Index rright = (Index) right;
+        if (lleft->index != rright->index) {
+            return (lleft->index < rright->index) ? cc_lesser : cc_greater;
         } else {
-            if (!record_Cons(rright, left, &hold)) return false;
+            return entry_Compare(lleft->slot, rright->slot);
         }
     }
 
-    return record_Cons(rleft, hold, result);
+    case tc_label: {
+        const Label lleft  = (Label) left;
+        const Label rright = (Label) right;
+        if (lleft->label != rright->label) {
+            return (lleft->label < rright->label)  ? cc_lesser : cc_greater;
+        } else {
+            return entry_Compare(lleft->slot, rright->slot);
+        }
+    }
+
+    case tc_constant:
+        return (left < right) ? cc_lesser : cc_greater;
+
+    case tc_tuple:
+    case tc_record:
+    case tc_any:
+    case tc_all: {
+        const Branch lleft  = (Branch) left;
+        const Branch rright = (Branch) right;
+        if (lleft->count != rright->count)  {
+            return (lleft->count < rright->count)  ? cc_lesser : cc_greater;
+        } else {
+            const unsigned count = lleft->count;
+            int inx;
+            for (inx = 0; inx < count; ++inx) {
+                const Type llinx = lleft->slots[inx];
+                const Type rrinx = rright->slots[inx];
+                compare_code test = entry_Compare(llinx, rrinx);
+                if (test == cc_equal) continue;
+                return test;
+            }
+            return cc_equal;
+        }
+    }
+    }
 }
 
-static bool record_Merge(Branch left, Branch right, Type* result) {
-    Type hold;
-    Type lleft  = left->left;
-    Type rleft  = right->left;
+// is (left < right)
+static bool entry_Lesser(const Type left, const Type right) {
+    if (!right) return false;
+    if (!left)  return true;
 
-    fprintf(stderr, "merging ");
-    print(stderr, left);
-    fprintf(stderr, " to ");
-    print(stderr, right);
-    fprintf(stderr, "\n");
-
-    if (lleft == rleft) {
-        /* head == lleft & head == rleft */
-        if (!type_Record(left->right, right->right, &hold)) return false;
-        return record_Cons(rleft, hold, result);
+    if (left->code != right->code) {
+        return left->code < right->code;
     }
 
-    if (lleft < rleft) {
-        /* head == lleft */
-        if (!type_Record(left->right, (Type)right, &hold)) return false;
-        return record_Cons(lleft, hold, result);
+    switch (left->code) {
+    case tc_index: {
+        const Index lleft  = (Index) left;
+        const Index rright = (Index) right;
+        if (lleft->index != rright->index) {
+            return lleft->index < rright->index;
+        } else {
+            return entry_Lesser(lleft->slot, rright->slot);
+        }
     }
 
-    if (lleft > rleft) {
-        /* head == rleft */
-        if (!type_Record(right->right, (Type)left, &hold)) return false;
-        return record_Cons(rleft, hold, result);
+    case tc_label: {
+        const Label lleft  = (Label) left;
+        const Label rright = (Label) right;
+        if (lleft->label != rright->label) {
+            return lleft->label < rright->label;
+        } else {
+            return entry_Lesser(lleft->slot, rright->slot);
+        }
     }
+
+    case tc_constant:
+        return left < right;
+
+    case tc_tuple:
+    case tc_record:
+    case tc_any:
+    case tc_all: {
+        const Branch lleft  = (Branch) left;
+        const Branch rright = (Branch) right;
+        if (lleft->count != rright->count)  {
+            return lleft->count < rright->count;
+        } else {
+            const unsigned count = lleft->count;
+            int inx;
+            for (inx = 0; inx < count; ++inx) {
+                const Type llinx = lleft->slots[inx];
+                const Type rrinx = rright->slots[inx];
+                if (llinx == rrinx) continue;
+                if (!entry_Lesser(llinx, rrinx)) continue;
+                return true;
+            }
+            return false;
+        }
+    }
+    }
+}
+
+// is (left > right)
+static bool entry_Greater(const Type left, const Type right) {
+    if (!left)  return false;
+    if (!right) return true;
+
+    if (left->code != right->code) {
+        return left->code > right->code;
+    }
+
+    switch (left->code) {
+    case tc_index: {
+        const Index lleft  = (Index) left;
+        const Index rright = (Index) right;
+        if (lleft->index != rright->index) {
+            return lleft->index > rright->index;
+        } else {
+            return entry_Greater(lleft->slot, rright->slot);
+        }
+    }
+
+    case tc_label: {
+        const Label lleft  = (Label) left;
+        const Label rright = (Label) right;
+        if (lleft->label != rright->label) {
+            return lleft->label > rright->label;
+        } else {
+            return entry_Greater(lleft->slot, rright->slot);
+        }
+    }
+
+    case tc_constant:
+        return left > right;
+
+    case tc_tuple:
+    case tc_record:
+    case tc_any:
+    case tc_all: {
+        const Branch lleft  = (Branch) left;
+        const Branch rright = (Branch) right;
+        if (lleft->count != rright->count)  {
+            return lleft->count > rright->count;
+        } else {
+            const unsigned count = lleft->count;
+            int inx;
+            for (inx = 0; inx < count; ++inx) {
+                const Type llinx = lleft->slots[inx];
+                const Type rrinx = rright->slots[inx];
+                if (llinx == rrinx) continue;
+                if (!entry_Greater(llinx, rrinx)) continue;
+                return true;
+            }
+            return false;
+        }
+    }
+    }
+}
+
+// true = (added|found), false = full
+static bool insert_Ordered(Type type, const unsigned count, Type *slots) {
+    if (!type) return true;
+
+    int inx;
+    for (inx = 0; inx < count; ++inx) {
+        const Type here = slots[inx];
+        if (!here) {
+            slots[inx] = type;
+            return true;
+        }
+
+        if (type == here) return true;
+
+        if (entry_Greater(type, here)) continue;
+        slots[inx] = type;
+        type = here;
+    }
+
+    return false;
+}
+
+static bool branch_IsMember(const Branch set, const Type type) {
+    if (!set) return false;
+
+    const unsigned count = set->count;
+    const Type    *slots = set->slots;
+
+    int inx;
+    for (inx = 0; inx < count; ++inx) {
+        const Type here = slots[inx];
+        if (here != type) continue;
+        if (entry_Greater(here, type)) break;
+        return true;
+    }
+
+    return false;
+}
+
+static bool branch_Cons(const type_code kind,
+                        const Sort sort,
+                        const unsigned count,
+                        const Type *slots,
+                        Type* result)
+{
+    HashCode temp = sort->hashcode;
+
+    {
+        int inx;
+        for (inx = 0; inx < count; ++inx) {
+            const Type here = slots[inx];
+            if (here) {
+                temp = hash_merge(temp, here->hashcode);
+            }
+        }
+    }
+
+    const HashCode hashcode = temp;
+
+    const int row   = hashcode % _global_typetable->size;
+    Header    group = _global_typetable->row[row].first;
+
+    for ( ; group; group = group->after) {
+        if (!isIdentical(group->kind.constructor, s_branch)) continue;
+
+        Branch test = (Branch) asReference(group);
+
+        if (test->sort  != sort)  continue;
+        if (test->code  != kind)  continue;
+        if (test->count != count) continue;
+
+        int inx;
+        for (inx = 0; inx < count; ++inx) {
+            const Type here  = slots[inx];
+            const Type there = test->slots[inx];
+            if (here != there) goto next;
+        }
+
+        ASSIGN(result, test);
+        return true;
+
+      next: continue;
+    }
+
+    Header entry = fresh_atom(0, sizeof(struct type_branch) + (sizeof(Type) * count));
+
+    if (!entry) return false;
+
+    entry->kind.type        = (Node) s_branch;
+    entry->kind.constructor = (Node) s_branch;
+    entry->kind.constant    = 1;
+
+    Branch branch = (Branch) asReference(entry);
+
+    branch->hashcode = hashcode;
+    branch->sort     = sort;
+    branch->code     = kind;
+    branch->count    = count;
+
+    {
+        int inx;
+        for (inx = 0; inx < count; ++inx) {
+            branch->slots[inx] = slots[inx];
+        }
+    }
+
+    entry->after = _global_typetable->row[row].first;
+    _global_typetable->row[row].first = entry;
+
+    ASSIGN(result, branch);
+    return true;
+}
+
+static bool branch_Merge(const Sort sort,
+                         const Branch left,
+                         const unsigned count,
+                         const Type *slots,
+                         Type* result)
+{
+    if (!sort)  return false;
+    if (!left)  return false;
+    if (!slots) return false;
+
+    type_code         kind = left->code;
+    unsigned     fullcount = left->count + count;
+    unsigned long fullsize = sizeof(Type) * (fullcount + 1);
+
+    if (1 > count) return false;
+
+    Type *buffer = (Type *)malloc(fullsize);
+
+    memset(buffer, 0, fullsize);
+
+    unsigned inx;
+
+    for (inx = 0; inx < count; ++inx) {
+        if (!insert_Ordered(slots[inx], fullcount, buffer)) goto error;
+    }
+
+    for (inx = 0; inx < left->count; ++inx) {
+        if (!insert_Ordered(left->slots[inx], fullcount, buffer)) goto error;
+    }
+
+    for (inx = 0; inx < fullcount; ++inx) {
+        if (!buffer[inx]) {
+            fullcount = inx;
+            break;
+        }
+    }
+
+    if (!branch_Cons(kind, sort, fullcount, buffer, result)) goto error;
+
+    free(buffer);
+    return true;
+
+  error:
+    free(buffer);
+    return false;
+}
+
+/*
+ * Any :=
+ *
+ * any(a,a)   == a
+ * any(a,b)   == any(b,a)
+ * any(a,b,c) == any(a,any(b,c))
+ */
+extern bool type_Any(const Type left, const Type right, Type* result) {
+    if (!left)  return false;
+    if (!right) return false;
+
+    /* forall(A) any(A,A) == A */
+    if (isIdentical(left,right)) {
+        ASSIGN(result, left);
+        return true;
+    }
+
+    unsigned option = 0;
+
+    option += (left->code  == tc_any) ? 1 : 0;
+    option += (right->code == tc_any) ? 2 : 0;
+
+    switch (option) {
+    case 0: { /* left != tc_any, right != tc_any */
+        const Type array[3] = { left, right, 0};
+        return branch_Cons(tc_any, left->sort, 2, array, result);
+    }
+
+    case 1: { /* left == tc_any, right != tc_any */
+        const Type array[3] = { right, 0, 0};
+        return branch_Merge(left->sort, (Branch)left, 1, array, result);
+    }
+
+    case 2: { /* left != tc_any, right == tc_any */
+        const Type array[3] = { left, 0, 0};
+        return branch_Merge(right->sort, (Branch)right, 1, array, result);
+    }
+
+    case 3: {
+        unsigned    count = ((Branch) right)->count;
+        const Type *slots = ((Branch) right)->slots;
+        return branch_Merge(left->sort, (Branch) left, count, slots, result);
+    }}
+
+    return false;
+}
+
+/*
+ * Tuples := index(i,x) | tuple(a,b) where a,b in Tuple
+ *
+ * tuple(a,a) == a
+ * tuple(a,b) == tuple(b,a)
+ * tuple(a,tuple(b,c)) == tuple(tuple(a,b),c)
+ */
+extern bool type_Tuple(const Type left, const Type right, Type* result) {
+    if (!left)  return false;
+    if (!right) return false;
+
+
+    if (left->code != tc_index) {
+        if (left->code != tc_tuple) return false;
+    }
+
+    if (right->code != tc_index) {
+        if (right->code != tc_tuple) return false;
+    }
+
+    if (isIdentical(left,right)) {
+        ASSIGN(result, left);
+        return true;
+    }
+
+    unsigned option = 0;
+
+    option += (left->code  == tc_tuple) ? 1 : 0;
+    option += (right->code == tc_tuple) ? 2 : 0;
+
+    switch (option) {
+    case 0: { /* left != tc_any, right != tc_any */
+        const Type array[3] = { left, right, 0};
+        return branch_Cons(tc_tuple, left->sort, 2, array, result);
+    }
+
+    case 1: { /* left == tc_any, right != tc_any */
+        const Type array[3] = { right, 0, 0};
+        return branch_Merge(left->sort, (Branch)left, 1, array, result);
+    }
+
+    case 2: { /* left != tc_any, right == tc_any */
+        const Type array[3] = { left, 0, 0};
+        return branch_Merge(right->sort, (Branch)right, 1, array, result);
+    }
+
+    case 3: {
+        unsigned    count = ((Branch) right)->count;
+        const Type *slots = ((Branch) right)->slots;
+        return branch_Merge(left->sort, (Branch) left, count, slots, result);
+    }}
 
     return false;
 }
@@ -1051,26 +900,29 @@ extern bool type_Record(const Type left, const Type right, Type* result) {
     option += (right->code == tc_record) ? 2 : 0;
 
     switch (option) {
-    case 0:
-        /* enforce order of record members */
-        if (entry_Greater(left, right)) {
-            return record_Cons(right, left, result);
-        }
-        return record_Cons(left, right, result);
-
-    case 1: /* left == tc_record, right != tc_record */
-        return record_Add(right, (Branch)left, result);
-
-    case 2: /* left != tc_record, right == tc_record */
-        return record_Add(left, (Branch)right, result);
-
-    case 3:
-        return record_Merge((Branch) left, (Branch) right, result);
+    case 0: { /* left != tc_any, right != tc_any */
+        const Type array[3] = { left, right, 0};
+        return branch_Cons(tc_record, left->sort, 2, array, result);
     }
+
+    case 1: { /* left == tc_any, right != tc_any */
+        const Type array[3] = { right, 0, 0};
+        return branch_Merge(left->sort, (Branch)left, 1, array, result);
+    }
+
+    case 2: { /* left != tc_any, right == tc_any */
+        const Type array[3] = { left, 0, 0};
+        return branch_Merge(right->sort, (Branch)right, 1, array, result);
+    }
+
+    case 3: {
+        unsigned    count = ((Branch) right)->count;
+        const Type *slots = ((Branch) right)->slots;
+        return branch_Merge(left->sort, (Branch) left, count, slots, result);
+    }}
 
     return false;
 }
-#endif
 
 static bool axiom_Map(Operator func, const Axiom node, const Node env, Target target) {
    GC_Begin(4);
@@ -1185,59 +1037,57 @@ static bool label_Map(Operator func, const Label node, const Node env, Target ta
     return false;
 }
 
-static bool branch_Map(Operator func, const Branch branch, const Node env,
-                       Pair begin, Pair* end, Target result)
+static bool branch_Map(Operator func, const Branch branch, const Node env, Target target)
 {
-#if 0
-    enum type_code code = branch->code;
-
-    GC_Begin(8);
-
-    Node left;
-    Node right;
+    GC_Begin(7);
 
     Pair first;
     Pair last;
-    Node input;
+    Type input;
     Node output;
     Pair hold;
 
-    GC_Protect(left);
-    GC_Protect(right);
-
     GC_Protect(first);
     GC_Protect(last);
+    GC_Protect(input);
+    GC_Protect(output);
+    GC_Protect(hold);
 
-    if (branch->right->code == code) {
-        if (!end) {
-            end = &last;
-        }
-        if (!branch_Map(func, (Branch)(branch->right), env, begin, &last, &right)) goto error;
-        begin = right.pair;
-    } else {
-        func(branch->right, env, &right);
-        if (!pair_Create(right, NIL, &last)) goto error;
-        if (end) {
-            if (!pair_SetCdr(*end, last)) goto error;
-        } else if (!begin) {
-            begin = last;
+    const unsigned count = branch->count;
+    const Type    *slots = branch->slots;
+
+    if (0 < count) {
+        unsigned inx = 0;
+
+        input = slots[inx];
+
+        func(input, env, &output);
+
+        if (!pair_Create(output,NIL, &first)) goto error;
+
+        last = first;
+
+        for (++inx; inx < count; ++inx) {
+            hold   = 0;
+            input  = slots[inx];
+            output = NIL;
+
+            func(input, env, &output);
+
+            if (!pair_Create(output,NIL, &hold)) goto error;
+            if (!pair_SetCdr(last, hold))        goto error;
+
+            last = hold;
         }
     }
 
-    if (branch->left->code == code) {
-        if (!branch_Map(func, (Branch)(branch->left), env, begin, end, result)) goto error;
-    } else {
-        func(branch->left, env, &left);
-        if (!pair_Create(left, begin, result)) goto error;
-    }
 
+    ASSIGN(target, first);
     GC_End();
     return true;
 
  error:
     GC_End();
-#endif
-
     return false;
 }
 
@@ -1281,7 +1131,7 @@ extern bool type_Map(Operator func, const Node node, const Node env, Target targ
     }
 
     if (isIdentical(ctor, s_branch)) {
-        return branch_Map(func, node.branch, env, 0, 0, target);
+        return branch_Map(func, node.branch, env, target);
     }
 
     fatal("\nerror: type_Map applied to a non type obj");

@@ -104,62 +104,63 @@ static inline unsigned echo_type(TextBuffer *output, Node node) {
         goto done;
     }
 
-    if (isIdentical(node, t_opaque)) {
-        echo_format(output, "<opaque>");
-        goto done;
-    }
-
     if (fromCtor(node, s_sort)) {
-        echo_format(output, "<sort ");
+        echo_format(output, "<sort %p ", node.type);
         echo_string(output, sort_Name(node.sort));
         echo_format(output, ">");
         goto done;
     }
 
     if (fromCtor(node, s_base)) {
-        if (isIdentical(node.type->sort, void_s)) {
-            echo_format(output, "<%s %s>",
-                        type_ConstantName(node.type),
-                        type_SortName(node.type));
-            goto done;
-        }
-
-        if (isIdentical(node.type->sort, opaque_s)) {
-            echo_format(output, "<%s %s>",
-                        type_ConstantName(node.type),
-                        type_SortName(node.type));
-            goto done;
-        }
-
-        if (isIdentical(node.type->sort, zero_s)) {
-            echo_format(output, "<%s %s>",
-                        type_ConstantName(node.type),
-                        type_SortName(node.type));
-            goto done;
-        }
-
-        echo_format(output, "<type ");
-        echo_string(output, type_ConstantName(node.type));
-        echo_format(output, " ");
-        echo_string(output, type_SortName(node.type));
-        echo_format(output, ">");
+        echo_format(output, "<%s %p %s>",
+                    type_ConstantName(node.type),
+                    node.type,
+                    type_SortName(node.type));
         goto done;
     }
 
     if (fromCtor(node, s_index)) {
-        echo_format(output, "<index %u = ", type_IndexOffset(node.type));
+        echo_format(output, "<index %p %u = ", node.type, type_IndexOffset(node.type));
         echo_type(output, type_IndexSlot(node.type));
         echo_format(output, ">");
         goto done;
     }
 
     if (fromCtor(node, s_label)) {
-        echo_format(output, "<label ");
+        echo_format(output, "<label %p ", node.type);
         echo_string(output, type_LabelName(node.type));
         echo_format(output, " = ");
         echo_type(output, type_LabelSlot(node.type));
         echo_format(output, ">");
         goto done;
+    }
+
+    if (fromCtor(node, s_branch)) {
+        Branch branch = node.branch;
+        switch (branch->code) {
+        default:
+            echo_format(output, "<branch %p unknown(%u) %u>",
+                        branch,
+                        (unsigned) branch->code,
+                        branch->count);
+            goto done;
+
+        case tc_tuple:
+            echo_format(output, "<branch %p tuple %u>", branch, branch->count);
+            goto done;
+
+        case tc_record:
+            echo_format(output, "<branch %p record %u>", branch, branch->count);
+            goto done;
+
+        case tc_any:
+            echo_format(output, "<branch %p any %u>", branch, branch->count);
+            goto done;
+
+        case tc_all:
+            echo_format(output, "<branch %p all %u>", branch, branch->count);
+            goto done;
+        }
     }
 
     echo_format(output, "<type %p %s %s>",

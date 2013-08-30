@@ -121,9 +121,9 @@ struct gc_kind {
     struct {
         enum gc_color   color : 2;
         unsigned int     live : 1; // is this alive
-        unsigned int     atom : 1; // is this a tuple of values
+        unsigned int     atom : 1; // is this an atomic value
         unsigned int   inside : 1; // is this inside a space (malloc/free by the treadmill)
-        unsigned int constant : 1;
+        unsigned int constant : 1; // is this a constant value
     } __attribute__((__packed__));
 };
 

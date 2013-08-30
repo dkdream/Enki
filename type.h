@@ -18,15 +18,15 @@
 #include "hashcode.h"
 #include "primitive.h"
 
-enum type_code {
-    tc_constant,
+typedef enum {
     tc_index,
     tc_label,
-    tc_any,    // type_branch (union of types )
-    tc_tuple,  // type_branch (indexed collection of types )
-    tc_record, // type_branch (labeled collection of types )
-    tc_all,    // type_branch (intersection of types)
-};
+    tc_constant,
+    tc_tuple,    // type_branch (indexed collection of types )
+    tc_record,   // type_branch (labeled collection of types )
+    tc_any,      // type_branch (union of types )
+    tc_all,      // type_branch (intersection of types)
+} type_code;
 
 // s_sort is a sort (sort constant)
 struct sort {
@@ -49,21 +49,21 @@ struct rule {
 };
 
 struct type {
-    HashCode hashcode; enum type_code code;
+    HashCode hashcode; type_code code;
     Sort sort;
     HashCode marker[0];
 };
 
 // s_base is a base type
 struct type_constant {
-    HashCode hashcode; enum type_code code;
+    HashCode hashcode; type_code code;
     Sort sort;
     Symbol name;
 };
 
 // s_index is an indexed type
 struct type_index {
-    HashCode hashcode; enum type_code code;
+    HashCode hashcode; type_code code;
     Sort     sort;
     unsigned index;
     Type     slot;
@@ -71,7 +71,7 @@ struct type_index {
 
 // s_label is an labeled type
 struct type_label {
-    HashCode hashcode; enum type_code code;
+    HashCode hashcode; type_code code;
     Sort   sort;
     Symbol label;
     Type   slot;
@@ -79,11 +79,10 @@ struct type_label {
 
 // s_branch is a branch type (any,tuple,record,all)
 struct type_branch {
-    HashCode hashcode; enum type_code code;
+    HashCode hashcode; type_code code;
     Sort sort;
-    Type here;
-    Type left;
-    Type right;
+    unsigned count;
+    Type slots[1];
 };
 
 // s_name is a variable reference used in a formula
