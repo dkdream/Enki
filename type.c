@@ -609,11 +609,101 @@ static bool entry_Greater(const Type left, const Type right) {
     }
 }
 
-// true = (added|found), false = full
+// true = (added|found|merged), false = full
 static bool insert_Ordered(Type type, const unsigned count, Type *slots) {
     if (!type) return true;
 
-    int inx;
+    int      inx;
+    unsigned index;
+    Symbol   label;
+    Type     reference;
+    Type     join;
+
+    if (tc_index == type->code) {
+        index     = ((Index) type)->index;
+        reference = ((Index) type)->slot;
+        goto index_loop;
+    }
+    if (tc_label == type->code) {
+        label     = ((Label) type)->label;
+        reference = ((Label) type)->slot;
+        goto label_loop;
+    }
+    goto general_loop;
+
+  index_loop:
+    for (inx = 0; inx < count; ++inx) {
+        const Type here = slots[inx];
+        if (!here) {
+            slots[inx] = type;
+            return true;
+        }
+
+        if (type == here) return true;
+
+        if (tc_index == here->code) {
+            const unsigned at = ((Index) here)->index;
+            if (at == index) goto merge_index;
+        }
+
+        if (entry_Greater(type, here)) continue;
+        slots[inx] = type;
+        type = here;
+    }
+    return false;
+
+  merge_index:
+    {
+        const Index here = (Index) slots[inx];
+        for (++inx; inx < count; ++inx) {
+            if (!slots[inx]) break;
+            slots[inx-1] = slots[inx];
+        }
+        slots[inx - 1] = 0;
+
+        if (!type_Any(reference,here->slot, &join)) return false;
+        if (!type_Index(index, join, &type)) return false;
+
+        return insert_Ordered(type, count, slots);
+    }
+
+  label_loop:
+    for (inx = 0; inx < count; ++inx) {
+        const Type here = slots[inx];
+        if (!here) {
+            slots[inx] = type;
+            return true;
+        }
+
+        if (type == here) return true;
+
+        if (tc_label == here->code) {
+            const Symbol at = ((Label) here)->label;
+            if (at == label) goto merge_label;
+        }
+
+        if (entry_Greater(type, here)) continue;
+        slots[inx] = type;
+        type = here;
+    }
+    return false;
+
+  merge_label:
+    {
+        const Label here = (Label) slots[inx];
+        for (++inx; inx < count; ++inx) {
+            if (!slots[inx]) break;
+            slots[inx-1] = slots[inx];
+        }
+        slots[inx - 1] = 0;
+
+        if (!type_Any(reference,here->slot, &join)) return false;
+        if (!type_Label(label, join, &type)) return false;
+
+        return insert_Ordered(type, count, slots);
+    }
+
+  general_loop:
     for (inx = 0; inx < count; ++inx) {
         const Type here = slots[inx];
         if (!here) {
@@ -629,6 +719,27 @@ static bool insert_Ordered(Type type, const unsigned count, Type *slots) {
     }
 
     return false;
+}
+
+static unsigned count_Ordered(const unsigned count, Type *buffer) {
+    unsigned fullcount = 0;
+    unsigned inx;
+
+    for (inx = 0; inx < count; ++inx) {
+        if (!buffer[inx]) {
+            fullcount = inx;
+            break;
+        }
+    }
+
+    for (; inx < count; ++inx) {
+        if (!buffer[inx]) continue;
+        buffer[fullcount] = buffer[inx];
+        buffer[inx] = 0;
+        ++fullcount;
+    }
+
+    return fullcount;
 }
 
 static bool branch_IsMember(const Branch set, const Type type) {
@@ -752,12 +863,7 @@ static bool branch_Merge(const Sort sort,
         if (!insert_Ordered(left->slots[inx], fullcount, buffer)) goto error;
     }
 
-    for (inx = 0; inx < fullcount; ++inx) {
-        if (!buffer[inx]) {
-            fullcount = inx;
-            break;
-        }
-    }
+    fullcount = count_Ordered(fullcount, buffer);
 
     if (!branch_Cons(kind, sort, fullcount, buffer, result)) goto error;
 
@@ -793,8 +899,18 @@ extern bool type_Any(const Type left, const Type right, Type* result) {
 
     switch (option) {
     case 0: { /* left != tc_any, right != tc_any */
-        const Type array[3] = { left, right, 0};
-        return branch_Cons(tc_any, left->sort, 2, array, result);
+        Type array[3] = { 0, 0, 0 };
+        if (!insert_Ordered(left, 3, array)) return false;
+        if (!insert_Ordered(right, 3, array)) return false;
+
+        unsigned count = count_Ordered(3, array);
+
+        if (1 > count) return false;
+        if (1 < count) return branch_Cons(tc_any, left->sort, count, array, result);
+
+        ASSIGN(result, array[0]);
+
+        return true;
     }
 
     case 1: { /* left == tc_any, right != tc_any */
@@ -848,8 +964,18 @@ extern bool type_Tuple(const Type left, const Type right, Type* result) {
 
     switch (option) {
     case 0: { /* left != tc_any, right != tc_any */
-        const Type array[3] = { left, right, 0};
-        return branch_Cons(tc_tuple, left->sort, 2, array, result);
+        Type array[3] = { 0, 0, 0 };
+        if (!insert_Ordered(left, 3, array)) return false;
+        if (!insert_Ordered(right, 3, array)) return false;
+
+        unsigned count = count_Ordered(3, array);
+
+        if (1 > count) return false;
+        if (1 < count) return branch_Cons(tc_tuple, left->sort, count, array, result);
+
+        ASSIGN(result, array[0]);
+
+        return true;
     }
 
     case 1: { /* left == tc_any, right != tc_any */
@@ -901,8 +1027,18 @@ extern bool type_Record(const Type left, const Type right, Type* result) {
 
     switch (option) {
     case 0: { /* left != tc_any, right != tc_any */
-        const Type array[3] = { left, right, 0};
-        return branch_Cons(tc_record, left->sort, 2, array, result);
+        Type array[3] = { 0, 0, 0};
+        if (!insert_Ordered(left, 3, array)) return false;
+        if (!insert_Ordered(right, 3, array)) return false;
+
+        unsigned count = count_Ordered(3, array);
+
+        if (1 > count) return false;
+        if (1 < count) return branch_Cons(tc_any, left->sort, count, array, result);
+
+        ASSIGN(result, array[0]);
+
+        return true;
     }
 
     case 1: { /* left == tc_any, right != tc_any */
