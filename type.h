@@ -101,7 +101,6 @@ extern Type t_symbol;  // the union of all symbol types
 extern Type t_text;    // the union of all text types
 extern Type t_tuple;   // the union of all tuple types
 
-extern Type t_any;     // the union of all type of sort Zero
 extern Type t_buffer;  // the type of a c-text-buffer
 extern Type t_false;   // the type of the value void
 extern Type t_infile;  // the type of a c-os-infile

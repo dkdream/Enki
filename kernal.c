@@ -2823,6 +2823,19 @@ extern SUBR(Record) {
     type_Record(left.type, right.type, result.type);
 }
 
+extern SUBR(All) {
+    Node left;
+    Node right;
+
+    checkArgs(args, "All", 2, NIL, NIL);
+    fetchArgs(args, &left, &right, 0);
+
+    if (!isAType(left))  fatal("All: left is not a type");
+    if (!isAType(right)) fatal("All: right is not a type");
+
+    type_All(left.type, right.type, result.type);
+}
+
 static void mirror(Node local, Node env, Target result) {
     ASSIGN(result, local);
 }
@@ -3153,6 +3166,7 @@ void startEnkiLibrary() {
     MK_PRM(Index);
     MK_PRM(Tuple);
     MK_PRM(Record);
+    MK_PRM(All);
     MK_PRM(Unfold);
 
     Reference std_in  = 0;
