@@ -105,7 +105,7 @@ static inline unsigned echo_type(TextBuffer *output, Node node) {
     }
 
     if (fromCtor(node, s_sort)) {
-        echo_format(output, "<sort %p ", node.type);
+        echo_format(output, "<sort %p ", node.reference);
         echo_string(output, sort_Name(node.sort));
         echo_format(output, ">");
         goto done;

@@ -1,7 +1,6 @@
 <core> = <object>
        | <name>
        | <quote>
-       | <type>
        | (formula <arguments> <core>)
        | (if <core> <core> <core>)
        | (define <name> <core>)
@@ -10,8 +9,16 @@
        | (delay <type> <core>)
        | (effect <core>)
        | (syntax <core>)
+       | (cast <type> <core>)
        | (ctor <name> <type> <core>*)
        | (case <core> <condition>* <else>)
+       | (ctor? <core> <core>)
+       | (type? <core> <core>)
+       | (sort? <core> <core>)
+       | (ctor-of <core>)
+       | (type-of <core>)
+       | (sort-of <core>)
+       | (begin <core>* <core>)
        | (<core> <core>*)
 
 formula = lambda | pi | sigma | any | all | subset
@@ -27,7 +34,7 @@ formula = lambda | pi | sigma | any | all | subset
          | _      <type>?
 
 <assigns> = <assign>+
-<assign>  = (set <name> <core>)
+<assign>  = (bind <name> <core>)
 
 <arguments> = ()
             | <local>
@@ -52,15 +59,20 @@ fix     := declare a local scope assigned from inner scope
 delay   := construct a delayed thunk
 effect  := evaluate a delayed thunk without updating it
 syntax  := construct a syntax function
+cast    := construct a runtime type-check 
 ctor    := construct a value with type <type> and constructor <symbol> and elements <core>*
 case    := de-construct a value by constructor
 
 - - - - - - - - - - - - - - - - - - - - - 
 
-(sigma  (a [A]) (B a)) == { (a, b) | a \in A && b \in (B a) }
-(pi     (a [A]) (B a)) == { f      | f \subset (sigma (a [A]) (B a)) && f \in Function }
-(any    (a [A]) (B a)) == { b      | b \in Union{x \in A}(B x) }
-(all    (a [A]) (B a)) == { b      | b \in Intercection{x \in A}(B x) }
-(subset (a [A]) (B a)) == { a      | #(B a) > 0 }
+(sigma  (a : A) (B a)) == { (a, b) | a \in A && b \in (B a) }
+(pi     (a : A) (B a)) == { f      | f \subset (sigma (a [A]) (B a)) && f \in Function }
+(any    (a : A) (B a)) == { b      | b \in Union{x \in A}(B x) }
+(all    (a : A) (B a)) == { b      | b \in Intercection{x \in A}(B x) }
+(subset (a : A) (B a)) == { (a, b) | a \in A && b \subset (B a) }
+
+- - - - - - - - - - - - - - - - - - - - - 
+
+(cast : A x) == runtime type check
 
 - - - - - - - - - - - - - - - - - - - - - 

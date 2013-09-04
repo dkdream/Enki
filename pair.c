@@ -11,7 +11,7 @@
 #include "apply.h"
 #include "type.h"
 
-extern Type t_pair;  // this need to be removed (use sigma-types)
+extern Base t_pair;  // this need to be removed (use sigma-types)
 
 extern bool pair_Create(const Node car, const Node cdr, Pair* target) {
     if (!node_Allocate(_zero_space,

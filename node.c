@@ -151,7 +151,7 @@ extern void node_TypeOf(Node value, Target result)
     }
 
     if (isAType(value)) {
-        ASSIGN(result, value.type->sort);
+        compute_Sort(value.type, result);
         return;
     }
 

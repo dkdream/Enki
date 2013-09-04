@@ -40,14 +40,17 @@ typedef struct primitive     *Primitive;
 typedef struct symbol        *Symbol;
 typedef struct text          *Text;
 typedef struct tuple         *Tuple;
+
+typedef struct type_base     *Base;
 typedef struct sort          *Sort;
-typedef struct axiom         *Axiom;
-typedef struct rule          *Rule;
-typedef struct type          *Type;
+//typedef struct type_fixed    *Fixed;
 typedef struct type_constant *Constant;
 typedef struct type_index    *Index;
 typedef struct type_label    *Label;
 typedef struct type_branch   *Branch;
+
+typedef struct axiom         *Axiom;
+typedef struct rule          *Rule;
 typedef struct name          *Name;
 
 /*    */
@@ -65,14 +68,16 @@ node {
     Text      text;
     Tuple     tuple;
     /**/
+    Base      type;
+    /**/
     Sort      sort;
-    Axiom     axiom;
-    Rule      rule;
-    Type      type;
     Constant  constant;
     Index     index;
     Label     label;
     Branch    branch;
+    /**/
+    Axiom     axiom;
+    Rule      rule;
     Name      name;
     /**/
 };
@@ -92,14 +97,16 @@ node_target {
     Text      *text;
     Tuple     *tuple;
     /**/
+    Base      *type;
+    /**/
     Sort      *sort;
-    Axiom     *axiom;
-    Rule      *rule;
-    Type      *type;
     Constant  *constant;
     Index     *index;
     Label     *label;
     Branch    *branch;
+    /**/
+    Axiom     *axiom;
+    Rule      *rule;
     Name      *name;
     /**/
     Node      *node;

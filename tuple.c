@@ -12,7 +12,7 @@
 
 #include <stdarg.h>
 
-extern Type t_tuple;
+extern Base t_tuple;
 
 extern bool tuple_Create(unsigned size, Tuple* target) {
     if (1 > size) return false;

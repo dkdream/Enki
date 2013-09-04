@@ -35,6 +35,8 @@ unsigned int ea_global_trace = 0;
 //
 struct gc_treadmill enki_zero_space;
 struct gc_header    enki_true;
+struct gc_header    enki_false;
+struct gc_header    enki_unit;
 struct gc_header    enki_void;
 
 
@@ -44,6 +46,8 @@ unsigned __scan_cycle;
 
 Node        enki_globals = NIL; // nt_pair(nil, alist)
 Node              true_v = NIL;
+Node             false_v = NIL;
+Node              unit_v = NIL;
 Node              void_v = NIL;
 Primitive  p_eval_symbol = 0;
 Primitive    p_eval_pair = 0;
@@ -2263,10 +2267,6 @@ extern SUBR(sizeof) {
         integer_Create(sizeof(struct text), result.integer);
     }
 
-    if (isIdentical(kind, s_type)) {
-        integer_Create(sizeof(struct type), result.integer);
-    }
-
     if (isIdentical(kind, s_sort)) {
         integer_Create(sizeof(struct sort), result.integer);
     }
@@ -2849,6 +2849,29 @@ extern SUBR(Unfold) {
     type_Map(mirror, type, env, result);
 }
 
+extern SUBR(cast) {
+    Node type;
+    Node left;
+    Node right;
+
+    checkArgs(args, "cast", 2, NIL, NIL);
+    fetchArgs(args, &left, &right, 0);
+
+    node_TypeOf(right, &type);
+
+    if (node_Iso(5, left, type)) {
+        ASSIGN(result,right);
+    } else {
+        fprintf(stderr, "cast failure:\n target=");
+        print(stderr, left);
+        fprintf(stderr, "\n value=");
+        prettyPrint(stderr, right);
+        fprintf(stderr, "\n typeof=");
+        print(stderr, type);
+        fatal("\n");
+    }
+}
+
 /***************************************************************
  ***************************************************************
  ***************************************************************
@@ -2990,11 +3013,15 @@ void startEnkiLibrary() {
     VM_DEBUG(1, "startEnkiLibrary init type table");
     init_global_typetable();
 
-    true_v = (Node)init_atom(&enki_true, 0);
-    void_v = (Node)init_atom(&enki_void, 0);
+    true_v  = (Node)init_atom(&enki_true, 0);
+    false_v = (Node)init_atom(&enki_false, 0);
+    unit_v  = (Node)init_atom(&enki_unit, 0);
+    void_v  = (Node)init_atom(&enki_void, 0);
 
-    setType(true_v, t_true);
-    setType(void_v, t_false);
+    setType(true_v,  boolean_s);
+    setType(false_v, boolean_s);
+    setType(unit_v,  unit_s);
+    setType(void_v,  undefined_s);
 
     pair_Create(NIL,NIL, &enki_globals.pair);
 
@@ -3168,6 +3195,8 @@ void startEnkiLibrary() {
     MK_PRM(Record);
     MK_PRM(All);
     MK_PRM(Unfold);
+
+    MK_PRM(cast);
 
     Reference std_in  = 0;
     Reference std_out = 0;

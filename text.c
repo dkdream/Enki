@@ -12,7 +12,7 @@
 /* */
 #include <string.h>
 
-extern Type t_text;
+extern Base t_text;
 /*
  * the hash code is computed but xor-ing the longs together
  * but a text may not fill the last long so when to text

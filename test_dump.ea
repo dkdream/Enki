@@ -65,3 +65,17 @@ dump
 (let ((xxx 1)(yyy 2))
   (dumpln (environment 'current)))
 
+(define one   (Field 'one integer))
+(define two   (Field 'two text))
+(define three (Field 'three symbol))
+
+(println one)
+(println two)
+(println three)
+
+(dumpln (Unfold (Record one two)))
+(dumpln (Unfold (Record two three)))
+(dumpln (Unfold (Record one (Record two three))))
+
+
+
