@@ -253,6 +253,32 @@ extern bool make_Axiom(Sort element, Sort class) {
     return true;
 }
 
+extern bool find_Rule(Symbol functor, Sort xxx, Sort yyy, Sort zzz) {
+    if (!functor) return false;
+    if (!xxx)     return false;
+    if (!yyy)     return false;
+    if (!zzz)    return false;
+
+    HashCode hashcode = functor->hashcode;
+
+    const int row = hashcode % _global_typetable->size;
+    Header group  = _global_typetable->row[row].first;
+
+    for ( ; group; group = group->after) {
+        if (!isIdentical(group->kind.constructor, s_rule)) continue;
+
+        Rule test = (Rule) asReference(group);
+
+        if (test->functor != functor) continue;
+        if (test->xxx     != xxx)     continue;
+        if (test->yyy     != yyy)     continue;
+        if (test->zzz     != zzz)    continue;
+
+        return true;
+    }
+    return false;
+}
+
 // each rule is for a functor
 // functors:
 //   Pi    - (xxx -> yyy):zzz (dependent function types)

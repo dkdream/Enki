@@ -113,6 +113,7 @@ extern bool type_Create(Symbol,Sort,Base*); /* each type constant in a sort has 
 
 extern bool find_Axiom(const Sort, const Sort);
 extern bool make_Axiom(const Sort, const Sort);
+
 extern bool find_Rule(const Symbol, const Sort, const Sort, const Sort);
 extern bool make_Rule(const Symbol, const Sort, const Sort, const Sort);
 
