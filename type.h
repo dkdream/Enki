@@ -35,30 +35,29 @@ struct type_base {
 };
 
 // s_sort is a sort (sort constant)
-struct sort {
-    HashCode hashcode; type_code code;
-    Symbol   name;
-};
+//struct sort {
+//    HashCode hashcode; type_code code;
+//    Symbol   name;
+//};
 
 // s_axiom is a axiom pair (c:s)
 struct axiom {
     HashCode hashcode;
-    Sort element;
-    Sort class;
+    Constant element;
+    Constant class;
 };
 
 // s_rule is a rule  triple (in=s1,out=s2,kind=s3)
 struct rule {
     HashCode hashcode;
     Symbol   functor;
-    Sort xxx, yyy, zzz;
+    Constant xxx, yyy, zzz;
 };
 
-
-// s_base is a base type
+// s_base is a type constant
+// s_sort is a sort constant
 struct type_constant {
     HashCode hashcode; type_code code;
-    Sort sort;
     Symbol name;
 };
 
@@ -85,37 +84,37 @@ struct type_branch {
 
 // s_name is a variable reference used in a formula
 struct name {
-    Sort sort;
+    Base sort;
 };
 
-extern Sort opaque_s;    // the sort of opaque types
-extern Sort symbol_s;    // the sort of symbols
-extern Sort zero_s;      // the sort of values
+extern Constant opaque_s;    // the sort of opaque types
+extern Constant symbol_s;    // the sort of symbols
+extern Constant zero_s;      // the sort of values
 
-extern Sort boolean_s;   // the sort with true and false values
-extern Sort undefined_s; // the sort with the void value
-extern Sort unit_s;      // the sort with the unit value
-extern Sort void_s;      // the sort with no values
+extern Constant boolean_s;   // the sort with true and false values
+extern Constant undefined_s; // the sort with the void value
+extern Constant unit_s;      // the sort with the unit value
+extern Constant void_s;      // the sort with no values
 
-extern Base t_integer; // the type of integer values
-extern Base t_pair;    // the union of all pairs types
-extern Base t_symbol;  // the union of all symbol types
-extern Base t_text;    // the union of all text types
-extern Base t_tuple;   // the union of all tuple types
+extern Constant t_integer; // the type of integer values
+extern Constant t_pair;    // the union of all pairs types
+extern Constant t_symbol;  // the union of all symbol types
+extern Constant t_text;    // the union of all text types
+extern Constant t_tuple;   // the union of all tuple types
 
-extern Base t_buffer;    // the type of a c-text-buffer
-extern Base t_infile;    // the type of a c-os-infile
-extern Base t_nil;       // the type of the value nil
-extern Base t_outfile;   // the type of a c-os-infile
+extern Constant t_buffer;    // the type of a c-text-buffer
+extern Constant t_infile;    // the type of a c-os-infile
+extern Constant t_nil;       // the type of the value nil
+extern Constant t_outfile;   // the type of a c-os-infile
 
-extern bool sort_Create(Symbol,Sort*);      /* each sort has a unique name */
-extern bool type_Create(Symbol,Sort,Base*); /* each type constant in a sort has a unique name */
+extern bool sort_Create(const Symbol,Constant*); /* each sort has a unique name */
+extern bool type_Create(const Symbol, const Constant, Constant*); /* each type constant in a sort has a unique name */
 
-extern bool find_Axiom(const Sort, const Sort);
-extern bool make_Axiom(const Sort, const Sort);
+extern bool find_Axiom(const Constant, const Constant);
+extern bool make_Axiom(const Constant, const Constant);
 
-extern bool find_Rule(const Symbol, const Sort, const Sort, const Sort);
-extern bool make_Rule(const Symbol, const Sort, const Sort, const Sort);
+extern bool find_Rule(const Symbol, const Constant, const Constant, const Constant);
+extern bool make_Rule(const Symbol, const Constant, const Constant, const Constant);
 
 extern bool compute_Sort(Base value, Target result);
 
@@ -178,14 +177,12 @@ extern void check_TypeTable__(const char* filename, unsigned line);
   inline functions
  ******************/
 
-extern inline bool sort_Contains(const Base type, const Sort sort) __attribute__((always_inline));
-extern inline bool sort_Contains(const Base type, const Sort sort) {
+extern inline bool sort_Contains(const Base type, const Constant sort) __attribute__((always_inline));
+extern inline bool sort_Contains(const Base type, const Constant sort) {
     if (!type) return false;
     if (!sort) return false;
-    if (type->code == tc_constant) {
-        (((Constant)type)->sort == sort);
-    }
-    if (type->code == tc_sort) return find_Axiom((Sort)type, sort);
+    if (type->code == tc_constant) return find_Axiom((Constant)type, sort);
+    if (type->code == tc_sort)     return find_Axiom((Constant)type, sort);
     return false;
 }
 
@@ -243,20 +240,10 @@ extern inline bool fromCtor(const Node value, const Node ctor) {
     return (kind->constructor.reference == ctor.reference);
 }
 
-extern inline const char* sort_Name(Sort sort) __attribute__((always_inline));
-extern inline const char* sort_Name(Sort sort) {
+extern inline const char* sort_Name(Constant sort) __attribute__((always_inline));
+extern inline const char* sort_Name(Constant sort) {
     if (!sort) return "";
     return (const char*)(sort->name->value);
-}
-
-extern inline const char* type_SortName(Base type) __attribute__((always_inline));
-extern inline const char* type_SortName(Base type) {
-    if (!type) return "";
-    if (type->code != tc_constant) return "";
-
-    Constant type_const = (Constant)type;
-
-    return (const char*)(type_const->sort->name->value);
 }
 
 extern inline const char* type_ConstantName(Base type) __attribute__((always_inline));

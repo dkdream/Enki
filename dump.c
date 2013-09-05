@@ -106,16 +106,15 @@ static inline unsigned echo_type(TextBuffer *output, Node node) {
 
     if (fromCtor(node, s_sort)) {
         echo_format(output, "<sort %p ", node.reference);
-        echo_string(output, sort_Name(node.sort));
+        echo_string(output, sort_Name(node.constant));
         echo_format(output, ">");
         goto done;
     }
 
     if (fromCtor(node, s_base)) {
-        echo_format(output, "<%s %p %s>",
+        echo_format(output, "<%s %p>",
                     type_ConstantName(node.type),
-                    node.type,
-                    type_SortName(node.type));
+                    node.type);
         goto done;
     }
 
@@ -163,10 +162,9 @@ static inline unsigned echo_type(TextBuffer *output, Node node) {
         }
     }
 
-    echo_format(output, "<type %p %s %s>",
+    echo_format(output, "<type %p %s>",
                 node.reference,
-                type_ConstantName(node.type),
-                type_SortName(node.type));
+                type_ConstantName(node.type));
 
  done: {
         const unsigned stop = buffer_marker(output);

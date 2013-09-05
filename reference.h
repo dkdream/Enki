@@ -42,8 +42,6 @@ typedef struct text          *Text;
 typedef struct tuple         *Tuple;
 
 typedef struct type_base     *Base;
-typedef struct sort          *Sort;
-//typedef struct type_fixed    *Fixed;
 typedef struct type_constant *Constant;
 typedef struct type_index    *Index;
 typedef struct type_label    *Label;
@@ -70,7 +68,6 @@ node {
     /**/
     Base      type;
     /**/
-    Sort      sort;
     Constant  constant;
     Index     index;
     Label     label;
@@ -99,7 +96,6 @@ node_target {
     /**/
     Base      *type;
     /**/
-    Sort      *sort;
     Constant  *constant;
     Index     *index;
     Label     *label;

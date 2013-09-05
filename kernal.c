@@ -470,7 +470,7 @@ extern SUBR(encode_type) {
         case 1:
             tuple_GetItem(value.tuple, 0, &sort);
             if (isSymbol(sort)) {
-                sort_Create(sort, result.sort);
+                sort_Create(sort, result.constant);
             } else {
                 fatal("named sorts must be symbols");
             }
@@ -486,9 +486,9 @@ extern SUBR(encode_type) {
                 fatal("named types must use symbols");
             }
             {
-                Sort set;
+                Constant set;
                 sort_Create(sort, &set);
-                type_Create(type, set, result.type);
+                type_Create(type, set, result.constant);
             }
             return;
 
@@ -2265,10 +2265,6 @@ extern SUBR(sizeof) {
 
     if (isIdentical(kind, s_text)) {
         integer_Create(sizeof(struct text), result.integer);
-    }
-
-    if (isIdentical(kind, s_sort)) {
-        integer_Create(sizeof(struct sort), result.integer);
     }
 
     if (isIdentical(kind, s_tuple)) {

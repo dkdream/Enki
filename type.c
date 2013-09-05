@@ -44,27 +44,28 @@ struct _internal_Table {
 
 static struct _internal_Table *_global_typetable = 0;
 
-Sort opaque_s = 0;
-Sort symbol_s = 0;
-Sort zero_s   = 0;
+Constant void_s = 0;
 
-Sort boolean_s = 0;
-Sort undefined_s = 0;
-Sort unit_s = 0;
-Sort void_s = 0;
+Constant opaque_s = 0;
+Constant symbol_s = 0;
+Constant zero_s   = 0;
 
-Base t_integer = 0;
-Base t_pair = 0;
-Base t_symbol = 0;
-Base t_text = 0;
-Base t_tuple = 0;
+Constant boolean_s = 0;
+Constant undefined_s = 0;
+Constant unit_s = 0;
 
-Base t_buffer = 0;
-Base t_infile = 0;
-Base t_nil = 0;
-Base t_outfile = 0;
+Constant t_integer = 0;
+Constant t_pair = 0;
+Constant t_symbol = 0;
+Constant t_text = 0;
+Constant t_tuple = 0;
 
-static void make_sort(const char* value, Sort* target) {
+Constant t_buffer = 0;
+Constant t_infile = 0;
+Constant t_nil = 0;
+Constant t_outfile = 0;
+
+static void make_sort(const char* value, Constant* target) {
     Symbol symbol = 0;
 
     if (!symbol_Convert(value, &symbol)) return;
@@ -72,7 +73,7 @@ static void make_sort(const char* value, Sort* target) {
     sort_Create(symbol, target);
 }
 
-static void make_basetype(const char* value, Sort sort, Base* target) {
+static void make_basetype(const char* value, Constant sort, Constant* target) {
     Symbol symbol = 0;
 
     if (!symbol_Convert(value, &symbol)) return;
@@ -98,6 +99,8 @@ extern void init_global_typetable() {
 
     _global_typetable = result;
 
+    make_sort("Void", &void_s);
+
     make_sort("Opaque", &opaque_s);
     make_sort("Symbol", &symbol_s);
     make_sort("Zero", &zero_s);
@@ -105,7 +108,6 @@ extern void init_global_typetable() {
     make_sort("Boolean",   &boolean_s);
     make_sort("Undefined", &undefined_s);
     make_sort("Unit",      &unit_s);
-    make_sort("Void",      &void_s);
 
     MK_BTYPE(integer);
     MK_BTYPE(pair);
@@ -150,7 +152,7 @@ extern void check_TypeTable__(const char* filename, unsigned line) {
     }
 }
 
-extern bool sort_Create(Symbol symbol, Sort* target) {
+extern bool sort_Create(Symbol symbol, Constant* target) {
     if (!symbol) return false;
 
     const HashCode hashcode = symbol->hashcode;
@@ -161,7 +163,7 @@ extern bool sort_Create(Symbol symbol, Sort* target) {
     for ( ; group; group = group->after) {
         if (!isIdentical(group->kind.constructor, s_sort)) continue;
 
-        Sort test = (Sort) asReference(group);
+        Constant test = (Constant) asReference(group);
 
         if (test->name != symbol) continue;
 
@@ -170,7 +172,7 @@ extern bool sort_Create(Symbol symbol, Sort* target) {
         return true;
     }
 
-    Header entry = fresh_atom(0, sizeof(struct sort));
+    Header entry = fresh_atom(0, sizeof(struct type_constant));
 
     if (!entry) return false;
 
@@ -178,7 +180,7 @@ extern bool sort_Create(Symbol symbol, Sort* target) {
     entry->kind.constructor = (Node)s_sort;
     entry->kind.constant = 1;
 
-    Sort result = (Sort) asReference(entry);
+    Constant result = (Constant) asReference(entry);
 
     result->hashcode = symbol->hashcode;
     result->code     = tc_sort;
@@ -192,9 +194,11 @@ extern bool sort_Create(Symbol symbol, Sort* target) {
     return true;
 }
 
-extern bool find_Axiom(Sort element, Sort class) {
+extern bool find_Axiom(Constant element, Constant class) {
     if (!element) return false;
     if (!class)   return false;
+
+    if (class == void_s) return false;
 
     HashCode hashcode = class->hashcode;
 
@@ -214,9 +218,11 @@ extern bool find_Axiom(Sort element, Sort class) {
     return false;
 }
 
-extern bool make_Axiom(Sort element, Sort class) {
+extern bool make_Axiom(Constant element, Constant class) {
     if (!element) return false;
     if (!class)   return false;
+
+    if (class == void_s) return false;
 
     HashCode hashcode = class->hashcode;
 
@@ -253,11 +259,15 @@ extern bool make_Axiom(Sort element, Sort class) {
     return true;
 }
 
-extern bool find_Rule(Symbol functor, Sort xxx, Sort yyy, Sort zzz) {
+extern bool find_Rule(Symbol functor, Constant xxx, Constant yyy, Constant zzz) {
     if (!functor) return false;
     if (!xxx)     return false;
     if (!yyy)     return false;
-    if (!zzz)    return false;
+    if (!zzz)     return false;
+
+    if (xxx == void_s) return false;
+    if (yyy == void_s) return false;
+    if (zzz == void_s) return false;
 
     HashCode hashcode = functor->hashcode;
 
@@ -283,11 +293,15 @@ extern bool find_Rule(Symbol functor, Sort xxx, Sort yyy, Sort zzz) {
 // functors:
 //   Pi    - (xxx -> yyy):zzz (dependent function types)
 //   Sigma - (xxx, yyy):zzz   (dependent tuple types)
-extern bool make_Rule(Symbol functor, Sort xxx, Sort yyy, Sort zzz) {
+extern bool make_Rule(Symbol functor, Constant xxx, Constant yyy, Constant zzz) {
     if (!functor) return false;
     if (!xxx)     return false;
     if (!yyy)     return false;
-    if (!zzz)    return false;
+    if (!zzz)     return false;
+
+    if (xxx == void_s) return false;
+    if (yyy == void_s) return false;
+    if (zzz == void_s) return false;
 
     HashCode hashcode = functor->hashcode;
 
@@ -302,7 +316,7 @@ extern bool make_Rule(Symbol functor, Sort xxx, Sort yyy, Sort zzz) {
         if (test->functor != functor) continue;
         if (test->xxx     != xxx)     continue;
         if (test->yyy     != yyy)     continue;
-        if (test->zzz     != zzz)    continue;
+        if (test->zzz     != zzz)     continue;
 
         return true;
     }
@@ -329,7 +343,7 @@ extern bool make_Rule(Symbol functor, Sort xxx, Sort yyy, Sort zzz) {
     return true;
 }
 
-extern bool type_Create(Symbol symbol, Sort sort, Base* target) {
+extern bool type_Create(Symbol symbol, Constant sort, Constant* target) {
     if (!symbol) return false;
     if (!sort)   return false;
 
@@ -343,10 +357,10 @@ extern bool type_Create(Symbol symbol, Sort sort, Base* target) {
 
         Constant test = (Constant) asReference(group);
 
-        if (test->sort != sort)        continue;
         if (test->code != tc_constant) continue;
+        if (test->name != symbol) continue;
 
-        if (((Constant)test)->name != symbol)      continue;
+        make_Axiom(test, sort);
 
         ASSIGN(target, test);
 
@@ -364,12 +378,13 @@ extern bool type_Create(Symbol symbol, Sort sort, Base* target) {
     Constant result = (Constant) asReference(entry);
 
     result->hashcode = hashcode;
-    result->sort     = sort;
     result->code     = tc_constant;
     result->name     = symbol;
 
     entry->after = _global_typetable->row[row].first;
     _global_typetable->row[row].first = entry;
+
+    make_Axiom(result, sort);
 
     ASSIGN(target, result);
 
@@ -844,7 +859,7 @@ static bool insertAll_Ordered(Base type, const unsigned count, Base *slots) {
         slots[inx - 1] = 0;
 
         if (!type_All(reference,here->slot, &join)) return false;
-        if (void_s == (Sort)join) {
+        if (void_s == (Constant)join) {
             type = (Base)void_s;
         } else {
             if (!type_Index(index, join, &type)) return false;
@@ -884,7 +899,7 @@ static bool insertAll_Ordered(Base type, const unsigned count, Base *slots) {
         slots[inx - 1] = 0;
 
         if (!type_All(reference,here->slot, &join)) return false;
-        if (void_s == (Sort)join) {
+        if (void_s == (Constant)join) {
             type = (Base)void_s;
         } else {
             if (!type_Label(label, join, &type)) return false;
@@ -1660,6 +1675,76 @@ extern bool type_Contains(const Base type, const Node value) {
     if (type == vtype) return true;
 }
 
+static bool collect_Any(const Base hold,
+                        const Base next,
+                        const unsigned fullcount,
+                        Base *slots,
+                        Base* result)
+{
+    Base temp = (Base)0;
+
+    filter_Ordered((Base)void_s, fullcount, slots);
+
+    unsigned current = count_Ordered(fullcount, slots);
+
+    if (1 == current) {
+        temp = slots[0];
+    }
+
+    if (1 < current) {
+        branch_Cons(tc_any, current, slots, &temp);
+    }
+
+    if (hold) {
+        if (!temp) {
+            temp = hold;
+        } else {
+            type_Any(hold, temp, &temp);
+        }
+    }
+
+    if (next) {
+        if (!temp) {
+            temp = hold;
+        } else {
+            type_Any(hold, temp, &temp);
+        }
+    }
+
+    result[0] = temp;
+}
+
+static bool collect_Sorts(Constant element, Target result) {
+    Base buffer[100];
+    Base hold = 0;
+
+    const unsigned fullcount = 99;
+
+    memset(buffer, 0, sizeof(Base) * 100);
+
+    unsigned row = 0;
+    unsigned max = _global_typetable->size;
+    for (; row < max; ++row) {
+        Header group = _global_typetable->row[row].first;
+        for ( ; group; group = group->after) {
+            if (!isIdentical(group->kind.constructor, s_axiom)) continue;
+
+            Axiom test = (Axiom) asReference(group);
+
+            if (test->element != element) continue;
+
+            Base next = (Base)(test->class);
+
+            if (!insertAny_Ordered(next, fullcount, buffer)) {
+                collect_Any(hold, next, fullcount, buffer, &hold);
+                memset(buffer, 0, sizeof(Base) * 100);
+            }
+        }
+    }
+
+    return collect_Any(hold, (Base)0, fullcount, buffer, &hold);
+}
+
 extern bool compute_Sort(Base value, Target result) {
     if (!value) {
         ASSIGN(result, undefined_s);
@@ -1667,13 +1752,24 @@ extern bool compute_Sort(Base value, Target result) {
     }
 
     switch (value->code) {
-    default:
-        ASSIGN(result, undefined_s);
-        return false;
+    case tc_index:
+        return compute_Sort(((Index)value)->slot, result);
+
+    case tc_label:
+        return compute_Sort(((Label)value)->slot, result);
 
     case tc_constant:
-        ASSIGN(result, ((Constant)value)->sort);
-        return true;
+        return collect_Sorts((Constant)value, result);
+
+    case tc_sort:
+        return collect_Sorts((Constant)value, result);
+
+    case tc_tuple:
+    case tc_record:
+    case tc_any:
+    case tc_all:
+        ASSIGN(result, undefined_s);
+        return false;
     }
 }
 
