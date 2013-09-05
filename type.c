@@ -1742,7 +1742,7 @@ static bool collect_Sorts(Constant element, Target result) {
         }
     }
 
-    return collect_Any(hold, (Base)0, fullcount, buffer, &hold);
+    return collect_Any(hold, (Base)0, fullcount, buffer, result.type);
 }
 
 extern bool compute_Sort(Base value, Target result) {

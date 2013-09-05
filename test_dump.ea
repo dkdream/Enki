@@ -43,15 +43,17 @@ dump
 (dumpln 'x8)
 (assert (iso 10 'fooness         (ctor-of ttest)))
 
-(dumpln 'x9)
+(dumpln 'x9 (type-of ttest) :{iseq Zero})
 (assert (iso 10 :{iseq Zero}     (type-of ttest)))
 
 (define fooness 'fooness)
 
+(dumpln 'x10 :{symbol Symbol} (type-of fooness))
 (assert (iso 10 :{symbol Symbol} (type-of fooness)))
 
 (define barness :{barness Zero})
 
+(dumpln 'x11 :{Zero} (type-of barness))
 (assert (iso 10 :{Zero} (type-of barness)))
 
 (define barness (lambda (ok)
