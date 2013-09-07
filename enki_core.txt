@@ -1,27 +1,41 @@
 <core> = <object>
        | <name>
-       | <quote>
-       | (formula <arguments> <core>)
-       | (if <core> <core> <core>)
-       | (define <name> <core>)
-       | (let <locals> <assigns> <core>)
-       | (fix <locals> <assigns> <core>)
-       | (delay <type> <core>)
-       | (effect <core>)
-       | (syntax <core>)
-       | (cast <type> <core>)
-       | (ctor <name> <type> <core>*)
-       | (case <core> <condition>* <else>)
-       | (ctor? <core> <core>)
-       | (type? <core> <core>)
-       | (sort? <core> <core>)
-       | (ctor-of <core>)
-       | (type-of <core>)
-       | (sort-of <core>)
-       | (begin <core>* <core>)
+       | <construct>
+       | <reflector>
+       | <control>
+       | <context>
+       | <predicate>
+       | <enviroment>
+       | <filter>
        | (<core> <core>*)
 
-formula = lambda | pi | sigma | any | all | subset
+<constructor> = (<formula> <arguments> <core>* <core>)
+              | (delay <type> <core>)
+              | (ctor <name> <type> <core>*)
+              | (syntax <core>)
+              | <quote>
+
+<control> = (if <core> <core> <core>)
+          | (case <core> <condition>* <else>)
+
+<context> = (let <locals> <assigns> <core>* <core>)
+          | (fix <locals> <assigns> <core>* <core>)
+
+<enviroment> = (define <name> <core>)
+             | (effect <core>)
+             | (require <object> <name>?) 
+
+<filter> = (cast <type> <core>)
+
+<reflector> = (ctor-of <core>)
+            | (type-of <core>)
+            | (sort-of <core>)
+
+<predicate> = (ctor? <core> <core>)
+            | (type? <core> <core>)
+            | (sort? <core> <core>)
+
+<formula> = lambda | pi | sigma | any | all | subset
 
 <object> := a literal value
 <name>   := a name 

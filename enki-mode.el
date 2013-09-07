@@ -1,21 +1,50 @@
 ;;; enki-mode.el --- Enki mode, and its idiosyncratic commands
 
+;; <formula>     = lambda | pi | sigma | any | all | subset
+;; <constructor> = delay | ctor | syntax 
+;; <control>     = if | case 
+;; <context>     = let | fix | bind
+;; <enviroment>  = define | effect
+;; <filter>      = cast
+;; <reflector>   = ctor-of | type-of | sort-of
+;; <predicate>   = ctor?   | type?   | sort?
+;;
+;; <syntax> = : | & | _ | ' | .
+;; 
+
+
+
 (defconst enki-font-lock-keywords-1
     (list
      ;;
      ;; Definitions.
      (list 
       (concat
-       "(" (regexp-opt
-            '(
-              "define"
-              "lambda" "pi" "sigma" "any" "all" "subset"
-              "delay" "syntax" "ctor"
-              "bind"
-              "set"
-              "macro"
-              ) t)
+       "(\\s-*" (regexp-opt
+                 '(
+                   "lambda" "pi" "sigma" "any" "all" "subset"
+                   "delay" "ctor" "syntax"
+                   "if" "case" 
+                   "let" "fix"
+                   "define" "effect" "require"
+                   "cast"
+                   "ctor-of" "type-of" "sort-of"
+                   "ctor?" "type?" "sort?"
+                   "bind"
+                   ) t)
        "\\>")
+      '(1 font-lock-keyword-face))
+     
+     ;;
+     ;; Syntax
+     (list 
+      (concat "\\<" (regexp-opt '( "_" ) t) "\\>")
+      '(1 font-lock-keyword-face))
+
+     ;;
+     ;; Syntax
+     (list 
+      (regexp-opt '(":" "&" "." "'") t)
       '(1 font-lock-keyword-face))
      )
   "Subdued level highlighting for Enki modes.")
@@ -24,45 +53,12 @@
   (append enki-font-lock-keywords-1
      (list
       ;;
-      ;; Control structures.
-      (cons (concat
-	     "(" (regexp-opt
-		  '(
-                    "and"
-                    "begin"
-                    "cond"
-                    "if"
-                    "let"
-                    "fix"
-                    "or"
-                    "case"
-                    "effect"
-                    "_"
-                    ) t)
-	     "\\>")
-	    1)
-      ;;
-      ;; Control structures
-      (cons (concat
-	     "(" (regexp-opt
-		  '(
-		    "loop"
-                    "do"
-                    "require"
-                    "unless"
-                    "when"
-                    ) t)
-	     "\\>")
-	    1)
-      ;;
       ;; Exit/Feature symbols as constants.
       (list
        (concat
         "(" (regexp-opt
              '(
                "catch"
-               "featurep"
-               "provide"
                "throw"
                ) t)
         "\\>"
@@ -82,20 +78,22 @@
                ) t)
         "\\>")
        1 font-lock-warning-face)
+
+      '("(\\s-*\\(\\sw+\\)" 1 font-lock-function-name-face append)
+      '("(\\s-*\\(\\s_+\\)" 1 font-lock-function-name-face append)
       ;;
       ;;
       ;; Words inside \\s' tend to be symbol names.
       '("\\s'\\(\\sw+\\)" 1 font-lock-constant-face append)
       ;;
+      ;; Enki : - type expression 
+      '(":\\s-*\\(\\sw+\\)" 1 font-lock-type-face append)
       ;;
-      '("\\.\\(\\sw+\\)" 1 font-lock-function-name-face append)
-
+      ;; Enki & -
+      '("&\\s-*\\(\\sw+\\)"  1 font-lock-builtin-face append)
       ;;
-      ;; Constant values.
-      '(":\\(\\sw+\\)" 1 font-lock-builtin-face append)
-      ;;
-      ;; Enki `&' keywords as types.
-      '("&\\(\\sw+\\)"  1 font-lock-type-face append)
+      ;; Enki . -
+      '("\\.\\s-*\\(\\sw+\\)" 1 font-lock-function-name-face append)
       ))
   "Gaudy level highlighting for Enki modes.")
 
