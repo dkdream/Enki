@@ -37,8 +37,11 @@ dump
 (dumpln 'x6)
 (assert (iso 10 'tuple           (ctor-of ttest)))
 
-(dumpln 'x7)
-(assert (iso 10 ttest            (ctor-of (type-of ttest :{iseq Zero}) 'fooness)))
+(define ctest (ctor 'fooness :{iseq Zero} 1 2 3 4))
+(dumpln 'x7 ctest)
+(assert (iso 10 'fooness     (ctor-of ctest))
+(assert (iso 10 :{iseq Zero} (type-of ctest))
+(assert (iso 10 ttest  ctest))
 
 (dumpln 'x8)
 (assert (iso 10 'fooness         (ctor-of ttest)))

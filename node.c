@@ -103,33 +103,35 @@ bool node_Iso(long depth, Node left, Node right)
     Node type = getType(left);
     Node ctor = getConstructor(left);
 
-    if (!isIdentical(type, getType(right))) return false;
-    if (!isIdentical(ctor, getConstructor(right))) return false;
+    const bool type_match = isIdentical(type, getType(right));
+    const bool ctor_match = isIdentical(ctor, getConstructor(right));
 
     if (1 > depth) return true;
 
-    if (isIdentical(ctor, s_text)) {
-        if (left.text->size != right.text->size) return false;
-        return 0 == memcmp(left.text->value,
-                           right.text->value,
-                           left.text->size);
-    }
+    if (ctor_match) {
+        if (isIdentical(ctor, s_text)) {
+            if (left.text->size != right.text->size) return false;
+            return 0 == memcmp(left.text->value,
+                               right.text->value,
+                               left.text->size);
+        }
 
-    if (isIdentical(ctor, s_integer)) {
-        return left.integer->value == right.integer->value;
-    }
-
-    if (isAtomic(left)) {
-        return false;
-    }
-    if (isAtomic(right)) {
-        return false;
+        if (isIdentical(ctor, s_integer)) {
+            return left.integer->value == right.integer->value;
+        }
     }
 
     const unsigned lhs_max = asKind(left)->count;
     const unsigned rhs_max = asKind(right)->count;
 
     if (lhs_max != rhs_max) return false;
+
+    if (isAtomic(left)) {
+        if (!isAtomic(right)) return false;
+        return 0 == memcmp(left.reference, right.reference, toSize(lhs_max));
+    }
+
+    if (isAtomic(right)) return false;
 
     unsigned inx = 0;
     for (; inx < lhs_max ; ++inx) {

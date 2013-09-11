@@ -636,7 +636,7 @@ extern void eval_binding(Node local, Node env, Target result)
 
     if (!isNil(type)) {
         eval(type, env, &type);
-        if (!isType(value, type)) {
+        if (!inType(value, type)) {
             value = void_v;
         }
     }
@@ -1219,81 +1219,76 @@ extern SUBR(fixed)
   ASSIGN(result, (Node)tuple);
 }
 
-extern SUBR(type_of)
-{
-    Node value, type;
-    int count = checkArgs(args, "type-of", 1, NIL);
-
-    ASSIGN(result,NIL);
-
-    if (1 < count) {
-        fetchArgs(args, &value, &type, 0);
-        if (!isAType(type)) {
-            fatal("only types can be use to set values\n");
-        }
-        if (isSymbol(value)) {
-            fatal("symbol can only have the symbol type\n");
-        }
-        if (isAType(value)) {
-            fatal("type can not have their type set\n");
-        }
-        if (isASort(value)) {
-            fatal("sort can not have their type set\n");
-        }
-        setType(value, type);
-        ASSIGN(result,value);
-    } else {
-        pair_GetCar(args.pair, &value);
-        node_TypeOf(value, result);
-    }
-}
-
-extern SUBR(kind_of)
+extern SUBR(ctor_of)
 {
     Node value;
 
-    checkArgs(args, "kind-of", 1, NIL);
-    forceArgs(args, &value, 0);
+    checkArgs(args, "ctor-of", 1, NIL);
+    fetchArgs(args, &value, 0);
 
-    ASSIGN(result, getType(value));
+    ASSIGN(result, getConstructor(value));
 }
 
-extern SUBR(ctor_of)
+extern SUBR(type_of)
+{
+    Node value;
+
+    checkArgs(args, "type-of", 1, NIL);
+    fetchArgs(args, &value, 0);
+
+    node_TypeOf(value, result);
+}
+
+extern SUBR(sort_of)
+{
+    Node value, type;
+
+    checkArgs(args, "kind-of", 1, NIL);
+    fetchArgs(args, &value, 0);
+
+    node_TypeOf(value, &type);
+    node_TypeOf(type, result);
+}
+
+extern SUBR(ctor_q)
 {
     Node value, ctor;
 
-    int count = checkArgs(args, "ctor-of", 1, NIL);
+    checkArgs(args, "ctor?", 2, NIL, NIL);
+    fetchArgs(args, &value, &ctor, 0);
 
-    if (1 < count) {
-        fetchArgs(args, &value, &ctor, 0);
+    ASSIGN(result,NIL);
 
-        if (!isSymbol(ctor)) {
-            fatal("only symbol can be used as ctor\n");
-        }
-
-        if (isConstant(value)) {
-            fatal("can not remap the ctor of a constant\n");
-        }
-
-        setConstructor(value,ctor);
-
-        ASSIGN(result,value);
-    } else {
-        forceArgs(args, &value, 0);
-
-        ASSIGN(result, getConstructor(value));
+    if (fromCtor(value, ctor)) {
+        ASSIGN(result, true_v);
     }
 }
 
-extern SUBR(isA_q)
+extern SUBR(type_q)
 {
     Node value, type;
-    checkArgs(args, "isA?", 2, NIL, NIL);
+    checkArgs(args, "type?", 2, NIL, NIL);
     fetchArgs(args, &value, &type, 0);
 
     ASSIGN(result,NIL);
 
-    if (isType(value, type)) {
+    if (inType(value, type)) {
+        ASSIGN(result, true_v);
+    }
+}
+
+extern SUBR(sort_q)
+{
+    Node value, type, sort;
+
+    checkArgs(args, "sort?", 2, NIL, NIL);
+    fetchArgs(args, &value, &sort, 0);
+
+    node_TypeOf(value, &type);
+
+    ASSIGN(result,NIL);
+
+    if (inSort(type, sort)) {
         ASSIGN(result, true_v);
     }
 }
@@ -2037,7 +2032,7 @@ extern SUBR(close_in) {
     checkArgs(args, "close-in", 1, t_infile);
     forceArgs(args, &file, 0);
 
-    if (!isType(file, t_infile)) {
+    if (!inType(file, t_infile)) {
         fatal("close-in: not an infile");
     }
 
@@ -2057,7 +2052,7 @@ extern SUBR(close_out) {
     checkArgs(args, "close-out", 1, t_outfile);
     forceArgs(args, &file, 0);
 
-    if (!isType(file, t_outfile)) {
+    if (!inType(file, t_outfile)) {
         fatal("close-out: not an outfile");
     }
 
@@ -2085,7 +2080,7 @@ extern SUBR(fprint) {
         pair_GetCar(args.pair, &outfile);
         pair_GetCdr(args.pair, &args);
 
-        if (!isType(outfile, t_outfile)) {
+        if (!inType(outfile, t_outfile)) {
             fatal("first argument to fprint is not an outfile\n");
         }
 
@@ -2113,7 +2108,7 @@ extern SUBR(read_line) {
     checkArgs(args, "read-line", 1, t_infile);
     forceArgs(args, &file, 0);
 
-    if (!isType(file, t_infile)) {
+    if (!inType(file, t_infile)) {
         fatal("read-line: not an infile");
     }
 
@@ -2147,7 +2142,7 @@ extern SUBR(eof_in) {
     checkArgs(args, "eof_in", 1, t_infile);
     forceArgs(args, &file, 0);
 
-    if (!isType(file, t_infile)) {
+    if (!inType(file, t_infile)) {
         fatal("read-line: not an infile");
     }
 
@@ -2169,7 +2164,7 @@ extern SUBR(read_sexpr) {
     checkArgs(args, "read-sexpr", 1, t_infile);
     forceArgs(args, &file, 0);
 
-    if (!isType(file, t_infile)) {
+    if (!inType(file, t_infile)) {
         fatal("read-line: not an infile");
     }
 
@@ -2376,7 +2371,7 @@ extern SUBR(the) {
     checkArgs(args, "the", 2, NIL, NIL);
     fetchArgs(args, &type, &value, 0);
 
-    if (!isType(value, type)) {
+    if (!inType(value, type)) {
         fprintf(stderr, "the : ");
         print(stderr, value);
         fprintf(stderr, " :is not a: ");
@@ -2440,7 +2435,7 @@ extern SUBR(bprint) {
         pair_GetCar(args.pair, &buffer);
         pair_GetCdr(args.pair, &args);
 
-        if (!isType(buffer, t_buffer)) {
+        if (!inType(buffer, t_buffer)) {
             fatal("first argument to bprint is not an buffer\n");
         }
 
@@ -2465,7 +2460,7 @@ extern SUBR(close_buffer) {
     checkArgs(args, "close-buffer", 1, t_buffer);
     forceArgs(args, &buffer, 0);
 
-    if (!isType(buffer, t_buffer)) {
+    if (!inType(buffer, t_buffer)) {
         fatal("close-buffer: not an buffer");
     }
 
@@ -2698,7 +2693,7 @@ extern SUBR(all_q) {
         pair_GetCar(list.pair, &value);
         pair_GetCdr(list.pair, &list);
 
-        if (isType(value, type)) continue;
+        if (inType(value, type)) continue;
 
         ASSIGN(result, NIL);
         return;
@@ -3089,9 +3084,15 @@ void startEnkiLibrary() {
     MK_PRM(form);
     MK_PRM(fixed);
 
-    MK_OPR(type-of, type_of);
-    MK_OPR(kind-of, kind_of);
     MK_OPR(ctor-of, ctor_of);
+    MK_OPR(type-of, type_of);
+    MK_OPR(sort-of, sort_of);
+
+    MK_OPR(ctor?, ctor_q);
+    MK_OPR(type?, type_q);
+    MK_OPR(sort?, sort_q);
+
+    MK_OPR(isA?, type_q);
 
     MK_OPR(~,com);
 
@@ -3161,7 +3162,6 @@ void startEnkiLibrary() {
     MK_OPR(eof-in,eof_in);
 
     MK_OPR(integer?,integer_q);
-    MK_OPR(isA?, isA_q);
     MK_OPR(nil?,nil_q);
     MK_OPR(pair?,pair_q);
     MK_OPR(symbol?,symbol_q);

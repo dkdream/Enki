@@ -177,8 +177,8 @@ extern void check_TypeTable__(const char* filename, unsigned line);
   inline functions
  ******************/
 
-extern inline bool sort_Contains(const Base type, const Constant sort) __attribute__((always_inline));
-extern inline bool sort_Contains(const Base type, const Constant sort) {
+extern inline bool sort_Contains(const Constant sort, const Base type) __attribute__((always_inline));
+extern inline bool sort_Contains(const Constant sort, const Base type) {
     if (!type) return false;
     if (!sort) return false;
     if (type->code == tc_constant) return find_Axiom((Constant)type, sort);
@@ -223,13 +223,21 @@ extern inline bool isASort(const Node sort) {
     return (kind->type.symbol == s_sort);
 }
 
-extern inline bool isType(const Node value, const Node type) __attribute__((always_inline));
-extern inline bool isType(const Node value, const Node type) {
+extern inline bool inType(const Node value, const Node type) __attribute__((always_inline));
+extern inline bool inType(const Node value, const Node type) {
     Kind kind = asKind(value);
     if (!kind) return false;
     if (kind->type.reference == type.reference) return true;
     if (!isAType(type)) return false;
     return type_Contains(type.type, value);
+}
+
+extern inline bool inSort(const Node value, const Node sort) __attribute__((always_inline));
+extern inline bool inSort(const Node value, const Node sort) {
+    Kind kind = asKind(value);
+    if (!kind) return false;
+    if (!isASort(sort)) return false;
+    return sort_Contains(sort.constant, kind->type.type);
 }
 
 extern inline bool fromCtor(const Node value, const Node ctor) __attribute__((always_inline));
