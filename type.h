@@ -88,7 +88,6 @@ struct name {
 };
 
 extern Constant opaque_s;    // the sort of opaque types
-extern Constant symbol_s;    // the sort of symbols
 extern Constant zero_s;      // the sort of values
 
 extern Constant boolean_s;   // the sort with true and false values
@@ -117,6 +116,7 @@ extern bool find_Rule(const Symbol, const Constant, const Constant, const Consta
 extern bool make_Rule(const Symbol, const Constant, const Constant, const Constant);
 
 extern bool compute_Sort(Base value, Target result);
+extern bool compute_Type(Node value, Target result);
 
 /* Any := type | any(a,b) where a,b in Any
  * any(a,void) == any(void,a) == a

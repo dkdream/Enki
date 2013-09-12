@@ -147,25 +147,7 @@ bool node_Iso(long depth, Node left, Node right)
 
 extern void node_TypeOf(Node value, Target result)
 {
-    if (isNil(value)) {
-        ASSIGN(result, t_nil);
-        return;
-    }
-
-    if (isAType(value)) {
-        compute_Sort(value.type, result);
-        return;
-    }
-
-    Node type = getType(value);
-
-    if (isNil(type)) {
-        ASSIGN(result, value);
-        return;
-    }
-
-    ASSIGN(result, type);
-    return;
+    compute_Type(value, result);
 }
 
 /*****************

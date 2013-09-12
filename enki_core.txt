@@ -10,9 +10,10 @@
        | (<core> <core>*)
 
 <constructor> = (<formula> <arguments> <core>* <core>)
-              | (delay <type> <core>)
-              | (ctor <name> <type> <core>*)
-              | (syntax <core>)
+              | (box <core>)                  -- arg1 is a type
+              | (delay <core> <core>)         -- arg1 is a type, arg2 is expr
+              | (ctor <name> <core> <core>*)  -- arg1 is a ctor, arg2 is type
+              | (syntax <core>)               -- ???
               | <quote>
 
 <control> = (if <core> <core> <core>)
@@ -20,12 +21,13 @@
 
 <context> = (let <locals> <assigns> <core>* <core>)
           | (fix <locals> <assigns> <core>* <core>)
+          | (set <name> <core>)
 
 <enviroment> = (define <name> <core>)
-             | (effect <core>)
-             | (require <object> <name>?) 
+             | (effect <core>)            -- 
+             | (require <object> <name>?) -- ???
 
-<filter> = (cast <type> <core>)
+<filter> = (cast <core> <core>) -- arg1 is a type, arg2 is expr
 
 <reflector> = (ctor-of <core>)
             | (type-of <core>)
@@ -66,16 +68,30 @@ sigma   := construct a dependent coproduct
 any     := construct a dependent union
 all     := construct a dependent intersection
 subset  := construct a subset type
+box     := construct a boxed type
 if      := construct if conditional
 define  := define/update global name
 let     := declare a local scope assigned from outer scope
 fix     := declare a local scope assigned from inner scope
+set     := update a locally scoped name (must be a boxed value type)
 delay   := construct a delayed thunk
 effect  := evaluate a delayed thunk without updating it
 syntax  := construct a syntax function
 cast    := construct a runtime type-check 
 ctor    := construct a value with type <type> and constructor <symbol> and elements <core>*
 case    := de-construct a value by constructor
+
+- - - - - - - - - - - - - - - - - - - - - 
+
+note: define dose NOT make a boxed type, therefore
+
+(define one 1)
+(define two (lambda () (+ one one)))
+(println (two)) -- prints: 2
+(define one 2)
+(println (two)) -- prints: 2
+(define two (lambda () (+ one one)))
+(println (two)) -- prints: 4
 
 - - - - - - - - - - - - - - - - - - - - - 
 
@@ -90,3 +106,5 @@ case    := de-construct a value by constructor
 (cast : A x) == runtime type check
 
 - - - - - - - - - - - - - - - - - - - - - 
+
+(par <core>) -- evaluate an expression in parallel

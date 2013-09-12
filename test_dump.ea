@@ -19,8 +19,8 @@ dump
 (dumpln 'x1  :text (type-of "1"))
 (assert (iso 10 :text (type-of "1")))
 
-(dumpln 'x2 :{symbol Symbol} (type-of 'val))
-(assert (iso 10 :{symbol Symbol} (type-of 'val)))
+(dumpln 'x2 :symbol (type-of 'val))
+(assert (iso 10 :symbol (type-of 'val)))
 
 (dumpln 'x3 (type-of nil))
 (assert (iso 10 :{nil Zero}     (type-of nil)) "nil is not type :nil")
@@ -38,21 +38,20 @@ dump
 (assert (iso 10 'tuple           (ctor-of ttest)))
 
 (define ctest (ctor 'fooness :{iseq Zero} 1 2 3 4))
-(dumpln 'x7 ctest)
-(assert (iso 10 'fooness     (ctor-of ctest))
-(assert (iso 10 :{iseq Zero} (type-of ctest))
-(assert (iso 10 ttest  ctest))
 
-(dumpln 'x8)
-(assert (iso 10 'fooness         (ctor-of ttest)))
+(dumpln 'x7 ctest (ctor-of ctest))
+(assert (iso 10 'fooness (ctor-of ctest)))
 
-(dumpln 'x9 (type-of ttest) :{iseq Zero})
-(assert (iso 10 :{iseq Zero}     (type-of ttest)))
+(dumpln 'x8  ctest (sort-of ctest))
+(assert (iso 10 :Zero (sort-of ctest)))
+
+(dumpln 'x9 ctest (type-of ttest))
+(assert (iso 10 :{iseq Zero} (type-of ctest)))
 
 (define fooness 'fooness)
 
-(dumpln 'x10 :{symbol Symbol} (type-of fooness))
-(assert (iso 10 :{symbol Symbol} (type-of fooness)))
+(dumpln 'x10 symbol (type-of fooness))
+(assert (iso 10 symbol (type-of fooness)))
 
 (define barness :{barness Zero})
 
@@ -65,22 +64,48 @@ dump
                   1
                   ))
 
+(define next
+   (let (count)
+      (bind count 0)
+      (lambda () 
+         (set count (+ 1 count))
+         count)))
+
+(dumpln 'y (next))
 (println (barness "testing"))
 
+(dumpln 'y (next))
 (let ((xxx 1)(yyy 2))
   (dumpln (environment 'current)))
 
+(dumpln 'y (next))
 (define one   (Field 'one integer))
 (define two   (Field 'two text))
 (define three (Field 'three symbol))
 
+(dumpln 'y (next))
 (println one)
-(println two)
-(println three)
+(dumpln (type-of one))
 
-(dumpln (Unfold (Record one two)))
-(dumpln (Unfold (Record two three)))
-(dumpln (Unfold (Record one (Record two three))))
+(println two)
+(dumpln (type-of two))
+
+(println three)
+(dumpln  (type-of three))
+
+(define r1 (Record one two))
+(define r2 (Record two three))
+(define r3 (Record one r2))
+
+(dumpln 'y (next))
+(dumpln (Unfold r1))
+(dumpln (Unfold r2))
+(dumpln (Unfold r3))
+
+(dumpln 'y (next))
+(dumpln (type-of r1))
+(dumpln (type-of r2))
+(dumpln (type-of r3))
 
 
 

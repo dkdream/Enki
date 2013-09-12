@@ -3018,9 +3018,12 @@ void startEnkiLibrary() {
 
     VM_DEBUG(1, "startEnkiLibrary init globals");
 
-    MK_CONST(true,true_v);
-    MK_CONST(void,void_v);
     MK_CONST(nil,NIL);
+    MK_CONST(void,void_v);
+    MK_CONST(unit,unit_v);
+    MK_CONST(false,false_v);
+    MK_CONST(true,true_v);
+
 
     MK_CONST(integer,t_integer);
     MK_CONST(pair,t_pair);
@@ -3029,6 +3032,10 @@ void startEnkiLibrary() {
     MK_CONST(tuple,t_tuple);
 
     MK_CONST(Zero,zero_s);
+    MK_CONST(Opaque,opaque_s);
+    MK_CONST(Boolean,boolean_s);
+    MK_CONST(Unit,unit_s);
+    MK_CONST(Undefined,undefined_s);
 
     MK_PRM(system_check);
 

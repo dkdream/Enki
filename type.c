@@ -47,7 +47,6 @@ static struct _internal_Table *_global_typetable = 0;
 Constant void_s = 0;
 
 Constant opaque_s = 0;
-Constant symbol_s = 0;
 Constant zero_s   = 0;
 
 Constant boolean_s = 0;
@@ -102,7 +101,6 @@ extern void init_global_typetable() {
     make_sort("Void", &void_s);
 
     make_sort("Opaque", &opaque_s);
-    make_sort("Symbol", &symbol_s);
     make_sort("Zero", &zero_s);
 
     make_sort("Boolean",   &boolean_s);
@@ -111,7 +109,7 @@ extern void init_global_typetable() {
 
     MK_BTYPE(integer);
     MK_BTYPE(pair);
-    make_basetype("symbol", symbol_s, &t_symbol);
+    MK_BTYPE(symbol);
     MK_BTYPE(text);
     MK_BTYPE(tuple);
 
@@ -1748,7 +1746,7 @@ static bool collect_Sorts(Constant element, Target result) {
 extern bool compute_Sort(Base value, Target result) {
     if (!value) {
         ASSIGN(result, undefined_s);
-        return;
+        return true;
     }
 
     switch (value->code) {
@@ -1771,6 +1769,27 @@ extern bool compute_Sort(Base value, Target result) {
         ASSIGN(result, undefined_s);
         return false;
     }
+}
+
+extern bool compute_Type(Node value, Target result) {
+    if (isNil(value)) {
+        ASSIGN(result, t_nil);
+        return true;
+    }
+
+    if (isAType(value)) {
+        return compute_Sort(value.type, result);
+    }
+
+    Node type = getType(value);
+
+    if (isNil(type)) {
+        ASSIGN(result, value);
+        return false;
+    }
+
+    ASSIGN(result, type);
+    return true;
 }
 
 /*****************
