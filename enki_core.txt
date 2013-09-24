@@ -10,14 +10,18 @@
        | (<core> <core>*)
 
 <constructor> = (<formula> <arguments> <core>* <core>)
+              | (fiber <core>* <core>)        -- this is like a block
+              | (timer <core> <core>)         -- arg1 is an interval, arg2 is start second)
               | (box <core>)                  -- arg1 is a type
+              | (channel <core>)              -- arg1 is a type
               | (delay <core> <core>)         -- arg1 is a type, arg2 is expr
               | (ctor <name> <core> <core>*)  -- arg1 is a ctor, arg2 is type
               | (syntax <core>)               -- ???
               | <quote>
 
 <control> = (if <core> <core> <core>)
-          | (case <core> <condition>* <else>)
+          | (case <core> <data-pattern>* <else>)
+          | (select <action-pattern>* <else>)
 
 <context> = (let <locals> <assigns> <core>* <core>)
           | (fix <locals> <assigns> <core>* <core>)
@@ -57,29 +61,42 @@
             | ( <local>+ )
             | ( <local>+ . <local> )
 
-condition = (<name> <arguments> <core>)
-else      = ( _ <core>)
+<action-pattern>  = <fiber-pattern> | <timer-pattern> | <channel-pattern>
+<timer-pattern>   = (alarm <argument> <name> <core>)
+<fiber-pattern>   = (done  <argument> <name> <core>)
+<channel-pattern> = (read  <argument> <name> <core>)
+                  | (write <argument> <name> <core>)
+<data-pattern>    = (<name> <arguments> <core>)
+<else>            = ( _ <core>)
 
-quote   := construct a AST
-form    := construct a AST tranformer value
-lambda  := construct a value function
-pi      := construct a dependent product
-sigma   := construct a dependent coproduct
-any     := construct a dependent union
 all     := construct a dependent intersection
-subset  := construct a subset type
+any     := construct a dependent union
 box     := construct a boxed type
-if      := construct if conditional
+case    := de-construct a value by constructor
+cast    := construct a runtime type-check 
+channel := create a channel of comunication
+ctor    := construct a value with type <type> and constructor <symbol> and elements <core>*
 define  := define/update global name
-let     := declare a local scope assigned from outer scope
-fix     := declare a local scope assigned from inner scope
-set     := update a locally scoped name (must be a boxed value type)
 delay   := construct a delayed thunk
 effect  := evaluate a delayed thunk without updating it
+fiber   := create and start a fiber of control
+fix     := declare a local scope assigned from inner scope
+form    := construct a AST tranformer value
+if      := construct if conditional
+lambda  := construct a value function
+let     := declare a local scope assigned from outer scope
+pi      := construct a dependent product
+quote   := construct a AST
+read    := read from a channel (or wait till ready read)
+select  := select a ready channel (or wait till one is ready (read/write))
+set     := update a locally scoped name (must be a boxed value type)
+sigma   := construct a dependent coproduct
+subset  := construct a subset type
 syntax  := construct a syntax function
-cast    := construct a runtime type-check 
-ctor    := construct a value with type <type> and constructor <symbol> and elements <core>*
-case    := de-construct a value by constructor
+wait    := select an exited fiber (or wait till one has exited)
+write   := write to a channel (or wait till ready write)
+
+- - - - - - - - - - - - - - - - - - - - - 
 
 - - - - - - - - - - - - - - - - - - - - - 
 
@@ -108,3 +125,13 @@ note: define dose NOT make a boxed type, therefore
 - - - - - - - - - - - - - - - - - - - - - 
 
 (par <core>) -- evaluate an expression in parallel
+
+- - - - - - - - - - - - - - - - - - - - - 
+
+Pattern Matching on Lists: http://www.erlang.org/course/sequential_programming.html
+/* in erlang list are [...] and tuples are {...} */
+[A,B|C] = [1,2,3,4,5,6,7]
+-- Succeeds - binds A = 1, B = 2,
+--                  C = [3,4,5,6,7]
+{A,_,[B|_],{B}} = {abc,23,[22,x],{22}}
+-- Succeeds - binds A = abc, B = 22
