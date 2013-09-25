@@ -10,12 +10,14 @@
        | (<core> <core>*)
 
 <constructor> = (<formula> <arguments> <core>* <core>)
+              | (in <core>)                   -- arg1 must be a type or sort
               | (fiber <core>* <core>)        -- this is like a block
               | (timer <core> <core>)         -- arg1 is an interval, arg2 is start second)
               | (box <core>)                  -- arg1 is a type
               | (conduit <core>)              -- arg1 is a type
               | (delay <core> <core>)         -- arg1 is a type, arg2 is expr
-              | (ctor <name> <core> <core>*)  -- arg1 is a ctor, arg2 is type
+              | (ctor <name> <core> <core>*)  -- name is a ctor, arg1 is type
+              | (type <core> <core> <core>*)  -- arg1 is a sort, arg2 is a list of constructor symbols
               | (syntax <core>)               -- ???
               | <quote>
 
@@ -41,7 +43,7 @@
             | (type? <core> <core>)
             | (sort? <core> <core>)
 
-<formula> = lambda | pi | sigma | any | all | subset
+<formula> = pi | sigma | any | all | subset | mu | constrain
 
 <object> := a literal value
 <name>   := a name 
@@ -49,23 +51,27 @@
 <quote> = '<core>
 <type>  = :<core>
 
-<locals> = ( <local>+ )
-<local>  = <name> <type>?
-         | _      <type>?
+<locals> = <local>+
+<local>  = [<name> <type>?]
 
 <assigns> = <assign>+
 <assign>  = (bind <name> <core>)
 
-<arguments> = ()
-            | <local>
-            | ( <local>+ )
-            | ( <local>+ . <local> )
+<arguments> = []
+            | <argument>
+            | [ <argument>+ ]
+            | [ <argument>+ . <argument> ]
+
+<argument> = <name> <type>?
+           | _      <type>?
 
 <action-pattern>  = <fiber-pattern> | <timer-pattern> | <conduit-pattern>
+
 <timer-pattern>   = (alarm <core> <core>*)
 <fiber-pattern>   = (done <core> <core>*)
 <conduit-pattern> = (recieve <name> <core> <core>*)
                   | (send <name> <core> <core>*)
+
 <data-pattern>    = (<name> <arguments> <core>)
 <else>            = ( _ <core>)
 

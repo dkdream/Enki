@@ -1,0 +1,121 @@
+
+(define Pair (lambda [x :Zero y :Zero] (type Zero '(pair) x y)))
+(define List (lambda [x :Zero] (mu [y :(Pair x (in Zero))]        (Pair x (or y Unit))))
+(define Tree (lambda [x :Zero] (mu [y :(or (Pair x (in Zero)) x)] (Pair y (or y Unit))))
+
+(define cons
+   (constrain [X :Zero Y :Zero]
+              (lambda [x :X y :Y]
+                 (ctor 'pair (Pair X Y) x y))))
+
+(define car  (lambda [x :(Pair (in Zero) (in Zero))] (case x (pair [first _] first))))
+(define cdr  (lambda [x :(Pair (in Zero) (in Zero))] (case x (pair [_ next] next))))
+
+(define cadr (lambda [x :(Pair (Pair (in Zero) (in Zero)) (in Zero))] (car (cdr x))))
+(define cadr (lambda [x :(Pair (in Zero) (Pair (in Zero) (in Zero)))] (cdr (cdr x))))
+
+
+(define concat-list
+   (constrain [z :Zero]
+              (let [list :Zero]
+                 (bind list (List z))
+                 (mu [self :(pi [_ :list _ :list] list)]
+                     (lambda [x :list y :list]
+                        (case x
+                              (pair [first _ :Unit] y)
+                              (pair [first next]
+                                    (cons (car first) (self (cdr x) y))))))))
+
+(define expand-quote
+   (let (qq-list qq-element qq-object)
+      (bind qq-list (lambda (l)
+                      (if (pair? l)
+                            (let ((obj (car l))
+                                  (rst (cdr l)))
+                               (if (and (pair? obj)
+                                        (== (car obj) 'unquote-splicing))
+                                     (let ((value (cadr obj)))
+                                        (if rst
+                                              (new-list 'concat-list value (qq-list rst))
+                                           value))
+                                  (new-list 'cons (qq-object obj) (qq-list rst))))
+                         (new-list 'quote l))))
+      (bind qq-element (lambda (l)
+                         (let ((head (car l)))
+                            (if (== head 'unquote)
+                                  (cadr l)
+                               (qq-list l)))))
+      (bind qq-object (lambda (object)
+                        (if (pair? object)
+                              (qq-element object)
+                           (new-list 'quote object))))
+      qq-object))
+
+(define quasiquote (form expand-quote))
+
+(define %define-with (lambda (%define)
+                        (lambda (pattern . body)
+                           (if (pair? pattern)
+                                 (let ((name (car pattern))
+                                       (args (cdr pattern)))
+                                    `(\%define \name (lambda \args \@body)))
+                              `(\%define \pattern \@body)))))
+
+(define %define-kind (lambda (%define %kind)
+                        (lambda (pattern . body)
+                           (if (pair? pattern)
+                                 (let ((name (car pattern))
+                                       (args (cdr pattern)))
+                                    `(\%define \name (\%kind (lambda \args \@body))))
+                              `(\%define \pattern (\%kind \@body))))))
+
+(define expand-define (%define-with define))
+(define expand-bind   (%define-with bind))
+(define expand-macro  (%define-kind define form))
+
+(define define (form expand-define))
+(define bind   (form expand-bind))
+(define macro  (form expand-macro))
+
+## (rec var exp) -> (let ([var '()]) (set! var exp))
+(macro (rec var exp)
+   `(let ((\var '())) (set \var \exp)))
+
+## (when test exp ... ) -> (if test (begin exp ... ) '())
+(macro (when test . body)
+   `(if \test (begin \@body) '()))
+
+## (unless test exp ... ) -> (if test '() (begin exp ... ))
+(macro (unless test . body)
+   `(if \test '() \@body))
+
+## (record (var ... ) (val ...) exp ... ) -> (apply (lambda (var ... ) (begin exp ... )) val)
+(macro (record vars vals . body)
+   `(apply (lambda \vars \@body) vals))
+
+(define (expand-cond clauses)
+   (if (pair? clauses)
+         (let ((head (car clauses))
+               (tail (cdr clauses)))
+            (if (pair? head)
+                  (let ((test (car head))
+                        (seq  (cdr head)))
+                     (if (== test 'else)
+                           `(begin \@seq)
+                        (if (pair? seq)
+                              `(if \test 
+                                     (begin \@seq)
+                                  (cond \@tail))
+                           `(or \test (cond \@tail)))))))))
+
+(macro (cond . clauses)
+   (expand-cond clauses))
+
+
+#{
+## (recur f ([var init] ... ) exp ... ) -> ((rec f (lambda (var ... ) (begin exp ... ))) init ... )
+(macro (recur name bindings . body)
+   (let ((vars (map car binding))
+         (vals (map cdr binding)))
+      `((rec \name (lambda vars \@body)) \@vals)))
+}#
