@@ -13,7 +13,7 @@
               | (fiber <core>* <core>)        -- this is like a block
               | (timer <core> <core>)         -- arg1 is an interval, arg2 is start second)
               | (box <core>)                  -- arg1 is a type
-              | (channel <core>)              -- arg1 is a type
+              | (conduit <core>)              -- arg1 is a type
               | (delay <core> <core>)         -- arg1 is a type, arg2 is expr
               | (ctor <name> <core> <core>*)  -- arg1 is a ctor, arg2 is type
               | (syntax <core>)               -- ???
@@ -61,11 +61,11 @@
             | ( <local>+ )
             | ( <local>+ . <local> )
 
-<action-pattern>  = <fiber-pattern> | <timer-pattern> | <channel-pattern>
-<timer-pattern>   = (alarm <argument> <name> <core>)
-<fiber-pattern>   = (done  <argument> <name> <core>)
-<channel-pattern> = (read  <argument> <name> <core>)
-                  | (write <argument> <name> <core>)
+<action-pattern>  = <fiber-pattern> | <timer-pattern> | <conduit-pattern>
+<timer-pattern>   = (alarm <core> <core>*)
+<fiber-pattern>   = (done <core> <core>*)
+<conduit-pattern> = (recieve <name> <core> <core>*)
+                  | (send <name> <core> <core>*)
 <data-pattern>    = (<name> <arguments> <core>)
 <else>            = ( _ <core>)
 
@@ -74,7 +74,7 @@ any     := construct a dependent union
 box     := construct a boxed type
 case    := de-construct a value by constructor
 cast    := construct a runtime type-check 
-channel := create a channel of comunication
+conduit := create a conduit of comunication
 ctor    := construct a value with type <type> and constructor <symbol> and elements <core>*
 define  := define/update global name
 delay   := construct a delayed thunk
@@ -87,14 +87,13 @@ lambda  := construct a value function
 let     := declare a local scope assigned from outer scope
 pi      := construct a dependent product
 quote   := construct a AST
-read    := read from a channel (or wait till ready read)
-select  := select a ready channel (or wait till one is ready (read/write))
+recieve := recieve from a conduit
+select  := select a conduit, timer or fiber (or wait till one has an event)
 set     := update a locally scoped name (must be a boxed value type)
 sigma   := construct a dependent coproduct
 subset  := construct a subset type
 syntax  := construct a syntax function
-wait    := select an exited fiber (or wait till one has exited)
-write   := write to a channel (or wait till ready write)
+send    := send to a conduit
 
 - - - - - - - - - - - - - - - - - - - - - 
 
@@ -135,3 +134,64 @@ Pattern Matching on Lists: http://www.erlang.org/course/sequential_programming.h
 --                  C = [3,4,5,6,7]
 {A,_,[B|_],{B}} = {abc,23,[22,x],{22}}
 -- Succeeds - binds A = abc, B = 22
+
+- - - - - - - - - - - - - - - - - - - - - 
+Happens Before: http://golang.org/ref/mem
+
+let v be a variable then
+  bind(v,y)  is defined as the event that writes to the variable v the first value y
+  read(x,v)  is defined as the event that reads from the variable v into the registor x
+  set(v,y)   is defined as the event that writes to the variable v from the next value y
+  fini(v)    is defined as the event that writes to the variable v the last value -never seen-
+
+let e,e' be events then
+  before(e,e') is defined as the parital order (e happens-before e').
+  1) before(e,e') == true,       if e happens-before e'
+  2) before(e,e') == concurrent, if e happens-concurrently with e'
+  3) before(e,e') == false,      if before(e',e) == true, 
+
+A read r of a variable v can not happen before an init i of that variable
+  * before(i,r) == true then read
+A read of a variable v can not happen after a fini of that variable  
+  * before(f,r) == true then disallow read
+
+A read r of a variable v is allowed to observe a write w to v if both of the following hold:
+ 1. before(r,w) != true
+ 2. forall write w' then before(w',w) == true
+
+the life cycle of a variable is:
+ 1. init(v,x) the first write event.
+ 2. zero or more : read(x,v) or write(v,y)
+ 3. fini(v) the final write event 
+    -- after this only writes are possible
+
+each fiber is annotated with the variable its uses.
+a fiber is not started until all its variables are init-ed.
+a variable can only be fini-ed when all the fiber the use it exit.
+
+example:
+
+(let (a :int b :string c :fiber)
+     (bind c (fiber (print b a)))
+     (bind a 1)
+     (bind b "a =")
+     (print "ok"))
+
+the fiber c will not start until after (bind b 2)
+and the context (a,b,c) will not be GC-ed until after both the let and the fiber exit.
+
+- - - - - - - - - - - - - - - - - - - - - 
+
+let c be a conduit then
+  init(c)      is defined as the event that created the conduit
+  send(c,x)    is defined as the event that writes to the conduit the value of the variable x
+  recieve(y,c) is defined as the event that reads from the conduit a value into the variable y
+  fini(c)      is defined as the event that closes the conduit
+
+the life cycle of a conduit is:
+  1. init(c)
+     -- before this no events are possible
+  2. for every recieve r the must be a send s such that before(s,r) == true
+  3. fini(c)
+     -- after this only recieve are possible
+
