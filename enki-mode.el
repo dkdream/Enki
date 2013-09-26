@@ -1,18 +1,16 @@
 ;;; enki-mode.el --- Enki mode, and its idiosyncratic commands
 
-;; <formula>     = lambda | pi | sigma | any | all | subset
-;; <constructor> = delay | ctor | syntax 
-;; <control>     = if | case 
-;; <context>     = let | fix | bind
-;; <enviroment>  = define | effect
+;; <formula>     = lambda | pi | sigma | any | all | subset | mu | constrain
+;; <constructor> = fiber | timer | box | conduit | delay | ctor | type | syntax 
+;; <control>     = if | unless | case | select | alarm | done | recieve | send
+;; <context>     = let | fix | set | bind
+;; <enviroment>  = define | effect | require
 ;; <filter>      = cast
 ;; <reflector>   = ctor-of | type-of | sort-of
 ;; <predicate>   = ctor?   | type?   | sort?
 ;;
 ;; <syntax> = : | & | _ | ' | .
 ;; 
-
-
 
 (defconst enki-font-lock-keywords-1
     (list
@@ -22,15 +20,14 @@
       (concat
        "(\\s-*" (regexp-opt
                  '(
-                   "lambda" "pi" "sigma" "any" "all" "subset"
-                   "delay" "ctor" "syntax"
-                   "if" "case" 
-                   "let" "fix"
+                   "lambda" "pi" "sigma" "any" "all" "subset" "mu" "constrain"
+                   "fiber" "timer" "box" "conduit" "delay" "ctor" "type" "syntax"
+                   "if" "unless" "case" "select" "alarm" "done" "recieve" "send"
+                   "let" "fix" "bind" "set"
                    "define" "effect" "require"
                    "cast"
                    "ctor-of" "type-of" "sort-of"
                    "ctor?" "type?" "sort?"
-                   "bind"
                    ) t)
        "\\>")
       '(1 font-lock-keyword-face))
@@ -552,21 +549,29 @@ is the buffer position of the start of the containing expression."
 ;; like define if the first form is placed on the next line, otherwise
 ;; it is indented like any other form (i.e. forms line up under first).
 
-(put 'lambda 'enki-indent-function 'define)
+(put 'define    'enki-indent-function 'define)
+(put 'lambda    'enki-indent-function 'define)
+(put 'pi        'enki-indent-function 'define)
+(put 'sigma     'enki-indent-function 'define)
+(put 'any       'enki-indent-function 'define)
+(put 'all       'enki-indent-function 'define)
+(put 'subset    'enki-indent-function 'define)
+(put 'mu        'enki-indent-function 'define)
+(put 'constrain 'enki-indent-function 'define)
+
 (put 'macro  'enki-indent-function 'define)
-(put 'define 'enki-indent-function 'define)
+
 (put 'begin  'enki-indent-function 0)
-(put 'progn  'enki-indent-function 0)
-(put 'prog1  'enki-indent-function 1)
-(put 'prog2  'enki-indent-function 2)
+
 (put 'let    'enki-indent-function 1)
-(put 'let*   'enki-indent-function 1)
-(put 'while  'enki-indent-function 1)
+(put 'fix    'enki-indent-function 1)
+
 (put 'if     'enki-indent-function 2)
 (put 'unless 'enki-indent-function 2)
+(put 'case   'enki-indent-function 1)
+(put 'select 'enki-indent-function 1)
+
 (put 'catch  'enki-indent-function 1)
-(put 'when   'enki-indent-function 1)
-(put 'unless 'enki-indent-function 1)
 
 (defun enki-indent-sexp (&optional endpos)
   "Indent each line of the list starting just after point.

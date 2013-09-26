@@ -10,7 +10,6 @@
        | (<core> <core>*)
 
 <constructor> = (<formula> <arguments> <core>* <core>)
-              | (in <core>)                   -- arg1 must be a type or sort
               | (fiber <core>* <core>)        -- this is like a block
               | (timer <core> <core>)         -- arg1 is an interval, arg2 is start second)
               | (box <core>)                  -- arg1 is a type
@@ -22,6 +21,7 @@
               | <quote>
 
 <control> = (if <core> <core> <core>)
+          | (unless <core> <core> <core>)
           | (case <core> <data-pattern>* <else>)
           | (select <action-pattern>* <else>)
 
@@ -43,7 +43,7 @@
             | (type? <core> <core>)
             | (sort? <core> <core>)
 
-<formula> = pi | sigma | any | all | subset | mu | constrain
+<formula> = lambda | pi | sigma | any | all | subset | mu | constrain
 
 <object> := a literal value
 <name>   := a name 

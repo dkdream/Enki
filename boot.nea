@@ -1,30 +1,90 @@
 
 (define Pair (lambda [x :Zero y :Zero] (type Zero '(pair) x y)))
-(define List (lambda [x :Zero] (mu [y :(Pair x (in Zero))]        (Pair x (or y Unit))))
-(define Tree (lambda [x :Zero] (mu [y :(or (Pair x (in Zero)) x)] (Pair y (or y Unit))))
+
+(define List 
+   (constrain [tail :Zero]
+      (lambda [x :Zero]
+         (mu [y :(Pair x tail)] (Pair x (or y Unit))))))
+
+(define Tree 
+   (constrain [tail :Zero]
+      (lambda [x :Zero]                 
+         (mu [y :(or (Pair x tail) x)] (Pair y (or y Unit))))
+
+(define pair?
+   (lambda [object]
+      (ctor? object 'pair)))
 
 (define cons
    (constrain [X :Zero Y :Zero]
-              (lambda [x :X y :Y]
-                 (ctor 'pair (Pair X Y) x y))))
+      (lambda [x :X y :Y]
+         (ctor 'pair (Pair X Y) x y))))
 
-(define car  (lambda [x :(Pair (in Zero) (in Zero))] (case x (pair [first _] first))))
-(define cdr  (lambda [x :(Pair (in Zero) (in Zero))] (case x (pair [_ next] next))))
+(define car  
+   (constrain [head :Zero tail :Zero]
+      (lambda [x :(Pair head tail)]
+         (case x (pair [first _] first))))
 
-(define cadr (lambda [x :(Pair (Pair (in Zero) (in Zero)) (in Zero))] (car (cdr x))))
-(define cadr (lambda [x :(Pair (in Zero) (Pair (in Zero) (in Zero)))] (cdr (cdr x))))
+(define cdr  
+   (constrain [head :Zero tail :Zero]
+      (lambda [x :(Pair head tail)]
+         (case x (pair [_ next] next))))
 
+(define cadr 
+   (constrain [a :Zero b :Zero c :Zero]
+      (lambda [x :(Pair (Pair a b) d)] (car (cdr x))))
+
+(define cadr 
+   (constrain [a :Zero b :Zero c :Zero]
+      (lambda [x :(Pair a (Pair b c))] (cdr (cdr x))))
 
 (define concat-list
    (constrain [z :Zero]
-              (let [list :Zero]
-                 (bind list (List z))
-                 (mu [self :(pi [_ :list _ :list] list)]
-                     (lambda [x :list y :list]
-                        (case x
-                              (pair [first _ :Unit] y)
-                              (pair [first next]
-                                    (cons (car first) (self (cdr x) y))))))))
+      (let [list :Zero]
+         (bind list (List z))
+         (mu [self :(pi [_ :list _ :list] list)]
+            (lambda [x :list y :list]
+               (case x
+                     (pair [first _ :Unit] y)
+                     (pair [first next]
+                           (cons (car first)
+                                 (self (cdr x) y)))))))))
+
+
+(define expand-quote
+   (fix [tree :Zero map :Zero]
+      (bind tree :(Tree Symbol))
+      (bind map  :(pi [_ :tree] tree))   
+      (fix [qq-list :map qq-element :map qq-object :map]
+         (bind qq-list
+               (lambda [l :tree]
+                  (case l
+                     (pair [obj rst]
+                           (case obj
+                              (pair [head :Symbol tail]
+                                    (if (== head 'unquote-splicing)
+                                          (let [value]
+                                             (bind value (car tail))
+                                             (if (== unit rst)
+                                                   value
+                                                (new-list 'concat-list value (qq-list rst))))
+                                       (new-list 'cons (qq-object) (qq-list rst))))
+                              (pair [head tail]
+                                    (new-list 'quote l)))))))
+         (bind qq-element
+               (lambda [l :tree]
+                  (let [head]
+                     (bind head (car l))
+                     (if (== head 'unquote)
+                           (cadr l)
+                        (qq-list l)))))
+         (bind qq-object
+               (lambda [l :tree]
+                  (if (pair? l)
+                        (qq-element l)
+                     (new-list 'quote object))))
+         qq-object))
+            
 
 (define expand-quote
    (let (qq-list qq-element qq-object)
