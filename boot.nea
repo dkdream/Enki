@@ -1,52 +1,59 @@
+##-*- mode: enki;-*-
 
-(define Pair (lambda [x :Zero y :Zero] (type Zero '(pair) x y)))
-
-(define List 
-   (constrain [tail :Zero]
-      (lambda [x :Zero]
-         (mu [y :(Pair x tail)] (Pair x (or y Unit))))))
+(define Pair
+   (lambda (x :Zero y :Zero)
+      (type Zero '(pair) x y)))
 
 (define Tree 
    (constrain [tail :Zero]
-      (lambda [x :Zero]                 
-         (mu [y :(or (Pair x tail) x)] (Pair y (or y Unit))))
+      (lambda (x :Zero)
+         (mu [y :(or (Pair x tail) x)]
+            (Pair y y)))
+
+## note:
+##   x = (Tree :symbol)
+##   --> x < (pi [tail :Zero] (or (Pair symbol tail) symbol)) ??????
+##   --> x = (mu [y :(or (Pair symbol tail) symbol)] (Pair y y))
+##   --> x = (Pair x x)
+##   --> x < (Pair (or (Pair symbol Zero) symbol) (or (Pair symbol Zero) symbol))
+##   -->
 
 (define pair?
-   (lambda [object]
+   (lambda (object)
       (ctor? object 'pair)))
 
 (define cons
    (constrain [X :Zero Y :Zero]
-      (lambda [x :X y :Y]
+      (lambda (x :X y :Y)
          (ctor 'pair (Pair X Y) x y))))
 
 (define car  
    (constrain [head :Zero tail :Zero]
-      (lambda [x :(Pair head tail)]
-         (case x (pair [first _] first))))
+      (lambda (x :(Pair head tail))
+         (case x (pair (first _) first))))
 
 (define cdr  
    (constrain [head :Zero tail :Zero]
-      (lambda [x :(Pair head tail)]
-         (case x (pair [_ next] next))))
+      (lambda (x :(Pair head tail))
+         (case x (pair (_ next) next))))
 
 (define cadr 
    (constrain [a :Zero b :Zero c :Zero]
-      (lambda [x :(Pair (Pair a b) d)] (car (cdr x))))
+      (lambda (x :(Pair (Pair a b) d)) (car (cdr x))))
 
 (define cadr 
    (constrain [a :Zero b :Zero c :Zero]
-      (lambda [x :(Pair a (Pair b c))] (cdr (cdr x))))
+      (lambda (x :(Pair a (Pair b c))) (cdr (cdr x))))
 
 (define concat-list
    (constrain [z :Zero]
       (let [list :Zero]
          (bind list (List z))
          (mu [self :(pi [_ :list _ :list] list)]
-            (lambda [x :list y :list]
+            (lambda (x :list y :list)
                (case x
-                     (pair [first _ :Unit] y)
-                     (pair [first next]
+                     (pair (first _ :Unit) y)
+                     (pair (first next)
                            (cons (car first)
                                  (self (cdr x) y)))))))))
 
@@ -55,36 +62,47 @@
    (fix [tree :Zero map :Zero]
       (bind tree :(Tree Symbol))
       (bind map  :(pi [_ :tree] tree))   
-      (fix [qq-list :map qq-element :map qq-object :map]
-         (bind qq-list
-               (lambda [l :tree]
+      (fix [qq-tree :map qq-element :map qq-object :map]
+         (bind qq-tree
+               (lambda (l :tree)
                   (case l
-                     (pair [obj rst]
+                     (pair (obj rst)
                            (case obj
-                              (pair [head :Symbol tail]
+                              (pair (head :Symbol tail)
                                     (if (== head 'unquote-splicing)
                                           (let [value]
                                              (bind value (car tail))
                                              (if (== unit rst)
                                                    value
-                                                (new-list 'concat-list value (qq-list rst))))
-                                       (new-list 'cons (qq-object) (qq-list rst))))
-                              (pair [head tail]
-                                    (new-list 'quote l)))))))
+                                                (new-tree 'concat-list value (qq-tree rst))))
+                                       (new-tree 'cons (qq-object) (qq-tree rst))))
+                              (pair (head tail)
+                                    (new-tree 'quote l)))))))
          (bind qq-element
-               (lambda [l :tree]
-                  (let [head]
+               (lambda (l :tree)
+                  (let [head :tree]
                      (bind head (car l))
                      (if (== head 'unquote)
                            (cadr l)
-                        (qq-list l)))))
+                        (qq-tree l)))))
          (bind qq-object
-               (lambda [l :tree]
+               (lambda (l :tree)
                   (if (pair? l)
                         (qq-element l)
-                     (new-list 'quote object))))
+                     (new-tree 'quote object))))
          qq-object))
             
+
+
+
+
+
+#######################################
+#######################################
+#######################################
+
+
+
 
 (define expand-quote
    (let (qq-list qq-element qq-object)

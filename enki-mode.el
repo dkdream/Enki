@@ -1,9 +1,9 @@
 ;;; enki-mode.el --- Enki mode, and its idiosyncratic commands
 
-;; <formula>     = lambda | pi | sigma | any | all | subset | mu | constrain
+;; <formula>     = lambda | pi | sigma | any | all | subset | mu
 ;; <constructor> = fiber | timer | box | conduit | delay | ctor | type | syntax 
 ;; <control>     = if | unless | case | select | alarm | done | recieve | send
-;; <context>     = let | fix | set | bind
+;; <context>     = constrain | let | fix | bind | set
 ;; <enviroment>  = define | effect | require
 ;; <filter>      = cast
 ;; <reflector>   = ctor-of | type-of | sort-of
@@ -20,10 +20,10 @@
       (concat
        "(\\s-*" (regexp-opt
                  '(
-                   "lambda" "pi" "sigma" "any" "all" "subset" "mu" "constrain"
+                   "lambda" "pi" "sigma" "any" "all" "subset" "mu"
                    "fiber" "timer" "box" "conduit" "delay" "ctor" "type" "syntax"
                    "if" "unless" "case" "select" "alarm" "done" "recieve" "send"
-                   "let" "fix" "bind" "set"
+                   "constrain" "let" "fix" "bind" "set"
                    "define" "effect" "require"
                    "cast"
                    "ctor-of" "type-of" "sort-of"

@@ -9,7 +9,8 @@
        | <filter>
        | (<core> <core>*)
 
-<constructor> = (<formula> <arguments> <core>* <core>)
+<constructor> = (lambda <arguments> <core>* <core>)
+              | (<formula> <parameters> <core>* <core>)
               | (fiber <core>* <core>)        -- this is like a block
               | (timer <core> <core>)         -- arg1 is an interval, arg2 is start second)
               | (box <core>)                  -- arg1 is a type
@@ -25,7 +26,8 @@
           | (case <core> <data-pattern>* <else>)
           | (select <action-pattern>* <else>)
 
-<context> = (let <locals> <assigns> <core>* <core>)
+<context> = (constrain <locals> <core>* <core>)
+          | (let <locals> <assigns> <core>* <core>)
           | (fix <locals> <assigns> <core>* <core>)
           | (set <name> <core>)
 
@@ -39,11 +41,11 @@
             | (type-of <core>)
             | (sort-of <core>)
 
-<predicate> = (ctor? <core> <core>)
-            | (type? <core> <core>)
-            | (sort? <core> <core>)
+<predicate> = (ctor? <core> <core>) -- arg1 is object, arg2 is constructor symbol
+            | (type? <core> <core>) -- arg1 is object, arg2 is container
+            | (sort? <core> <core>) -- arg1 is object, arg2 is universe
 
-<formula> = lambda | pi | sigma | any | all | subset | mu | constrain
+<formula> = pi | sigma | any | all | subset | mu
 
 <object> := a literal value
 <name>   := a name 
@@ -57,13 +59,15 @@
 <assigns> = <assign>+
 <assign>  = (bind <name> <core>)
 
-<arguments> = []
+<arguments> = ()
             | <argument>
-            | [ <argument>+ ]
-            | [ <argument>+ . <argument> ]
+            | ( <argument>+ )
+            | ( <argument>+ . <argument> )
 
 <argument> = <name> <type>?
            | _      <type>?
+
+<parameters> = [ <argument>+ ]
 
 <action-pattern>  = <fiber-pattern> | <timer-pattern> | <conduit-pattern>
 
@@ -73,7 +77,7 @@
                   | (send <name> <core> <core>*)
 
 <data-pattern>    = (<name> <arguments> <core>)
-<else>            = ( _ <core>)
+<else>            = (_ <core>)
 
 all     := construct a dependent intersection
 any     := construct a dependent union
