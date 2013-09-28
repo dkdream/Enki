@@ -1,49 +1,62 @@
 <core> = <object>
        | <name>
        | <construct>
-       | <reflector>
        | <control>
        | <context>
-       | <predicate>
+       | <binding>
        | <enviroment>
        | <filter>
+       | <reflector>
+       | <predicate>
        | (<core> <core>*)
 
-<constructor> = (lambda <arguments> <core>* <core>)
+<constructor> = (lambda <arguments> <result>? <core>* <core>)
+              | (thunk <result>? <core>* <core>)
               | (<formula> <parameters> <core>* <core>)
-              | (fiber <core>* <core>)        -- this is like a block
-              | (timer <core> <core>)         -- arg1 is an interval, arg2 is start second)
-              | (box <core>)                  -- arg1 is a type
-              | (conduit <core>)              -- arg1 is a type
-              | (delay <core> <core>)         -- arg1 is a type, arg2 is expr
-              | (ctor <name> <core> <core>*)  -- name is a ctor, arg1 is type
-              | (type <core> <core> <core>*)  -- arg1 is a sort, arg2 is a list of constructor symbols
-              | (syntax <core>)               -- ???
+              | (index <integer> <core>)
+              | (label <symbol> <core>)
+              | (fiber <core>* <core>)                -- this is like a block
+              | (timer <core> <core>)                 -- arg1 is an interval, arg2 is start second)
+              | (conduit <core>)                      -- arg1 is a type
+              | (delay <core> <core>)                 -- arg1 is a type, arg2 is expr
+              | (ctor <name> <core> <core>*)          -- name is a ctor, arg1 is type
+              | (type <core> <core> <core>*)          -- arg1 is a sort, arg2 is a list of constructor symbols
+              | (syntax <name> <name> <core>* <core>) -- name1 is input, name2 is output
               | <quote>
 
-<control> = (if <core> <core> <core>)
-          | (unless <core> <core> <core>)
-          | (case <core> <data-pattern>* <else>)
-          | (select <action-pattern>* <else>)
+<control> = (if <core> <core> <core>*)
+          | (unless <core> <core> <core>*)
+          | (case <core> <data-pattern>* <else-pattern>)
+          | (select <action-pattern>* <else-pattern>)
+          | (depart <name> <core>)
 
 <context> = (constrain <locals> <core>* <core>)
-          | (let <locals> <assigns> <core>* <core>)
-          | (fix <locals> <assigns> <core>* <core>)
+          | (fix <parameters> <core>* <core>)
+          | (let <parameters>? <core>* <core>)
+
+<binding> = (bind <name> <core>)
           | (set <name> <core>)
 
 <enviroment> = (define <name> <core>)
              | (effect <core>)            -- 
              | (require <object> <name>?) -- ???
 
-<filter> = (cast <core> <core>) -- arg1 is a type, arg2 is expr
+<filter> = (cast <core> <core> <core>?) -- arg1 is a type, arg2 is expr, [arg3 is an error handler]
 
 <reflector> = (ctor-of <core>)
             | (type-of <core>)
             | (sort-of <core>)
 
-<predicate> = (ctor? <core> <core>) -- arg1 is object, arg2 is constructor symbol
-            | (type? <core> <core>) -- arg1 is object, arg2 is container
-            | (sort? <core> <core>) -- arg1 is object, arg2 is universe
+<predicate> = (ctor? <core> <core>)           -- arg1 is object, arg2 is constructor symbol
+            | (type? <core> <core>)           -- arg1 is object, arg2 is container
+            | (sort? <core> <core>)           -- arg1 is object, arg2 is universe
+            | (iso? <core> <core> <core>*)    -- arg1 is object.1, arg2 is object.2
+            | (co? <core> <core> <core>*)     -- arg1 is object.1, arg2 is object.2
+            | (contra? <core> <core> <core>*) -- arg1 is object.1, arg2 is object.2
+            | (subset? <core> <core> <core>*) -- arg1 is object.1, arg2 is object.2
+            | (eq? <core> <core>)             -- arg1 is object.1, arg2 is object.2
+
+-    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -
 
 <formula> = pi | sigma | any | all | subset | mu
 
@@ -53,21 +66,15 @@
 <quote> = '<core>
 <type>  = :<core>
 
-<locals> = <local>+
-<local>  = [<name> <type>?]
-
-<assigns> = <assign>+
-<assign>  = (bind <name> <core>)
-
-<arguments> = ()
-            | <argument>
-            | ( <argument>+ )
-            | ( <argument>+ . <argument> )
+<locals>     = <arguments> 
+<parameters> = <arguments> 
+<arguments>  = [ <argument>+ ]
+             | [ <argument>* . <argument> ]
 
 <argument> = <name> <type>?
            | _      <type>?
 
-<parameters> = [ <argument>+ ]
+<result> = [ <name> <type>? ]
 
 <action-pattern>  = <fiber-pattern> | <timer-pattern> | <conduit-pattern>
 
@@ -76,38 +83,63 @@
 <conduit-pattern> = (recieve <name> <core> <core>*)
                   | (send <name> <core> <core>*)
 
-<data-pattern>    = (<name> <arguments> <core>)
-<else>            = (_ <core>)
+<data-pattern> = (<name> <arguments> <core>)
+<else-pattern> = (_ <core>)
 
-all     := construct a dependent intersection
-any     := construct a dependent union
-box     := construct a boxed type
-case    := de-construct a value by constructor
-cast    := construct a runtime type-check 
-conduit := create a conduit of comunication
-ctor    := construct a value with type <type> and constructor <symbol> and elements <core>*
-define  := define/update global name
-delay   := construct a delayed thunk
-effect  := evaluate a delayed thunk without updating it
-fiber   := create and start a fiber of control
-fix     := declare a local scope assigned from inner scope
-form    := construct a AST tranformer value
-if      := construct if conditional
-lambda  := construct a value function
-let     := declare a local scope assigned from outer scope
-pi      := construct a dependent product
-quote   := construct a AST
-recieve := recieve from a conduit
-select  := select a conduit, timer or fiber (or wait till one has an event)
-set     := update a locally scoped name (must be a boxed value type)
-sigma   := construct a dependent coproduct
-subset  := construct a subset type
-syntax  := construct a syntax function
-send    := send to a conduit
+-    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -
 
-- - - - - - - - - - - - - - - - - - - - - 
+lambda    := construct a function/procedure value  (lambda/Pi[?:?]/?sort)
+thunk     := construct a procedure value           (lambda/Pi[:?]/?sort)
+:         := ':' type expression
+pi        := construct a dependent function type   (pi/?sort/?sort)
+sigma     := construct a dependent tuple type      (sigma/?sort/?sort)
+any       := construct a dependent union           (any/?sort/?sort)
+all       := construct a dependent intersection    (all/?sort/?sort)
+subset    := construct a dependent subtype         (subset/?sort/?sort)
+mu        := construct a dependent recursive type  (mu/?sort/?sort)
+index     := construct an index type               (index/?sort/?sort)
+label     := construct a labeled type              (label/?sort/?sort)
+fiber     := construct a fiber value               (fiber/Fiber/Zero)
+timer     := construct a timer value               (timer/Timer/Zero)
+conduit   := construct a conduit value             (conduit/Conduit[?]/Zero)
+delay     := construct a lazy value                (delay/Lazy[?type]/?sort)
+ctor      := construct a value                     (?ctor/?type/?sort)
+type      := construct a type                      (type/?sort/?sort)
+syntax    := construct a syntax function           (macro/Pi[ASTree:ASTree]/Symbol)
+'         := construct (quote) a syntax tree value (quote/ASTree/Symbol)
+if        := 'if' control flow expression
+unless    := 'unless' control flow expression
+case      := 'case' control flow expression
+select    := 'select' control flow expression
+depart    := 'depart' control flow expression
+constrain := 'constrain' context expression
+let       := 'let' context expression
+fix       := 'fix' context expression
+bind      := 'bind'   binding expression (declared -> bound)
+set       := 'set'    binding expression (bound -> boxed)
+define    := 'define'  binding expression
+effect    := 'effect'  event expression
+require   := 'require' binding expression
+cast      := 'cast' type flow expression
+ctor-of   := function returns the constructor of a value
+type-of   := function returns the type of a value
+sort-of   := function returns the sort of a value
+ctor?     := the 'ctor?'   predicate function (predicate/Pi[_,_:Boolean]/?sort)
+type?     := the 'type?'   predicate function (predicate/Pi[_,_:Boolean]/?sort)
+sort?     := the 'sort?'   predicate function (predicate/Pi[_,_:Boolean]/?sort)
+iso?      := the 'iso?'    predicate function (predicate/Pi[_,_:Boolean]/?sort)
+co?       := the 'co?'     predicate function (predicate/Pi[_,_:Boolean]/?sort)
+contra?   := the 'contra?' predicate function (predicate/Pi[_,_:Boolean]/?sort)
+subset?   := the 'subset?' predicate function (predicate/Pi[_,_:Boolean]/?sort)
+eq?       := the 'eq?'     predicate function (predicate/Pi[_,_:Boolean]/?sort)
+alarm     := the 'alarm' timer pattern
+done      := the 'done' fiber pattern
+recieve   := the 'recieve' conduit pattern
+send      := the 'send' conduit pattern
 
-- - - - - - - - - - - - - - - - - - - - - 
++- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -+ 
+| = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = |
++- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -+
 
 note: define dose NOT make a boxed type, therefore
 

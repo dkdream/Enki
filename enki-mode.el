@@ -1,16 +1,58 @@
 ;;; enki-mode.el --- Enki mode, and its idiosyncratic commands
 
-;; <formula>     = lambda | pi | sigma | any | all | subset | mu
-;; <constructor> = fiber | timer | box | conduit | delay | ctor | type | syntax 
-;; <control>     = if | unless | case | select | alarm | done | recieve | send
-;; <context>     = constrain | let | fix | bind | set
-;; <enviroment>  = define | effect | require
-;; <filter>      = cast
-;; <reflector>   = ctor-of | type-of | sort-of
-;; <predicate>   = ctor?   | type?   | sort?
 ;;
 ;; <syntax> = : | & | _ | ' | .
 ;; 
+
+(defconst enki-keywords
+  '(
+    "lambda"
+    "thunk"
+    "pi"
+    "sigma"
+    "any"
+    "all"
+    "subset"
+    "mu"
+    "index"
+    "label"
+    "fiber"
+    "timer"
+    "conduit"
+    "delay"
+    "ctor"
+    "type"
+    "syntax"
+    "if"
+    "unless"
+    "case"
+    "select"
+    "depart"
+    "constrain"
+    "let"
+    "fix"
+    "bind"
+    "set"
+    "define"
+    "effect"
+    "require"
+    "cast"
+    "ctor-of"
+    "type-of"
+    "sort-of"
+    "ctor?"
+    "type?"
+    "sort?"
+    "iso?"
+    "co?"
+    "contra?"
+    "subset?"
+    "eq?"
+    "alarm"
+    "done"
+    "recieve"
+    "send"
+    ))
 
 (defconst enki-font-lock-keywords-1
     (list
@@ -18,18 +60,7 @@
      ;; Definitions.
      (list 
       (concat
-       "(\\s-*" (regexp-opt
-                 '(
-                   "lambda" "pi" "sigma" "any" "all" "subset" "mu"
-                   "fiber" "timer" "box" "conduit" "delay" "ctor" "type" "syntax"
-                   "if" "unless" "case" "select" "alarm" "done" "recieve" "send"
-                   "constrain" "let" "fix" "bind" "set"
-                   "define" "effect" "require"
-                   "cast"
-                   "ctor-of" "type-of" "sort-of"
-                   "ctor?" "type?" "sort?"
-                   ) t)
-       "\\>")
+       "(\\s-*" (regexp-opt enki-keywords t) "\\>")
       '(1 font-lock-keyword-face))
      
      ;;
@@ -49,39 +80,13 @@
 (defconst enki-font-lock-keywords-2
   (append enki-font-lock-keywords-1
      (list
-      ;;
-      ;; Exit/Feature symbols as constants.
-      (list
-       (concat
-        "(" (regexp-opt
-             '(
-               "catch"
-               "throw"
-               ) t)
-        "\\>"
-        "[ \t']*\\(\\sw+\\)?")
-       '(1 font-lock-keyword-face)
-       '(2 font-lock-constant-face nil t))
-      ;;
-      ;; Erroneous structures.
-      (list
-       (concat
-        "(" (regexp-opt
-             '(
-               "abort" 
-               "assert" 
-               "error"
-               "signal"
-               ) t)
-        "\\>")
-       1 font-lock-warning-face)
-
       '("(\\s-*\\(\\sw+\\)" 1 font-lock-function-name-face append)
       '("(\\s-*\\(\\s_+\\)" 1 font-lock-function-name-face append)
       ;;
       ;;
       ;; Words inside \\s' tend to be symbol names.
       '("\\s'\\(\\sw+\\)" 1 font-lock-constant-face append)
+      '("\\s'\\(\\s(\\s_+\\s)\\)" 1 font-lock-constant-face append)
       ;;
       ;; Enki : - type expression 
       '(":\\s-*\\(\\sw+\\)" 1 font-lock-type-face append)
@@ -222,15 +227,17 @@
   (setq comment-column 40)
   (setq comment-indent-function 'enki-comment-indent)
   (setq multibyte-syntax-as-symbol t)
+  ;;;
+  ;;; (keywords [keywords-only [case-fold [syntax-alist [syntax-begin other-vars...]]]])
+  ;;;
   (setq font-lock-defaults
-	'((enki-font-lock-keywords
-	   enki-font-lock-keywords-1
-           enki-font-lock-keywords-2)
-	  nil
-          nil
-          (("+-*/.<>=!?$%_&~^:" . "w"))
-          beginning-of-defun
-	  (font-lock-mark-block-function . mark-defun))))
+	'((enki-font-lock-keywords enki-font-lock-keywords-1 enki-font-lock-keywords-2)
+	  nil ;; keywords-only 
+          nil ;; case-fold
+          nil ;; syntax-alist (("+-*/.<>=!?$%_&~^:" . "w"))
+          nil ;; syntax-begin beginning-of-defun
+	  (font-lock-mark-block-function . mark-defun)
+          )))
 
 (defun enki-outline-level ()
   "Enki mode `outline-level' function."
