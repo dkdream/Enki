@@ -2313,12 +2313,60 @@ extern SUBR(pair_q) {
     }
 }
 
+extern SUBR(tuple_q) {
+    Node value;
+    checkArgs(args, "tuple?", 1, NIL);
+    pair_GetCar(args.pair, &value);
+
+    if (isTuple(value)) {
+        ASSIGN(result, true_v);
+    } else {
+        ASSIGN(result, NIL);
+    }
+}
+
+extern SUBR(text_q) {
+    Node value;
+    checkArgs(args, "text?", 1, NIL);
+    pair_GetCar(args.pair, &value);
+
+    if (isText(value)) {
+        ASSIGN(result, true_v);
+    } else {
+        ASSIGN(result, NIL);
+    }
+}
+
 extern SUBR(integer_q) {
     Node value;
     checkArgs(args, "integer?", 1, NIL);
     pair_GetCar(args.pair, &value);
 
     if (isInteger(value)) {
+        ASSIGN(result, true_v);
+    } else {
+        ASSIGN(result, NIL);
+    }
+}
+
+extern SUBR(quote_q) {
+    Node value;
+    checkArgs(args, "quote?", 1, NIL);
+    pair_GetCar(args.pair, &value);
+
+    if (isQuote(value)) {
+        ASSIGN(result, true_v);
+    } else {
+        ASSIGN(result, NIL);
+    }
+}
+
+extern SUBR(block_q) {
+    Node value;
+    checkArgs(args, "block?", 1, NIL);
+    pair_GetCar(args.pair, &value);
+
+    if (isBlock(value)) {
         ASSIGN(result, true_v);
     } else {
         ASSIGN(result, NIL);
@@ -2471,18 +2519,6 @@ extern SUBR(close_buffer) {
     buffer_free(buff);
 
     setType(buffer, s_opaque);
-}
-
-extern SUBR(text_q) {
-    Node value;
-    checkArgs(args, "text?", 1, NIL);
-    pair_GetCar(args.pair, &value);
-
-    if (isText(value)) {
-        ASSIGN(result, true_v);
-    } else {
-        ASSIGN(result, NIL);
-    }
 }
 
 extern SUBR(forced_q) {
@@ -2662,18 +2698,6 @@ extern SUBR(form_q) {
     pair_GetCar(args.pair, &value);
 
     if (isForm(value)) {
-        ASSIGN(result, true_v);
-    } else {
-        ASSIGN(result, NIL);
-    }
-}
-
-extern SUBR(tuple_q) {
-    Node value;
-    checkArgs(args, "tuple?", 1, NIL);
-    pair_GetCar(args.pair, &value);
-
-    if (isTuple(value)) {
         ASSIGN(result, true_v);
     } else {
         ASSIGN(result, NIL);
@@ -3168,19 +3192,21 @@ void startEnkiLibrary() {
 
     MK_OPR(eof-in,eof_in);
 
+    MK_OPR(all?,all_q);
+    MK_OPR(block?,block_q);
+    MK_OPR(delay?,delay_q);
+    MK_OPR(fixed?,fixed_q);
+    MK_OPR(forced?,forced_q);
+    MK_OPR(form?,form_q);
     MK_OPR(integer?,integer_q);
+    MK_OPR(lambda?,lambda_q);
     MK_OPR(nil?,nil_q);
     MK_OPR(pair?,pair_q);
+    MK_OPR(primitive?,primitive_q);
+    MK_OPR(quote?,quote_q);
     MK_OPR(symbol?,symbol_q);
     MK_OPR(text?,text_q);
-    MK_OPR(forced?,forced_q);
-    MK_OPR(fixed?,fixed_q);
-    MK_OPR(primitive?,primitive_q);
-    MK_OPR(delay?,delay_q);
-    MK_OPR(lambda?,lambda_q);
-    MK_OPR(form?,form_q);
     MK_OPR(tuple?,tuple_q);
-    MK_OPR(all?,all_q);
 
     MK_OPR(dot?,dot_q);
     MK_OPR(void?,void_q);

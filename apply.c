@@ -75,7 +75,7 @@ extern void expand(const Node expr, const Node env, Target result)
         });
 
     for (;;) {
-        if (!isPair(list)) {
+        if (!isPair(list) && !isQuote(list)) {
             ASSIGN(result, list);
             goto done;
         }
@@ -151,7 +151,7 @@ extern void encode(const Node expr, const Node env, Target result)
             fprintf(stderr, "\n");
         });
 
-    if (!isPair(list)) {
+    if (!isPair(list) && !isQuote(list)) {
         ASSIGN(result, list);
         goto done;
     }
@@ -218,6 +218,10 @@ extern void eval(const Node expr, const Node env, Target result)
             prettyPrint(stderr, expr);
             fprintf(stderr, "\n");
         });
+
+    if (isQuote(expr)) {
+        evaluator = p_eval_pair;
+    }
 
     if (isPair(expr)) {
         evaluator = p_eval_pair;

@@ -214,6 +214,63 @@ extern bool list_GetEnd(Pair pair, Target value) {
      return false;
 }
 
+extern bool list_SplitFirst(Pair pair, const Node value, Pair* target) {
+    if (!pair) return false;
+
+    darken_Node(pair);
+
+    if (!isPair(pair)) return false;
+
+    for (;;) {
+        if (!isPair(pair->cdr)) return false;
+
+        Pair next = pair->cdr.pair;
+
+        if (!isIdentical(next->car, value)) {
+            pair = next;
+            continue;
+        }
+
+        pair->cdr = NIL;
+        ASSIGN(target, next);
+        return true;
+    }
+
+    return false;
+}
+
+extern bool list_SplitLast(Pair pair, const Node value, Pair* target) {
+    if (!pair) return false;
+
+    darken_Node(pair);
+
+    Pair last = ((Pair)0);
+
+    if (!isPair(pair)) return false;
+
+    for (;;) {
+        if (!isPair(pair->cdr)) break;
+
+        Pair next = pair->cdr.pair;
+
+        if (isIdentical(next->car, value)) {
+            last = pair;
+        }
+
+        pair = next;
+    }
+
+    if (!last) return false;
+
+    {
+        Pair next = last->cdr.pair;
+        last->cdr = NIL;
+        ASSIGN(target, next);
+    }
+
+    return true;
+}
+
 extern bool alist_Entry(Pair pair, const Node label, Pair* value) {
     if (!pair) return false;
 

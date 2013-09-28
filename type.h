@@ -95,6 +95,8 @@ extern Constant undefined_s; // the sort with the void value
 extern Constant unit_s;      // the sort with the unit value
 extern Constant void_s;      // the sort with no values
 
+extern Constant t_ASTree; // the type of an Abstract Syntax Tree
+
 extern Constant t_integer; // the type of integer values
 extern Constant t_pair;    // the union of all pairs types
 extern Constant t_symbol;  // the union of all symbol types
@@ -357,6 +359,11 @@ extern inline bool isSymbol(const Node value) {
 extern inline bool isBlock(const Node value) __attribute__((always_inline));
 extern inline bool isBlock(const Node value) {
     return fromCtor(value, s_block);
+}
+
+extern inline bool isQuote(const Node value) __attribute__((always_inline));
+extern inline bool isQuote(const Node value) {
+    return fromCtor(value, s_quote);
 }
 
 /***************************

@@ -226,6 +226,13 @@ static inline int isOctal(int c)
     return '0' <= c && c <= '7';
 }
 
+static inline bool checkChar(FILE *fp, int match)
+{
+    int chr = getc(fp);
+    ungetc(chr, fp);
+    return (match == chr);
+}
+
 static inline bool matchChar(FILE *fp, int match)
 {
     int chr = getc(fp);
@@ -313,6 +320,7 @@ static int readChar(int chr, FILE *fp)
 }
 
 extern bool readExpr(FILE *fp, Target result);
+static bool readSegment(FILE *fp, int delim, Target result);
 static bool readList(FILE *fp, int delim, Target result);
 static bool readCode(FILE *fp, Target result);
 static bool readInteger(FILE *fp, int first, Target result);
@@ -321,9 +329,9 @@ static bool readQuote(FILE *fp, Node symbol, Target result);
 static bool readSymbol(FILE *fp, int first, Target result);
 static bool skipBlock(FILE *fp, const int delim);
 static bool skipComment(FILE *fp);
-
-// (...)
-static bool readList(FILE *fp, int delim, Target result)
+//
+//
+static bool readSegment(FILE *fp, int delim, Target result)
 {
     GC_Begin(7);
 
@@ -349,6 +357,59 @@ static bool readList(FILE *fp, int delim, Target result)
     tail = head;
 
     for (;;) {
+        if (!readExpr(fp, &(hold.reference)))      goto eof;
+        if (!pair_Create(hold, NIL, &(hold.pair))) goto failure;
+        if (!pair_SetCdr(tail, hold))              goto failure;
+        tail = hold.pair;
+    }
+
+ eof:
+    if (!checkChar(fp, delim)) {
+        error = "EOF while reading segment";
+        goto failure;
+    }
+
+ done:
+    GC_End();
+    return true;
+
+ failure:
+    if (!error) {
+        fatal("%s", error);
+    }
+
+    GC_End();
+    return false;
+}
+
+// (...)
+static bool readList(FILE *fp, int delim, Target result)
+{
+    GC_Begin(7);
+
+    const char *error = 0;
+    Pair  head;
+    Pair  tail;
+    Pair  list;
+    Node  hold;
+
+    GC_Protect(head);
+    GC_Protect(tail);
+    GC_Protect(list);
+    GC_Protect(hold);
+
+    if (!readExpr(fp, &(hold.reference))) {
+        ASSIGN(result, NIL);
+        goto eof;
+    }
+
+    if (!pair_Create(hold, NIL, result.pair))    goto failure;
+    if (!setType(*(result.reference), t_ASTree)) goto failure;
+
+    head = *result.pair;
+    tail = head;
+
+    for (;;) {
         if (!readExpr(fp, &(hold.reference))) goto eof;
 
         if (isIdentical(hold.symbol, s_dot)) {
@@ -363,6 +424,7 @@ static bool readList(FILE *fp, int delim, Target result)
         }
 
         if (!pair_Create(hold, NIL, &(hold.pair))) goto failure;
+        if (!setType(hold, t_ASTree)) goto failure;
         if (!pair_SetCdr(tail, hold)) goto failure;
         tail = hold.pair;
     }
@@ -406,36 +468,39 @@ static bool readTuple(FILE *fp, Node ctor, int delim, Target result)
     GC_Protect(list);
     GC_Protect(hold);
 
-    if (!readExpr(fp, &(hold.reference))) {
+    if (!readSegment(fp, delim, &list)) {
         ASSIGN(result, NIL);
-        if (!matchChar(fp, delim)) {
-            error = "EOF while reading list";
-            goto failure;
-        }
-        goto done;
-    }
-
-    if (!pair_Create(hold, NIL, &head)) goto failure;
-
-    tail = head;
-
-    for (;;) {
-        if (!readExpr(fp, &(hold.reference))) goto eof;
-        if (!pair_Create(hold, NIL, &(hold.pair))) goto failure;
-        if (!pair_SetCdr(tail, hold)) goto failure;
-        tail = hold.pair;
-    }
-
- eof:
-    if (!matchChar(fp, delim)) {
-        error = "EOF while reading list";
         goto failure;
     }
 
-    if (!list_State(head, &size, &dotted))    goto failure;
-    if (!tuple_Create(size, result.tuple))    goto failure;
-    if (!tuple_Fill(*result.tuple, head))     goto failure;
-    if (!setConstructor(*result.tuple, ctor)) goto failure;
+    if (!matchChar(fp, delim)) {
+        error = "EOF while reading tuple";
+        goto failure;
+    }
+
+    for (;list_SplitLast(list, s_dot, &tail);) {
+        Pair next = tail;
+
+        if (!isPair(next->cdr)) {
+            error = "invalid dot while reading tuple";
+            goto failure;
+        }
+
+        Pair segment = next->cdr.pair;
+
+        next->cdr = NIL;
+
+        if (!tuple_Convert(segment, &(next->car.tuple))) goto failure;
+
+        if (!list_SetEnd(list, next))         goto failure;
+        if (!setConstructor(next->car, ctor)) goto failure;
+        if (!setType(next->car, t_ASTree))    goto failure;
+    }
+
+ eof:
+    if (!tuple_Convert(list, result.tuple))         goto failure;
+    if (!setConstructor(*(result.reference), ctor)) goto failure;
+    if (!setType(*(result.reference), t_ASTree))     goto failure;
 
  done:
     GC_End();
@@ -522,7 +587,8 @@ static bool readQuote(FILE *fp, Node symbol, Target result)
     if (!readExpr(fp, &(hold.reference))) goto failure;
     if (!pair_Create(hold, NIL, &hold.pair)) goto failure;
     if (!pair_Create(symbol, hold, result.pair)) goto failure;
-
+    if (!setConstructor(*(result.reference), s_quote)) goto failure;
+    if (!setType(*(result.reference), t_ASTree)) goto failure;
     return true;
 
     failure:
@@ -724,7 +790,8 @@ extern bool readExpr(FILE *fp, Target result)
               if (isPair(*(result.reference))) {
                   if (!list_UnDot(*(result.pair))) return false;
                   if (!tuple_Convert(*(result.pair), result.tuple)) return false;
-                  setConstructor(*(result.tuple), s_path);
+                  if (!setConstructor(*(result.reference), s_path)) return false;
+                  if (!setType(*(result.reference), t_ASTree)) return false;
               }
               return rtn;
             }

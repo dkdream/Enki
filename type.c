@@ -53,6 +53,8 @@ Constant boolean_s = 0;
 Constant undefined_s = 0;
 Constant unit_s = 0;
 
+Constant t_ASTree = 0;
+
 Constant t_integer = 0;
 Constant t_pair = 0;
 Constant t_symbol = 0;
@@ -106,6 +108,8 @@ extern void init_global_typetable() {
     make_sort("Boolean",   &boolean_s);
     make_sort("Undefined", &undefined_s);
     make_sort("Unit",      &unit_s);
+
+    MK_BTYPE(ASTree);
 
     MK_BTYPE(integer);
     MK_BTYPE(pair);

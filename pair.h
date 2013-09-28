@@ -38,6 +38,15 @@ extern bool list_GetTail(Pair pair, unsigned index, Target value);
 extern bool list_SetEnd(Pair pair, const Node value);
 extern bool list_GetEnd(Pair pair, Target value);
 
+// split
+// when car(cdr(pair)) == v
+//    target = cdr(pair)
+//    setcdr(pair,null)
+//    exit t
+// exit f
+extern bool list_SplitFirst(Pair pair, const Node value, Target target);
+extern bool list_SplitLast(Pair pair, const Node value, Target target);
+
 //
 extern bool alist_Entry(Pair pair, const Node label, Pair* entry);
 extern bool alist_Get(Pair pair, const Node label, Target entry);

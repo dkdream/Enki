@@ -249,12 +249,19 @@ extern bool buffer_print(TextBuffer *output, Node node) {
         return true;
     }
 
+    if (isIdentical(ctor, s_block)) {
+        echo_format(output, "block(%p (size=%d))",
+                    node.reference,
+                    (unsigned) asKind(node.reference)->count);
+        return true;
+    }
+
     if (isIdentical(ctor, s_fixed)) {
         const unsigned max = asKind(node)->count;
         unsigned inx = 0;
-        buffer_add(output, "{");
+        buffer_add(output, "<|");
         buffer_print(output, node.tuple->item[0]);
-        buffer_add(output, "}");
+        buffer_add(output, "|>");
         return true;
     }
 
@@ -350,12 +357,19 @@ extern bool buffer_dump(TextBuffer *output, Node node) {
         return true;
     }
 
+    if (isIdentical(ctor, s_block)) {
+        echo_format(output, "block(%p (size=%d))",
+                    node.reference,
+                    (unsigned) asKind(node)->count);
+        return true;
+    }
+
     if (isIdentical(ctor, s_fixed)) {
         const unsigned max = asKind(node)->count;
         unsigned inx = 0;
-        buffer_add(output, "{");
+        buffer_add(output, "<|");
         buffer_dump(output, node.tuple->item[0]);
-        buffer_add(output, "}");
+        buffer_add(output, "|>");
         return true;
     }
 
@@ -515,12 +529,24 @@ extern void buffer_prettyPrint(TextBuffer *output, Node node) {
             return;
         }
 
-        if (isIdentical(ctor, s_fixed)) {
+        if (isIdentical(ctor, s_block)) {
             const unsigned max = asKind(node)->count;
             unsigned inx = 0;
             buffer_add(output, "{");
-            prettyPrint_intern(node.tuple->item[0], level+1);
+            for (; inx < max ;++inx) {
+                if (0 < inx) buffer_add(output, " ");
+                prettyPrint_intern(node.tuple->item[inx], level+1);
+            }
             buffer_add(output, "}");
+            return;
+        }
+
+        if (isIdentical(ctor, s_fixed)) {
+            const unsigned max = asKind(node)->count;
+            unsigned inx = 0;
+            buffer_add(output, "<|");
+            prettyPrint_intern(node.tuple->item[0], level+1);
+            buffer_add(output, "|>");
             return;
         }
 
