@@ -1,0 +1,15 @@
+(define value (ctor 'tuple tuple 1 2 3 4))
+
+(dumpln value)
+(dumpln (type-of value))
+
+(case value
+   (tuple (a b c d)
+          (dumpln "a=" a)
+          (dumpln "b=" b)
+          (dumpln "c=" c)
+          (dumpln "c=" d))
+   ((x) (dumpln "x=" x)))
+
+          
+          

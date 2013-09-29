@@ -559,24 +559,28 @@ extern void environ_Let(Node local, Node env, Target result)
     pair_Create(symbol, NIL, result.pair);
 }
 
-extern SUBR(encode_let) {
+extern SUBR(encode_let)
+{
+    /*
+    ** given args=((<binding>...) . body)
+    */
     GC_Begin(4);
 
-    Node locals;
+    Node bindings;
     Node lenv;
 
-    GC_Protect(locals);
+    GC_Protect(bindings);
     GC_Protect(lenv);
 
-    pair_GetCar(args.pair, &locals);
+    pair_GetCar(args.pair, &bindings);
 
-    if (!isPair(locals)) {
+    if (!isPair(bindings)) {
         encode(args, env, result);
         GC_End();
         return;
     }
 
-    list_Map(environ_Let, locals.pair, env, &lenv);
+    list_Map(environ_Let, bindings.pair, env, &lenv);
     list_SetEnd(lenv.pair, env);
 
     encode(args, lenv, result);
@@ -586,6 +590,11 @@ extern SUBR(encode_let) {
 
 extern void eval_binding(Node local, Node env, Target result)
 {
+    /*
+    ** arg = name
+    **     | (name expr)
+    **     | (name type ... expr)
+    */
     GC_Begin(4);
 
     Node symbol;
@@ -597,19 +606,19 @@ extern void eval_binding(Node local, Node env, Target result)
     GC_Protect(type);
     GC_Protect(value);
 
-    if (isSymbol(local)) {
+    if (isSymbol(local)) { // name
         symbol = local;
         value  = void_v;
         goto done;
     }
 
-    if (isPair(local)) {
+    if (isPair(local)) { // name expr
         list_GetItem(local.pair, 0, &symbol);
         list_GetItem(local.pair, 1, &expr);
         goto do_eval;
     }
 
-    if (isTuple(local)) {
+    if (isTuple(local)) { // name type ... expr
         unsigned long count = asKind(local.tuple)->count;
         tuple_GetItem(local.tuple, 0, &symbol);
 
@@ -648,7 +657,11 @@ extern void eval_binding(Node local, Node env, Target result)
 }
 
 extern SUBR(let)
-{ //Fixed
+{
+    /*
+    ** given args=((<binding>...) . body)
+    */
+
     GC_Begin(4);
     Node env2;
     Node bindings;
@@ -674,6 +687,255 @@ extern SUBR(let)
     GC_End();
 }
 
+extern void encode_Pattern(Node pattern, Node env, Target result)
+{
+    /*
+    ** pattern = (ctor (<binding>...) . body)
+    **         | ((<binding>...) . body)
+    */
+    GC_Begin(6);
+
+    Node ctor;
+    Node bindings;
+    Node body;
+    Node lenv;
+
+    GC_Protect(ctor);
+    GC_Protect(bindings);
+    GC_Protect(body);
+    GC_Protect(lenv);
+
+    list_GetItem(pattern.pair, 0, &ctor);
+
+    if (isPair(ctor)) { //((<binding>...) . body)
+        bindings = ctor;
+
+        list_GetTail(pattern.pair, 0, &body);
+        list_Map(environ_Let, bindings.pair, env, &lenv);
+        list_SetEnd(lenv.pair, env);
+
+        encode(body, lenv, &(body.pair));
+
+        pair_Create(bindings, body, result.pair);
+    } else { // (ctor (<binding>...) . body)
+        list_GetItem(pattern.pair, 1, &bindings);
+        list_GetTail(pattern.pair, 1, &body);
+
+        if (!isPair(bindings)) {
+            encode(body, env, &(body.pair));
+        } else {
+            list_Map(environ_Let, bindings.pair, env, &lenv);
+            list_SetEnd(lenv.pair, env);
+            encode(body, lenv, &(body.pair));
+        }
+
+        pair_Create(bindings, body, &(body.pair));
+        pair_Create(ctor, body, result.pair);
+    }
+
+    GC_End();
+}
+
+extern SUBR(encode_case)
+{
+    /*
+    ** arg = (expr <pattern>...)
+    */
+    GC_Begin(4);
+
+    Node expr;
+    Node cases;
+    Node hold;
+
+    GC_Protect(expr);
+    GC_Protect(cases);
+    GC_Protect(hold);
+
+    pair_GetCar(args.pair, &expr);
+    pair_GetCdr(args.pair, &cases);
+
+    encode(expr, env, &(expr.pair));
+
+    list_Map(encode_Pattern, cases.pair, env, &(cases.pair));
+
+    pair_Create(expr, cases, result.pair);
+
+    GC_End();
+}
+
+extern void bind_Pattern(Node names, Node object, Node env, Pair* result)
+{
+    GC_Begin(7);
+
+    Node name;
+    Node value;
+    Pair bound;
+    Pair first;
+    Pair next;
+    Pair last;
+
+    unsigned index = -1;
+
+    GC_Protect(first);
+    GC_Protect(bound);
+    GC_Protect(next);
+
+    VM_ON_DEBUG(2, {
+            fprintf(stderr,"binding names ");
+            prettyPrint(stderr, names);
+            fprintf(stderr,"\n");
+            fflush(stderr);
+        });
+
+    if (!isPair(names)) {
+        pair_Create(names, object, &bound);
+        pair_Create(bound, NIL, &first);
+        last = first;
+        goto done;
+    }
+
+    if (isAtomic(object)) {
+        pair_GetCar(names.pair, &name);
+        pair_Create(name, object, &bound);
+    } else {
+        index = 0;
+        pair_GetCar(names.pair, &name);
+        tuple_GetItem(object.tuple, index, &value);
+        pair_Create(name, value, &bound);
+    }
+
+    pair_Create(bound, NIL, &first);
+
+    last = first;
+
+    if (0 > index) {
+        for (;;) {
+            pair_GetCdr(names.pair, &names);
+            if (!isPair(names)) goto done;
+            pair_GetCar(names.pair, &name);
+            pair_Create(name, NIL, &bound);
+            pair_Create(bound, NIL, &next);
+            pair_SetCdr(last, next);
+            last = next;
+        }
+    }
+
+    for (;;) {
+        pair_GetCdr(names.pair, &names);
+        if (!isPair(names)) goto done;
+        index += 1;
+        pair_GetCar(names.pair, &name);
+        tuple_GetItem(object.tuple, index, &value);
+        pair_Create(name, value, &bound);
+        pair_Create(bound, NIL, &next);
+        pair_SetCdr(last, next);
+        last = next;
+    }
+
+ done:
+    VM_ON_DEBUG(2, {
+            fprintf(stderr,"bound names ");
+            prettyPrint(stderr, first);
+            fprintf(stderr,"\n");
+            fflush(stderr);
+        });
+
+    pair_SetCdr(last, env);
+    ASSIGN(result, first);
+    GC_End();
+}
+
+extern SUBR(case)
+{
+    /*
+    ** arg     = (expr <pattern>...)
+    ** pattern = (ctor (<binding>...) . body)
+    **         | ((<binding>...) . body)
+    */
+    GC_Begin(8);
+
+    Node expr;
+    Node cases;
+    Node value;
+    Node env2;
+    Node pattern;
+    Node bindings;
+    Node body;
+
+    GC_Protect(expr);
+    GC_Protect(cases);
+    GC_Protect(value);
+    GC_Protect(env2);
+    GC_Protect(pattern);
+    GC_Protect(bindings);
+    GC_Protect(body);
+
+    pair_GetCar(args.pair, &expr);
+    pair_GetCdr(args.pair, &cases);
+
+    eval(expr, env, &value);
+    forceArg(value, &value);
+
+    Node ctor = getConstructor(value);
+
+    unsigned long length = 1;
+
+    if (isAtomic(value)) {
+        pair_Create(value, NIL, &(value.pair));
+    } else {
+        length = getCount(value);
+    }
+
+    while (isPair(cases)) {
+        pair_GetCar(cases.pair, &pattern);
+        pair_GetCdr(cases.pair, &cases);
+
+        VM_ON_DEBUG(2, {
+                fprintf(stderr,"checking pattern  ");
+                prettyPrint(stderr, pattern);
+                fprintf(stderr,"\n");
+                fflush(stderr);
+            });
+
+        if (isSymbol(pattern.pair->car)) { // (ctor (<binding>...) . body)
+            if (!isIdentical(pattern.pair->car, ctor)) continue;
+            pair_GetCdr(pattern.pair, &pattern);
+        }
+
+        if (isPair(pattern.pair->car)) { // ((<binding>...) . body)
+            unsigned count  = 0;
+            bool     dotted = false;
+
+            pair_GetCar(pattern.pair, &bindings);
+            list_State(bindings.pair, &count, &dotted);
+
+            if (!dotted) {
+                if (length != count) continue;
+            } else {
+                if (length < (count - 1)) continue;
+            }
+
+            pair_GetCdr(pattern.pair, &body);
+            goto found;
+        }
+    }
+
+
+    ASSIGN(result, NIL);
+    GC_End();
+    return;
+
+ found:
+    VM_ON_DEBUG(2, {
+            fprintf(stderr,"found match\n");
+            fflush(stderr);
+        });
+
+    bind_Pattern(bindings, value, env, &(env2.pair));
+    eval_begin(body, env2, result);
+    GC_End();
+}
+
 extern void environ_Lambda(Node parameter, Node env, Target result)
 {
     Node symbol = NIL;
@@ -686,7 +948,17 @@ extern void environ_Lambda(Node parameter, Node env, Target result)
     pair_Create(parameter, NIL, result.pair);
 }
 
-extern SUBR(encode_lambda) {
+extern SUBR(encode_lambda)
+{
+    /*
+    ** args = (formals . body)
+    **
+    ** (set lenv (map box formal))
+    ** (set-end lenv env)
+    **
+    ** result=(cons formals (encode body lenv))
+    */
+
     GC_Begin(4);
     Node formals;
     Node body;
@@ -699,16 +971,11 @@ extern SUBR(encode_lambda) {
     pair_GetCar(args.pair, &formals);
     pair_GetCdr(args.pair, &body);
 
-    /*
-    ** given args=(formals . body)
-    **
-    ** (set lenv (map box formal))
-    ** (set-end lenv env)
-    **
-    ** result=(cons formals (encode body lenv))
-    */
-
-    list_Map(environ_Lambda, formals.pair, env, &lenv);
+    if (!isPair(formals)) {
+        environ_Lambda(formals, env, &lenv);
+    } else {
+        list_Map(environ_Lambda, formals.pair, env, &lenv);
+    }
     list_SetEnd(lenv.pair, env);
 
     encode(body, lenv, &(body.pair));
@@ -721,7 +988,8 @@ extern SUBR(encode_lambda) {
 extern SUBR(lambda)
 {
     /*
-    ** given args=(formals . body)
+    ** given
+    **   args=(formals . body)
     */
 
 #if 0
@@ -3079,6 +3347,7 @@ void startEnkiLibrary() {
 
     MK_EFXD(let,encode_let);
     MK_EFXD(lambda,encode_lambda);
+    MK_EFXD(case,encode_case);
 
     MK_OPR(%type,type);
     MK_OPR(%if,if);
@@ -3092,9 +3361,11 @@ void startEnkiLibrary() {
     MK_OPR(%let,let);
     MK_OPR(%lambda,lambda);
     MK_OPR(%delay,delay);
+    MK_OPR(%case,case);
 
     MK_OPR(%encode-let,encode_let);
     MK_OPR(%encode-lambda,encode_lambda);
+    MK_OPR(%encode-case,encode_case);
 
     MK_PRM(gensym);
     MK_PRM(member);

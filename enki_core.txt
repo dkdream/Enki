@@ -32,10 +32,10 @@
 
 <context> = (constrain <locals> <core>* <core>)
           | (fix <parameters> <core>* <core>)
-          | (let <parameters>? <core>* <core>)
+          | (let <parameters>? <bindings>? <core>* <core>)
 
-<binding> = (bind <name> <core>)
-          | (set <name> <core>)
+<binding> = (bind <name>* <core>) -- bind a collecton of names to the output of expression
+          | (set <name>* <core>)  -- set a collecton of names to the boxed output of expression
 
 <enviroment> = (define <name> <core>)
              | (effect <core>)            -- 
@@ -67,6 +67,7 @@
 <type>  = :<core>
 
 <locals>     = <arguments> 
+<bindings>   = [ <binding>+ ]
 <parameters> = <arguments> 
 <arguments>  = [ <argument>+ ]
              | [ <argument>* . <argument> ]

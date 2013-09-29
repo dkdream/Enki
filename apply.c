@@ -100,6 +100,9 @@ extern void expand(const Node expr, const Node env, Target result)
             alist_Get(enki_globals.pair, head, &value);
         }
 
+        // check if the reference is a form
+        if (!isForm(value)) goto list_begin;
+
         VM_ON_DEBUG(9, {
                 fprintf(stderr, "expand ");
                 prettyPrint(stderr, head);
@@ -107,9 +110,6 @@ extern void expand(const Node expr, const Node env, Target result)
                 prettyPrint(stderr, value);
                 fprintf(stderr, "\n");
             });
-
-        // check if the reference is a form
-        if (!isForm(value)) goto list_begin;
 
         // apply the form function to the rest of the list
         apply(value, tail, env, &list);

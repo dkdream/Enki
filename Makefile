@@ -20,6 +20,7 @@ AR     := ar
 RANLIB := ranlib
 
 TAILFLAGS := -O
+TAILFLAGS := -ggdb
 TAILFLAGS += -fexpensive-optimizations
 TAILFLAGS += -finline-functions
 TAILFLAGS += -foptimize-sibling-calls
@@ -41,7 +42,7 @@ RUNFLAGS :=
 INCFLAGS := -I. $(COPPER_INC)
 DBFLAGS  := -Wall -mtune=i686 -rdynamic -fPIC
 CFLAGS   := $(DBFLAGS) $(INCFLAG) $(TAILFLAGS)
-SFLAGS   := -mtune=i686 -rdynamic -fdelete-null-pointer-checks
+SFLAGS   := -mtune=i686 -rdynamic -fdelete-null-pointer-checks  -ggdb
 ASFLAGS  := -Qy
 LIBFLAGS := $(COPPER_LIB)
 ARFLAGS  := rcu
