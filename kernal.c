@@ -692,6 +692,7 @@ extern void encode_Pattern(Node pattern, Node env, Target result)
     /*
     ** pattern = (ctor (<binding>...) . body)
     **         | ((<binding>...) . body)
+    **         | (. body)
     */
     GC_Begin(6);
 
@@ -705,34 +706,73 @@ extern void encode_Pattern(Node pattern, Node env, Target result)
     GC_Protect(body);
     GC_Protect(lenv);
 
-    list_GetItem(pattern.pair, 0, &ctor);
+    VM_ON_DEBUG(2, {
+            fprintf(stderr,"encoding pattern ");
+            prettyPrint(stderr, pattern);
+            fprintf(stderr,"\n");
+            fflush(stderr);
+        });
+
+    pair_GetCar(pattern.pair, &ctor);
+
+    if (isIdentical(ctor, s_dot)) { // (. body)
+        VM_DEBUG(2, "matched dot");
+        pair_GetCdr(pattern.pair, &body);
+
+        encode(body, env, &(body.pair));
+
+        pair_Create(ctor, body, result.pair);
+        goto done;
+    }
 
     if (isPair(ctor)) { //((<binding>...) . body)
+        VM_DEBUG(2, "matched tuple");
+
         bindings = ctor;
 
-        list_GetTail(pattern.pair, 0, &body);
+        pair_GetCdr(pattern.pair, &body);
         list_Map(environ_Let, bindings.pair, env, &lenv);
+
+        VM_ON_DEBUG(2, {
+            fprintf(stderr,"extending context ");
+            prettyPrint(stderr, lenv);
+            fprintf(stderr,"\n");
+            fflush(stderr);
+        });
+
         list_SetEnd(lenv.pair, env);
 
         encode(body, lenv, &(body.pair));
 
         pair_Create(bindings, body, result.pair);
-    } else { // (ctor (<binding>...) . body)
-        list_GetItem(pattern.pair, 1, &bindings);
-        list_GetTail(pattern.pair, 1, &body);
-
-        if (!isPair(bindings)) {
-            encode(body, env, &(body.pair));
-        } else {
-            list_Map(environ_Let, bindings.pair, env, &lenv);
-            list_SetEnd(lenv.pair, env);
-            encode(body, lenv, &(body.pair));
-        }
-
-        pair_Create(bindings, body, &(body.pair));
-        pair_Create(ctor, body, result.pair);
+        goto done;
     }
 
+    VM_DEBUG(2, "matched ctor");
+    // (ctor (<binding>...) . body)
+    list_GetItem(pattern.pair, 1, &bindings);
+    list_GetTail(pattern.pair, 1, &body);
+
+    if (!isPair(bindings)) {
+        encode(body, env, &(body.pair));
+    } else {
+        list_Map(environ_Let, bindings.pair, env, &lenv);
+
+        VM_ON_DEBUG(2, {
+            fprintf(stderr,"extending context ");
+            prettyPrint(stderr, lenv);
+            fprintf(stderr,"\n");
+            fflush(stderr);
+        });
+
+        list_SetEnd(lenv.pair, env);
+        encode(body, lenv, &(body.pair));
+    }
+
+    pair_Create(bindings, body, &(body.pair));
+    pair_Create(ctor, body, result.pair);
+
+ done:
     GC_End();
 }
 
@@ -765,7 +805,7 @@ extern SUBR(encode_case)
 
 extern void bind_Pattern(Node names, Node object, Node env, Pair* result)
 {
-    GC_Begin(7);
+    GC_Begin(10);
 
     Node name;
     Node value;
@@ -799,7 +839,12 @@ extern void bind_Pattern(Node names, Node object, Node env, Pair* result)
         pair_Create(name, object, &bound);
     } else {
         index = 0;
-        pair_GetCar(names.pair, &name);
+        for (;;) {
+            pair_GetCar(names.pair, &name);
+            if (!isIdentical(name, s_uscore)) break;
+            pair_GetCdr(names.pair, &names);
+            index += 1;
+        }
         tuple_GetItem(object.tuple, index, &value);
         pair_Create(name, value, &bound);
     }
@@ -813,6 +858,7 @@ extern void bind_Pattern(Node names, Node object, Node env, Pair* result)
             pair_GetCdr(names.pair, &names);
             if (!isPair(names)) goto done;
             pair_GetCar(names.pair, &name);
+            if (isIdentical(name, s_uscore)) continue;
             pair_Create(name, NIL, &bound);
             pair_Create(bound, NIL, &next);
             pair_SetCdr(last, next);
@@ -825,6 +871,7 @@ extern void bind_Pattern(Node names, Node object, Node env, Pair* result)
         if (!isPair(names)) goto done;
         index += 1;
         pair_GetCar(names.pair, &name);
+        if (isIdentical(name, s_uscore)) continue;
         tuple_GetItem(object.tuple, index, &value);
         pair_Create(name, value, &bound);
         pair_Create(bound, NIL, &next);
@@ -852,7 +899,7 @@ extern SUBR(case)
     ** pattern = (ctor (<binding>...) . body)
     **         | ((<binding>...) . body)
     */
-    GC_Begin(8);
+    GC_Begin(10);
 
     Node expr;
     Node cases;
@@ -861,6 +908,7 @@ extern SUBR(case)
     Node pattern;
     Node bindings;
     Node body;
+    Node elsePtn;
 
     GC_Protect(expr);
     GC_Protect(cases);
@@ -869,6 +917,7 @@ extern SUBR(case)
     GC_Protect(pattern);
     GC_Protect(bindings);
     GC_Protect(body);
+    GC_Protect(elsePtn);
 
     pair_GetCar(args.pair, &expr);
     pair_GetCdr(args.pair, &cases);
@@ -878,11 +927,9 @@ extern SUBR(case)
 
     Node ctor = getConstructor(value);
 
-    unsigned long length = 1;
+    unsigned long length = 0;
 
-    if (isAtomic(value)) {
-        pair_Create(value, NIL, &(value.pair));
-    } else {
+    if (!isAtomic(value)) {
         length = getCount(value);
     }
 
@@ -890,14 +937,11 @@ extern SUBR(case)
         pair_GetCar(cases.pair, &pattern);
         pair_GetCdr(cases.pair, &cases);
 
-        VM_ON_DEBUG(2, {
-                fprintf(stderr,"checking pattern  ");
-                prettyPrint(stderr, pattern);
-                fprintf(stderr,"\n");
-                fflush(stderr);
-            });
-
         if (isSymbol(pattern.pair->car)) { // (ctor (<binding>...) . body)
+            if (isIdentical(pattern.pair->car, s_dot)) {
+                elsePtn = pattern;
+                continue;
+            }
             if (!isIdentical(pattern.pair->car, ctor)) continue;
             pair_GetCdr(pattern.pair, &pattern);
         }
@@ -916,16 +960,30 @@ extern SUBR(case)
             }
 
             pair_GetCdr(pattern.pair, &body);
-            goto found;
+            goto found_pattern;
         }
     }
 
+    if (isNil(elsePtn)) {
+        ASSIGN(result, NIL);
+        GC_End();
+        return;
 
-    ASSIGN(result, NIL);
+    }
+
+    pair_GetCdr(elsePtn.pair, &body);
+
+ found_else:  // (. body)
+    VM_ON_DEBUG(2, {
+            fprintf(stderr,"found else \n");
+            fflush(stderr);
+        });
+
+    eval_begin(body, env, result);
     GC_End();
     return;
 
- found:
+ found_pattern:
     VM_ON_DEBUG(2, {
             fprintf(stderr,"found match\n");
             fflush(stderr);

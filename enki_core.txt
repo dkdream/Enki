@@ -26,7 +26,7 @@
 
 <control> = (if <core> <core> <core>*)
           | (unless <core> <core> <core>*)
-          | (case <core> <data-pattern>* <else-pattern>)
+          | (case <core> <ctor-pattern>* <tuple-pattern>* <else-pattern>)
           | (select <action-pattern>* <else-pattern>)
           | (depart <name> <core>)
 
@@ -60,9 +60,6 @@
 
 <formula> = pi | sigma | any | all | subset | mu
 
-<object> := a literal value
-<name>   := a name 
-
 <quote> = '<core>
 <type>  = :<core>
 
@@ -84,8 +81,17 @@
 <conduit-pattern> = (recieve <name> <core> <core>*)
                   | (send <name> <core> <core>*)
 
-<data-pattern> = (<name> <arguments> <core>)
-<else-pattern> = (_ <core>)
+<ctor-pattern>  = (<name> <variables> <core>)
+<tuple-pattern> = (<variables> <core>)
+<variables>     = <arguments>
+                | ??? - the whole object
+
+<else-pattern>  = (. <core>)
+
+-    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -
+
+<object> := a literal value
+<name>   := a name 
 
 -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -
 

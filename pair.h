@@ -47,10 +47,13 @@ extern bool list_GetEnd(Pair pair, Target value);
 extern bool list_SplitFirst(Pair pair, const Node value, Target target);
 extern bool list_SplitLast(Pair pair, const Node value, Target target);
 
-//
+// find the entry=(label,value) for label
 extern bool alist_Entry(Pair pair, const Node label, Pair* entry);
+// find the value for label
 extern bool alist_Get(Pair pair, const Node label, Target entry);
+// set the value for label
 extern bool alist_Set(Pair pair, const Node label, const Node value);
+// prepend the entry(label,value) to list
 extern bool alist_Add(Pair pair, const Node label, const Node value, Pair* target);
 
 //

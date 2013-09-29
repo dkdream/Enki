@@ -32,6 +32,7 @@ extern Symbol s_ftick;
 extern Symbol s_qmark;
 extern Symbol s_bslash;
 extern Symbol s_bsat;
+extern Symbol s_uscore;
 
 extern Symbol s_axiom;
 extern Symbol s_base;

@@ -28,6 +28,7 @@ Symbol s_ftick = 0;
 Symbol s_qmark = 0;
 Symbol s_bslash = 0;
 Symbol s_bsat = 0;
+Symbol s_uscore = 0;
 
 Symbol s_axiom = 0;
 Symbol s_base = 0;
@@ -126,6 +127,8 @@ extern void init_global_symboltable() {
     symbol_Convert("?", &s_qmark);
     symbol_Convert("\\", &s_bslash);
     symbol_Convert("\\@", &s_bsat);
+    symbol_Convert("_", &s_uscore);
+
     symbol_Convert("unquote-splicing", &s_unquote_splicing);
 
     MK_SYM(axiom);
