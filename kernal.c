@@ -2491,7 +2491,7 @@ extern SUBR(read_sexpr) {
     forceArgs(args, &file, 0);
 
     if (!inType(file, t_infile)) {
-        fatal("read-line: not an infile");
+        fatal("read-sexpr: not an infile");
     }
 
     FILE* in = ((OSFile)(file.reference))->file;
