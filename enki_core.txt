@@ -33,7 +33,6 @@
 <context> = (constrain <locals> <core>* <core>)
           | (fix <parameters> <core>* <core>)
           | (let <parameters> <core>* <core>)
-          | (let _ <core>* <core>)
 
 <binding> = (bind <name>+ <core>) -- bind a collecton of names to the output of expression
           | (set <name>+ <core>)  -- set a collecton of names to the boxed output of expression
@@ -63,16 +62,19 @@
 
 <quote>      = '<core>
 
-<locals>     = [ <argument>+ ]
+<locals>     = [ <local>+ ]
 
-<parameters> = [ <argument>+ ] <result> <initialize>*
-             | [ <argument>+ ] _ <initialize>*
+<parameters> = [ <local>+ ] <result>? <initialize>*
              | ( <assignment>+ ) <result>?
+             | <result>?
 
 <arguments>  = [ <argument>+ ]
              | <name>
              | ( <name>+ )
              | ( <name>+ . <name>)
+
+<local> = <name> <core>
+        | <name> _
 
 <initialize> = [bind <name>+ <core>]
              | [set <name>+ <core>]
@@ -84,7 +86,7 @@
            | <name> _
            | _      <core>
 
-<result> = [ <name> <core>? ]
+<result> = [as <name> <core>? ]
 
 <action-pattern>  = <fiber-pattern> | <timer-pattern> | <conduit-pattern>
 

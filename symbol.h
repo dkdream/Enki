@@ -37,6 +37,7 @@ extern Symbol s_uscore;
 extern Symbol s_axiom;
 extern Symbol s_base;
 extern Symbol s_block;
+extern Symbol s_box;
 extern Symbol s_branch;
 extern Symbol s_clink;
 extern Symbol s_current;

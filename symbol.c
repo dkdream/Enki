@@ -33,6 +33,7 @@ Symbol s_uscore = 0;
 Symbol s_axiom = 0;
 Symbol s_base = 0;
 Symbol s_block = 0;
+Symbol s_box = 0;
 Symbol s_branch = 0;
 Symbol s_clink = 0;
 Symbol s_current = 0;
@@ -134,6 +135,7 @@ extern void init_global_symboltable() {
     MK_SYM(axiom);
     MK_SYM(base);
     MK_SYM(block);
+    MK_SYM(box);
     MK_SYM(branch);
     MK_SYM(clink);
     MK_SYM(current);

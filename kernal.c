@@ -1358,7 +1358,7 @@ extern SUBR(eval_pair)
     eval(head, env, &head);
 
     if (fromCtor(head, s_box)) {
-        pair_GetCar(head, &head);
+        pair_GetCar(head.pair, &head);
     }
 
     if (fromCtor(head, s_delay)) {
