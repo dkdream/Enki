@@ -2,10 +2,12 @@
 (define cadr (lambda (x) (car (cdr x))))
 (define cddr (lambda (x) (cdr (cdr x))))
 
-(define concat-list (lambda (x y)
-                       (if (pair? x)
-                             (cons (car x) (concat-list (cdr x) y))
-                          y)))
+(define concat-list 
+   (let (self)
+      (bind self (lambda (x y)
+                    (if (pair? x)
+                          (cons (car x) (self (cdr x) y))
+                       y)))))
 
 (define expand-quote
    (let (qq-list qq-element qq-object)

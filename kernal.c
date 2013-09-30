@@ -418,6 +418,33 @@ extern SUBR(set)
     ASSIGN(result,value);
 }
 
+extern SUBR(encode_args)
+{
+    list_Map(encode, args.pair, env, result);
+}
+
+extern SUBR(encode_define)
+{
+    Node symbol = NIL;
+    Node expr   = NIL;
+    Node value  = NIL;
+
+    fetchArgs(args, &symbol, &expr, 0);
+
+    if (!isSymbol(symbol)) {
+        fprintf(stderr, "\nerror: non-symbol identifier in define: ");
+        dump(stderr, symbol);
+        fprintf(stderr, "\n");
+        fflush(stderr);
+        fatal(0);
+    }
+
+    encode(expr, env, &value);
+
+    pair_Create(value, NIL, &(value.pair));
+    pair_Create(symbol, value, result.pair);
+}
+
 extern SUBR(define)
 { //Fixed
     Node symbol = NIL;
@@ -3311,7 +3338,6 @@ static Node defineEFixed(const char* neval,  Operator oeval,
 #define MK_BTYPE(x)   defineConstant(#x, t_ ##x)
 #define MK_PRM(x)     definePrimitive(#x, opr_ ## x)
 #define MK_FXD(x)     defineFixed(#x, opr_ ## x)
-#define MK_FXD(x)     defineFixed(#x, opr_ ## x)
 #define MK_EFXD(x,y)  defineEFixed(#x, opr_ ## x, #y, opr_ ## y)
 #define MK_OPR(x,y)   definePrimitive(#x, opr_ ## y)
 
@@ -3387,15 +3413,15 @@ void startEnkiLibrary() {
 
     MK_PRM(system_check);
 
-    MK_FXD(define);
+    MK_EFXD(define,encode_define);
     MK_EFXD(quote,list);
     MK_EFXD(type,encode_type);
 
-    MK_FXD(if);
+    MK_EFXD(if,encode_args);
     MK_FXD(and);
     MK_FXD(or);
-    MK_FXD(bind);
-    MK_FXD(set);
+    MK_EFXD(bind,encode_define);
+    MK_EFXD(set,encode_define);
     MK_FXD(delay);
 
     MK_FXD(while);

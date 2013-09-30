@@ -107,5 +107,16 @@ dump
 (dumpln (type-of r2))
 (dumpln (type-of r3))
 
+(if (integer? (next))
+      (println "integer")
+   (println "not integer"))
+
+(if (symbol? (next))
+      (println "symbol")
+   (println "not symbol"))
+
+
+
+
 
 
