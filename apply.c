@@ -161,8 +161,11 @@ extern void encode(const Node expr, const Node env, Target result)
 
     encode(head, env, &head);
 
-    if (isSymbol(head)) {
+    if (!isSymbol(head)) {
+        goto list_begin;
+    } else {
         Node value = NIL;
+
         // check if the enviroment
         if (!alist_Get(env.pair, head, &value)) {
             alist_Get(enki_globals.pair, head, &value);
@@ -170,12 +173,15 @@ extern void encode(const Node expr, const Node env, Target result)
 
         if (isPrimitive(value)) {
             head = value;
-        } else if (isFixed(value)) {
+            goto list_begin;
+        }
+
+        if (isFixed(value)) {
             head = value;
+        } else {
+            goto list_begin;
         }
     }
-
-    if (!isFixed(head)) goto list_begin;
 
     Node action = NIL;
 

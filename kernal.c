@@ -3275,34 +3275,8 @@ static Primitive definePrimitive(const char* name, Operator func) {
     return prim;
 }
 
-static Node defineFixed(const char* name, Operator eval)
-{
-    GC_Begin(8);
-
-    Tuple fixed; Symbol label; Primitive prim;
-
-    GC_Protect(fixed);
-    GC_Protect(label);
-    GC_Protect(prim);
-
-    symbol_Convert(name, &label);
-    primitive_Create(label, eval, &prim);
-
-    tuple_Create(2, &fixed);
-    setConstructor(fixed, s_fixed);
-
-    tuple_SetItem(fixed, fxd_name, label);
-    tuple_SetItem(fixed, fxd_eval, prim);
-
-    defineValue(label, fixed);
-
-    GC_End();
-
-    return (Node) fixed;
-}
-
-static Node defineEFixed(const char* neval,  Operator oeval,
-                         const char* nencode, Operator oencode)
+static Node defineFixed(const char* neval,  Operator oeval,
+                        const char* nencode, Operator oencode)
 {
     GC_Begin(8);
 
@@ -3337,8 +3311,7 @@ static Node defineEFixed(const char* neval,  Operator oeval,
 #define MK_CONST(x,y) defineConstant(#x, y)
 #define MK_BTYPE(x)   defineConstant(#x, t_ ##x)
 #define MK_PRM(x)     definePrimitive(#x, opr_ ## x)
-#define MK_FXD(x)     defineFixed(#x, opr_ ## x)
-#define MK_EFXD(x,y)  defineEFixed(#x, opr_ ## x, #y, opr_ ## y)
+#define MK_FXD(x,y)   defineFixed(#x, opr_ ## x, #y, opr_ ## y)
 #define MK_OPR(x,y)   definePrimitive(#x, opr_ ## y)
 
 
@@ -3413,23 +3386,23 @@ void startEnkiLibrary() {
 
     MK_PRM(system_check);
 
-    MK_EFXD(define,encode_define);
-    MK_EFXD(quote,list);
-    MK_EFXD(type,encode_type);
+    MK_FXD(define,encode_define);
+    MK_FXD(quote,list);
+    MK_FXD(type,encode_type);
 
-    MK_EFXD(if,encode_args);
-    MK_FXD(and);
-    MK_FXD(or);
-    MK_EFXD(bind,encode_define);
-    MK_EFXD(set,encode_define);
-    MK_FXD(delay);
+    MK_FXD(if,encode_args);
+    MK_FXD(and,encode_args);
+    MK_FXD(or,encode_args);
+    MK_FXD(bind,encode_define);
+    MK_FXD(set,encode_define);
+    MK_FXD(delay,encode_args);
 
-    MK_FXD(while);
-    MK_FXD(begin);
+    MK_FXD(while,encode_args);
+    MK_FXD(begin,encode_args);
 
-    MK_EFXD(let,encode_let);
-    MK_EFXD(lambda,encode_lambda);
-    MK_EFXD(case,encode_case);
+    MK_FXD(let,encode_let);
+    MK_FXD(lambda,encode_lambda);
+    MK_FXD(case,encode_case);
 
     MK_OPR(%type,type);
     MK_OPR(%if,if);
