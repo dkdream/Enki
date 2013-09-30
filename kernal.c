@@ -691,18 +691,22 @@ extern void encode_Pattern(Node pattern, Node env, Target result)
 {
     /*
     ** pattern = (ctor (<binding>...) . body)
-    **         | ((<binding>...) . body)
+    **         | (ctor name . body)
+    **         | (_ (<binding>...) . body)
+    **         | (_ name . body)
     **         | (. body)
     */
     GC_Begin(6);
 
     Node ctor;
     Node bindings;
+    Pair bound;
     Node body;
     Node lenv;
 
     GC_Protect(ctor);
     GC_Protect(bindings);
+    GC_Protect(bound);
     GC_Protect(body);
     GC_Protect(lenv);
 
@@ -715,8 +719,8 @@ extern void encode_Pattern(Node pattern, Node env, Target result)
 
     pair_GetCar(pattern.pair, &ctor);
 
-    if (isIdentical(ctor, s_dot)) { // (. body)
-        VM_DEBUG(2, "matched dot");
+    // (. body)
+    if (isIdentical(ctor, s_dot)) {
         pair_GetCdr(pattern.pair, &body);
 
         encode(body, env, &(body.pair));
@@ -725,52 +729,48 @@ extern void encode_Pattern(Node pattern, Node env, Target result)
         goto done;
     }
 
-    if (isPair(ctor)) { //((<binding>...) . body)
-        VM_DEBUG(2, "matched tuple");
-
-        bindings = ctor;
-
-        pair_GetCdr(pattern.pair, &body);
-        list_Map(environ_Let, bindings.pair, env, &lenv);
-
-        VM_ON_DEBUG(2, {
-            fprintf(stderr,"extending context ");
-            prettyPrint(stderr, lenv);
-            fprintf(stderr,"\n");
-            fflush(stderr);
-        });
-
-        list_SetEnd(lenv.pair, env);
-
-        encode(body, lenv, &(body.pair));
-
-        pair_Create(bindings, body, result.pair);
-        goto done;
+    if (!isSymbol(ctor)) {
+        fprintf(stderr, "\ncase error: invalid constructor name: ");
+        dump(stderr, ctor);
+        fprintf(stderr, "\n");
+        fflush(stderr);
+        fatal(0);
     }
 
-    VM_DEBUG(2, "matched ctor");
     // (ctor (<binding>...) . body)
+    // (ctor <name> . body)
+    // (_ (<binding>...) . body)
+    // (_ <name> . body)
     list_GetItem(pattern.pair, 1, &bindings);
     list_GetTail(pattern.pair, 1, &body);
 
-    if (!isPair(bindings)) {
-        encode(body, env, &(body.pair));
-    } else {
-        list_Map(environ_Let, bindings.pair, env, &lenv);
+    if (isSymbol(bindings)) {
+        pair_Create(bindings, NIL, &bound);
+        pair_Create(bound, env, &(lenv.pair));
 
-        VM_ON_DEBUG(2, {
-            fprintf(stderr,"extending context ");
-            prettyPrint(stderr, lenv);
-            fprintf(stderr,"\n");
-            fflush(stderr);
-        });
-
-        list_SetEnd(lenv.pair, env);
         encode(body, lenv, &(body.pair));
+
+        pair_Create(bindings, body, &(body.pair));
+        pair_Create(ctor, body, result.pair);
+        goto done;
     }
 
-    pair_Create(bindings, body, &(body.pair));
-    pair_Create(ctor, body, result.pair);
+    if (isPair(bindings)) {
+        list_Map(environ_Let, bindings.pair, env, &lenv);
+        list_SetEnd(lenv.pair, env);
+
+        encode(body, lenv, &(body.pair));
+
+        pair_Create(bindings, body, &(body.pair));
+        pair_Create(ctor, body, result.pair);
+        goto done;
+    }
+
+    fprintf(stderr, "\ncase error: invalid binding list: ");
+    dump(stderr, bindings);
+    fprintf(stderr, "\n");
+    fflush(stderr);
+    fatal(0);
 
  done:
     GC_End();
@@ -814,8 +814,6 @@ extern void bind_Pattern(Node names, Node object, Node env, Pair* result)
     Pair next;
     Pair last;
 
-    unsigned index = -1;
-
     GC_Protect(first);
     GC_Protect(bound);
     GC_Protect(next);
@@ -835,36 +833,26 @@ extern void bind_Pattern(Node names, Node object, Node env, Pair* result)
     }
 
     if (isAtomic(object)) {
-        pair_GetCar(names.pair, &name);
-        pair_Create(name, object, &bound);
-    } else {
-        index = 0;
-        for (;;) {
-            pair_GetCar(names.pair, &name);
-            if (!isIdentical(name, s_uscore)) break;
-            pair_GetCdr(names.pair, &names);
-            index += 1;
-        }
-        tuple_GetItem(object.tuple, index, &value);
-        pair_Create(name, value, &bound);
+        fprintf(stderr, "\ncase error: invalid compound value: ");
+        dump(stderr, object);
+        fprintf(stderr, "\n");
+        fflush(stderr);
+        fatal(0);
     }
 
+    unsigned index = 0;
+    for (;;) {
+        pair_GetCar(names.pair, &name);
+        if (!isIdentical(name, s_uscore)) break;
+        pair_GetCdr(names.pair, &names);
+        index += 1;
+    }
+
+    tuple_GetItem(object.tuple, index, &value);
+    pair_Create(name, value, &bound);
     pair_Create(bound, NIL, &first);
 
     last = first;
-
-    if (0 > index) {
-        for (;;) {
-            pair_GetCdr(names.pair, &names);
-            if (!isPair(names)) goto done;
-            pair_GetCar(names.pair, &name);
-            if (isIdentical(name, s_uscore)) continue;
-            pair_Create(name, NIL, &bound);
-            pair_Create(bound, NIL, &next);
-            pair_SetCdr(last, next);
-            last = next;
-        }
-    }
 
     for (;;) {
         pair_GetCdr(names.pair, &names);
@@ -897,7 +885,10 @@ extern SUBR(case)
     /*
     ** arg     = (expr <pattern>...)
     ** pattern = (ctor (<binding>...) . body)
-    **         | ((<binding>...) . body)
+    **         | (ctor name . body)
+    **         | (_ (<binding>...) . body)
+    **         | (_ name . body)
+    **         | (. body)
     */
     GC_Begin(10);
 
@@ -927,9 +918,10 @@ extern SUBR(case)
 
     Node ctor = getConstructor(value);
 
+    bool          atomic = isAtomic(value);
     unsigned long length = 0;
 
-    if (!isAtomic(value)) {
+    if (!atomic) {
         length = getCount(value);
     }
 
@@ -937,30 +929,39 @@ extern SUBR(case)
         pair_GetCar(cases.pair, &pattern);
         pair_GetCdr(cases.pair, &cases);
 
-        if (isSymbol(pattern.pair->car)) { // (ctor (<binding>...) . body)
+        if (isSymbol(pattern.pair->car)) {
             if (isIdentical(pattern.pair->car, s_dot)) {
                 elsePtn = pattern;
                 continue;
             }
-            if (!isIdentical(pattern.pair->car, ctor)) continue;
+            if (!isIdentical(pattern.pair->car, s_uscore)) {
+                if (!isIdentical(pattern.pair->car, ctor)) continue;
+            }
             pair_GetCdr(pattern.pair, &pattern);
         }
 
-        if (isPair(pattern.pair->car)) { // ((<binding>...) . body)
-            unsigned count  = 0;
-            bool     dotted = false;
-
+        if (isSymbol(pattern.pair->car)) {
             pair_GetCar(pattern.pair, &bindings);
-            list_State(bindings.pair, &count, &dotted);
-
-            if (!dotted) {
-                if (length != count) continue;
-            } else {
-                if (length < (count - 1)) continue;
-            }
-
             pair_GetCdr(pattern.pair, &body);
             goto found_pattern;
+        } else {
+            if (atomic) continue;
+            if (isPair(pattern.pair->car)) {
+                unsigned count  = 0;
+                bool     dotted = false;
+
+                pair_GetCar(pattern.pair, &bindings);
+                list_State(bindings.pair, &count, &dotted);
+
+                if (!dotted) {
+                    if (length != count) continue;
+                } else {
+                    if (length < (count - 1)) continue;
+                }
+
+                pair_GetCdr(pattern.pair, &body);
+                goto found_pattern;
+            }
         }
     }
 

@@ -82,9 +82,9 @@
                   | (send <name> <core> <core>*)
 
 <ctor-pattern>  = (<name> <variables> <core>)
-<tuple-pattern> = (<variables> <core>)
+<tuple-pattern> = (_ <variables> <core>)
 <variables>     = <arguments>
-                | ??? - the whole object
+                | <name>
 
 <else-pattern>  = (. <core>)
 

@@ -22,7 +22,7 @@
           (dumpln "c=" c)
           (dumpln "d=" d)
           (dumpln "e=" e))
-   ((x) (dumpln "x=" x)))
+   (_ (x) (dumpln "x=" x)))
 
 (define value (ctor 'tuple tuple 1 2 3 4 5))
 
@@ -49,7 +49,7 @@
           (dumpln "c=" c)
           (dumpln "d=" d)
           (dumpln "e=" e))
-   ((x) (dumpln "x=" x))
+   (_ (x) (dumpln "x=" x))
    (. (println "else")))
 
 (println)
@@ -69,8 +69,12 @@
           (dumpln "b=" b)
           (dumpln "c=" c)
           (dumpln "d=" d))
-   ((_ _ x _ _) (dumpln "x=" x))
+   (_ (_ _ x _ _) (dumpln "x=" x))
    (. (println "else")))
+
+(println)
+(dumpln value)
+(dumpln (type-of value))
 
 (case value
    (tuple (a b)
@@ -85,8 +89,52 @@
           (dumpln "b=" b)
           (dumpln "c=" c)
           (dumpln "d=" d))
-   ((_ x _ _) (dumpln "x=" x))
+   (_ (_ x _ _) (dumpln "x=" x))
    (. (println "else")))
 
-          
-          
+(define value 5)
+(println)
+(dumpln value)
+(dumpln (type-of value))
+(dumpln (ctor-of value))
+
+(case value
+   (tuple (a b)
+          (dumpln "a=" a)
+          (dumpln "b=" b))
+   (tuple (a b c)
+          (dumpln "a=" a)
+          (dumpln "b=" b)
+          (dumpln "c=" c))
+   (tuple (a b c d)
+          (dumpln "a=" a)
+          (dumpln "b=" b)
+          (dumpln "c=" c)
+          (dumpln "d=" d))
+   (_ (_ x _ _) (dumpln "x=" x))
+   (string y (dumpln "y=" y))
+   (integer x (dumpln "x=" x))
+   (. (println "else")))
+
+(define value '(1 3))
+(println)
+(dumpln value)
+(dumpln (type-of value))
+(dumpln (ctor-of value))
+
+(case value
+   (tuple (a b c)
+          (dumpln "a=" a)
+          (dumpln "b=" b)
+          (dumpln "c=" c))
+   (pair (a b)
+          (dumpln "a=" a)
+          (dumpln "b=" b))
+   (tuple (a b c d)
+          (dumpln "a=" a)
+          (dumpln "b=" b)
+          (dumpln "c=" c)
+          (dumpln "d=" d))
+   (_ (_ x _ _) (dumpln "x=" x))
+   (integer x (dumpln "x=" x))
+   (. (println "else")))
