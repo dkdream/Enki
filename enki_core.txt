@@ -32,7 +32,7 @@
 
 <context> = (constrain <locals> <core>* <core>)
           | (fix <parameters> <core>* <core>)
-          | (let <parameters>? <bindings>? <core>* <core>)
+          | (let <parameters>? <core>* <core>)
 
 <binding> = (bind <name>* <core>) -- bind a collecton of names to the output of expression
           | (set <name>* <core>)  -- set a collecton of names to the boxed output of expression
@@ -60,19 +60,17 @@
 
 <formula> = pi | sigma | any | all | subset | mu
 
-<quote> = '<core>
-<type>  = :<core>
+<quote>      = '<core>
 
 <locals>     = <arguments> 
-<bindings>   = [ <binding>+ ]
-<parameters> = <arguments> 
+<parameters> = <arguments> [<name>+ <core>]*
 <arguments>  = [ <argument>+ ]
-             | [ <argument>* . <argument> ]
 
-<argument> = <name> <type>?
-           | _      <type>?
+<argument> = <name> <core>
+           | <name> _
+           | _      <core>
 
-<result> = [ <name> <type>? ]
+<result> = [ <name> <core>? ]
 
 <action-pattern>  = <fiber-pattern> | <timer-pattern> | <conduit-pattern>
 

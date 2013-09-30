@@ -71,7 +71,7 @@ extern void defineValue(Node symbol, const Node value) {
     GC_End();
 }
 
-extern bool opaque_Create(Node type, Node ctor, long size, Reference* target) {
+extern bool opaque_Create(Node type, const Symbol ctor, long size, Reference* target) {
     if (!node_Allocate(_zero_space,
                        true,
                        size,
@@ -916,7 +916,7 @@ extern SUBR(case)
     eval(expr, env, &value);
     forceArg(value, &value);
 
-    Node ctor = getConstructor(value);
+    const Symbol ctor = getConstructor(value);
 
     bool          atomic = isAtomic(value);
     unsigned long length = 0;

@@ -178,8 +178,8 @@ extern bool sort_Create(Symbol symbol, Constant* target) {
 
     if (!entry) return false;
 
-    entry->kind.type        = (Node)s_sort;
-    entry->kind.constructor = (Node)s_sort;
+    entry->kind.type.symbol = s_sort;
+    entry->kind.constructor = s_sort;
     entry->kind.constant = 1;
 
     Constant result = (Constant) asReference(entry);
@@ -245,8 +245,8 @@ extern bool make_Axiom(Constant element, Constant class) {
 
     if (!entry) return false;
 
-    entry->kind.type        = (Node)s_axiom;
-    entry->kind.constructor = (Node)s_axiom;
+    entry->kind.type.symbol = s_axiom;
+    entry->kind.constructor = s_axiom;
     entry->kind.constant    = 1;
 
     Axiom result = (Axiom) asReference(entry);
@@ -327,8 +327,8 @@ extern bool make_Rule(Symbol functor, Constant xxx, Constant yyy, Constant zzz) 
 
     if (!entry) return false;
 
-    entry->kind.type        = (Node)s_rule;
-    entry->kind.constructor = (Node)s_rule;
+    entry->kind.type.symbol = s_rule;
+    entry->kind.constructor = s_rule;
     entry->kind.constant    = 1;
 
     Rule result = (Rule) asReference(entry);
@@ -373,8 +373,8 @@ extern bool type_Create(Symbol symbol, Constant sort, Constant* target) {
 
     if (!entry) return false;
 
-    entry->kind.type        = (Node) s_base;
-    entry->kind.constructor = (Node) s_base;
+    entry->kind.type.symbol = s_base;
+    entry->kind.constructor = s_base;
     entry->kind.constant    = 1;
 
     Constant result = (Constant) asReference(entry);
@@ -432,8 +432,8 @@ extern bool type_Index(const unsigned index, const Base at, Base* result) {
 
     if (!entry) return false;
 
-    entry->kind.type        = (Node) s_index;
-    entry->kind.constructor = (Node) s_index;
+    entry->kind.type.symbol = s_index;
+    entry->kind.constructor = s_index;
     entry->kind.constant = 1;
 
     Index inx = (Index) asReference(entry);
@@ -490,8 +490,8 @@ extern bool type_Label(const Symbol label, const Base at, Base* result) {
 
     if (!entry) return false;
 
-    entry->kind.type        = (Node) s_label;
-    entry->kind.constructor = (Node) s_label;
+    entry->kind.type.symbol = s_label;
+    entry->kind.constructor = s_label;
     entry->kind.constant    = 1;
 
     Label field = (Label) asReference(entry);
@@ -1035,8 +1035,8 @@ static bool branch_Cons(const type_code kind,
 
     if (!entry) return false;
 
-    entry->kind.type        = (Node) s_branch;
-    entry->kind.constructor = (Node) s_branch;
+    entry->kind.type.symbol = s_branch;
+    entry->kind.constructor = s_branch;
     entry->kind.constant    = 1;
 
     Branch branch = (Branch) asReference(entry);
@@ -1609,7 +1609,7 @@ extern bool type_Map(Operator func, const Node node, const Node env, Target targ
         return false;
     }
 
-    Node ctor = getConstructor(node);
+    const Symbol ctor = getConstructor(node);
 
     if (isIdentical(ctor, s_sort)) {
         func(node, env, target);

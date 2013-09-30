@@ -192,8 +192,8 @@ extern bool buffer_print(TextBuffer *output, Node node) {
         return true;
     }
 
-    Node type = getType(node);
-    Node ctor = getConstructor(node);
+    const Node   type = getType(node);
+    const Symbol ctor = getConstructor(node);
 
     if (isNil(type) && isNil(ctor)) {
         if (isAtomic(node)) {
@@ -297,8 +297,8 @@ extern bool buffer_dump(TextBuffer *output, Node node) {
         return true;
     }
 
-    Node type = getType(node);
-    Node ctor = getConstructor(node);
+    const Node type = getType(node);
+    const Symbol ctor = getConstructor(node);
 
     if (isNil(type) && isNil(ctor)) {
         if (isAtomic(node)) {
@@ -454,8 +454,8 @@ extern void buffer_prettyPrint(TextBuffer *output, Node node) {
             return;
         }
 
-        Node type = getType(node);
-        Node ctor = getConstructor(node);
+        const Node   type = getType(node);
+        const Symbol ctor = getConstructor(node);
 
         if (isNil(type) && isNil(ctor)) {
             if (isAtomic(node)) {

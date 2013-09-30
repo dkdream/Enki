@@ -5,9 +5,9 @@
       (type Zero '(pair end) x y)))
 
 (define Tree 
-   (constrain [tail :Zero]
-      (lambda [x :Zero]
-         (mu [y :(or (Pair x tail) x)]
+   (constrain [tail Zero]
+      (lambda [x Zero]
+         (mu [y (or (Pair x tail) x)]
             (Pair y y)))
 
 ## note:
@@ -23,36 +23,36 @@
       (ctor? object 'pair)))
 
 (define cons
-   (constrain [X :Zero Y :Zero]
-      (lambda (x :X y :Y)
+   (constrain [X Zero Y Zero]
+      (lambda (x X y Y)
          (ctor 'pair (Pair X Y) x y))))
 
 (define car  
-   (constrain [head :Zero tail :Zero]
-      (lambda [x :(Pair head tail)]
+   (constrain [head Zero tail Zero]
+      (lambda [x (Pair head tail)]
          (case x (pair (first _) first))))
 
 (define cdr  
-   (constrain [head :Zero tail :Zero]
-      (lambda [x :(Pair head tail)]
+   (constrain [head Zero tail Zero]
+      (lambda [x (Pair head tail)]
          (case x (pair (_ next) next))))
 
 (define cadr 
-   (constrain [a :Zero b :Zero c :Zero]
-      (lambda [x :(Pair (Pair a b) d)] (car (cdr x))))
+   (constrain [a Zero b Zero c Zero]
+      (lambda [x (Pair (Pair a b) d)] (car (cdr x))))
 
 (define cadr 
-   (constrain [a :Zero b :Zero c :Zero]
-      (lambda [x :(Pair a (Pair b c))] (cdr (cdr x))))
+   (constrain [a Zero b Zero c Zero]
+      (lambda [x (Pair a (Pair b c))] (cdr (cdr x))))
 
 (define concat-list
-   (constrain [z :Zero]
-      (let [list :Zero]
+   (constrain [z Zero]
+      (let [list Zero]
          (bind list (List z))
-         (mu [self :(pi [_ :list _ :list] list)]
-            (lambda [x :list y :list]
+         (mu [self (pi [_ list _ list] list)]
+            (lambda [x list y list]
                (case x
-                     (pair (first _ :Unit) y)
+                     (pair (first _) y)
                      (pair (first next)
                            (cons (car first)
                                  (self (cdr x) y)))))))))

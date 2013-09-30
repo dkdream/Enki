@@ -115,8 +115,8 @@ enum gc_color {
 #define BOOL_FALSE    0x02
 
 struct gc_kind {
-    Node type;
-    Node constructor;
+    Node   type;
+    Symbol constructor;
     unsigned long count : BITS_PER_WORD - 8 __attribute__((__packed__));
     struct {
         enum gc_color   color : 2;
@@ -152,6 +152,8 @@ struct gc_treadmill {
 extern Space    _zero_space;
 extern unsigned __alloc_cycle;
 extern unsigned __scan_cycle;
+extern Symbol   s_nil;
+
 
 extern void space_Init(const Space); // this will erase the contents of the space
 extern void space_Flip(const Space);
@@ -250,11 +252,11 @@ extern inline bool setType(const Node value, const Node type) {
     return true;
 }
 
-extern inline bool setConstructor(const Node value, const Node constructor) __attribute__((always_inline));
-extern inline bool setConstructor(const Node value, const Node constructor) {
+extern inline bool setConstructor(const Node value, const Symbol constructor) __attribute__((always_inline));
+extern inline bool setConstructor(const Node value, const Symbol constructor) {
+    if (!constructor) return false;
     Kind kind = asKind(value);
     if (!kind) return false;
-    if (kind->constant) return false;
     kind->constructor = constructor;
     return true;
 }
@@ -275,11 +277,12 @@ extern inline Node getType(const Node value) {
     return kind->type;
 }
 
-extern inline Node getConstructor(const Node value) __attribute__((always_inline));
-extern inline Node getConstructor(const Node value) {
+extern inline Symbol getConstructor(const Node value) __attribute__((always_inline));
+extern inline Symbol getConstructor(const Node value) {
     Kind kind = asKind(value);
-    if (!kind) return NIL;
-    return kind->constructor;
+    if (!kind) return s_nil;
+    if (kind->constructor) return kind->constructor;
+    return s_nil;
 }
 
 extern inline bool isAtomic(const Node value) __attribute__((always_inline));

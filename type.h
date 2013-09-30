@@ -191,7 +191,7 @@ extern inline bool sort_Contains(const Constant sort, const Base type) {
 extern inline bool isATypeObj(const Node node) __attribute__((always_inline));
 extern inline bool isATypeObj(const Node node) {
     if (isNil(node)) return false;
-    Node ctor = getConstructor(node);
+    const Symbol ctor = getConstructor(node);
     if (!s_sort) return false; // symbols are constructed before types
     if (isIdentical(ctor, s_sort))   return true;
     if (isIdentical(ctor, s_axiom))  return true;
@@ -208,11 +208,11 @@ extern inline bool isAType(const Node type) {
     Kind kind = asKind(type);
     if (!kind)   return false;
     if (!s_base) return false; // symbols are constructed before types
-    if (kind->constructor.symbol == s_sort)   return true;
-    if (kind->constructor.symbol == s_base)   return true;
-    if (kind->constructor.symbol == s_branch) return true;
-    if (kind->constructor.symbol == s_index)  return true;
-    if (kind->constructor.symbol == s_label)  return true;
+    if (kind->constructor == s_sort)   return true;
+    if (kind->constructor == s_base)   return true;
+    if (kind->constructor == s_branch) return true;
+    if (kind->constructor == s_index)  return true;
+    if (kind->constructor == s_label)  return true;
 
     return false;
 }
@@ -247,7 +247,7 @@ extern inline bool fromCtor(const Node value, const Node ctor) {
     if (isNil(ctor)) return false;
     Kind kind = asKind(value);
     if (!kind) return false;
-    return (kind->constructor.reference == ctor.reference);
+    return (kind->constructor == ctor.symbol);
 }
 
 extern inline const char* sort_Name(Constant sort) __attribute__((always_inline));

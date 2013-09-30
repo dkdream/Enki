@@ -450,7 +450,7 @@ static bool readList(FILE *fp, int delim, Target result)
 
 // [...] - tuple
 // {...} - block
-static bool readTuple(FILE *fp, Node ctor, int delim, Target result)
+static bool readTuple(FILE *fp, Symbol ctor, int delim, Target result)
 {
     GC_Begin(7);
 
@@ -500,7 +500,7 @@ static bool readTuple(FILE *fp, Node ctor, int delim, Target result)
  eof:
     if (!tuple_Convert(list, result.tuple))         goto failure;
     if (!setConstructor(*(result.reference), ctor)) goto failure;
-    if (!setType(*(result.reference), t_ASTree))     goto failure;
+    if (!setType(*(result.reference), t_ASTree))    goto failure;
 
  done:
     GC_End();

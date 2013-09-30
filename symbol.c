@@ -115,8 +115,8 @@ extern void init_global_symboltable() {
 
     MK_SYM(symbol); // must be first;
 
-    empty_symbol->kind.type        = (Node)t_symbol;
-    empty_symbol->kind.constructor = (Node)s_symbol;
+    empty_symbol->kind.type.constant = t_symbol;
+    empty_symbol->kind.constructor   = s_symbol;
 
     symbol_Convert(".", &s_dot);
     symbol_Convert(",", &s_comma);
@@ -178,15 +178,15 @@ extern void init_global_symboltable() {
 
 // used by init_global_typetable only
 extern void retype_global_symboltable() {
-    empty_symbol->kind.type = (Node)t_symbol;
+    empty_symbol->kind.type.constant = t_symbol;
 
     int row = _global_symboltable->size;
 
     for ( ; row-- ; ) {
         Header group = _global_symboltable->row[row].first;
         for ( ; group; group = group->after) {
-            group->kind.type        = (Node)t_symbol;
-            group->kind.constructor = (Node)s_symbol;
+            group->kind.type.constant = t_symbol;
+            group->kind.constructor   = s_symbol;
         }
     }
 }
@@ -269,10 +269,10 @@ extern bool symbol_Create(TextBuffer value, Symbol *target) {
                  result);
     }
 
-    entry->kind.type        = (Node)t_symbol;
-    entry->kind.constructor = (Node)s_symbol;
-    entry->kind.constant    = 1;
-    entry->after            = _global_symboltable->row[row].first;
+    entry->kind.type.constant = t_symbol;
+    entry->kind.constructor   = s_symbol;
+    entry->kind.constant      = 1;
+    entry->after              = _global_symboltable->row[row].first;
 
     result->size     = size;
     result->hashcode = hashcode;

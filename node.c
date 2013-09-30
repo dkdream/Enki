@@ -22,8 +22,8 @@ extern HashCode node_HashCode(Node node)
 {
     if (!node.reference) return 0;
 
-    Node type = getType(node);
-    Node ctor = getConstructor(node);
+    const Node   type = getType(node);
+    const Symbol ctor = getConstructor(node);
 
     if (isIdentical(ctor, s_symbol)) {
         return node.symbol->hashcode;
@@ -65,8 +65,8 @@ bool node_Match(Node left, Node right)
     if (0 == left.reference)  return false;
     if (0 == right.reference) return false;
 
-    Node type = getType(left);
-    Node ctor = getConstructor(left);
+    const Node   type = getType(left);
+    const Symbol ctor = getConstructor(left);
 
     if (!isIdentical(type, getType(right)))        return false;
     if (!isIdentical(ctor, getConstructor(right))) return false;
@@ -100,8 +100,8 @@ bool node_Iso(long depth, Node left, Node right)
     if (0 == left.reference)  return false;
     if (0 == right.reference) return false;
 
-    Node type = getType(left);
-    Node ctor = getConstructor(left);
+    const Node type = getType(left);
+    const Symbol ctor = getConstructor(left);
 
     const bool type_match = isIdentical(type, getType(right));
     const bool ctor_match = isIdentical(ctor, getConstructor(right));

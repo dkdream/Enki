@@ -24,7 +24,7 @@
           (dumpln "e=" e))
    (_ (x) (dumpln "x=" x)))
 
-(define value (ctor 'tuple tuple 1 2 3 4 5))
+(define value (new-tuple 1 2 3 4 5))
 
 (println)
 (dumpln value)
@@ -138,3 +138,25 @@
    (_ (_ x _ _) (dumpln "x=" x))
    (integer x (dumpln "x=" x))
    (. (println "else")))
+
+(println)
+(dumpln value)
+
+(case value
+   (tuple (a b)
+          (dumpln "a=" a)
+          (dumpln "b=" b)
+          (dumpln "c=" c))
+   (_ (a b)
+          (dumpln "a=" a)
+          (dumpln "b=" b))
+   (tuple (a b c d)
+          (dumpln "a=" a)
+          (dumpln "b=" b)
+          (dumpln "c=" c)
+          (dumpln "d=" d))
+   (_ (_ x _ _) (dumpln "x=" x))
+   (integer x (dumpln "x=" x))
+   (. (println "else")))
+
+(dumpln "output=" (case value (_ (_ b) (case b (_ (a _) a)))))
