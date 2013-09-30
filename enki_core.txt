@@ -28,14 +28,15 @@
           | (unless <core> <core> <core>*)
           | (case <core> <ctor-pattern>* <tuple-pattern>* <else-pattern>)
           | (select <action-pattern>* <else-pattern>)
-          | (depart <name> <core>)
+          | (depart <name> <core>+)
 
 <context> = (constrain <locals> <core>* <core>)
           | (fix <parameters> <core>* <core>)
-          | (let <parameters>? <core>* <core>)
+          | (let <parameters> <core>* <core>)
+          | (let _ <core>* <core>)
 
-<binding> = (bind <name>* <core>) -- bind a collecton of names to the output of expression
-          | (set <name>* <core>)  -- set a collecton of names to the boxed output of expression
+<binding> = (bind <name>+ <core>) -- bind a collecton of names to the output of expression
+          | (set <name>+ <core>)  -- set a collecton of names to the boxed output of expression
 
 <enviroment> = (define <name> <core>)
              | (effect <core>)            -- 
@@ -62,9 +63,22 @@
 
 <quote>      = '<core>
 
-<locals>     = <arguments> 
-<parameters> = <arguments> [<name>+ <core>]*
+<locals>     = [ <argument>+ ]
+
+<parameters> = [ <argument>+ ] <result> <initialize>*
+             | [ <argument>+ ] _ <initialize>*
+             | ( <assignment>+ ) <result>?
+
 <arguments>  = [ <argument>+ ]
+             | <name>
+             | ( <name>+ )
+             | ( <name>+ . <name>)
+
+<initialize> = [bind <name>+ <core>]
+             | [set <name>+ <core>]
+
+<assignment> = ( <name> <core> )
+             | name
 
 <argument> = <name> <core>
            | <name> _

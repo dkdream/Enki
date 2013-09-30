@@ -1357,6 +1357,10 @@ extern SUBR(eval_pair)
     // first eval the head
     eval(head, env, &head);
 
+    if (fromCtor(head, s_box)) {
+        pair_GetCar(head, &head);
+    }
+
     if (fromCtor(head, s_delay)) {
         Node dexpr, denv;
         tuple_GetItem(head.tuple, 1, &dexpr);
@@ -2718,13 +2722,6 @@ extern SUBR(gc_scan) {
     }
 }
 
-extern SUBR(box) {
-    Node value;
-    checkArgs(args, "box", 1, NIL);
-    fetchArgs(args, &value, 0);
-    pair_Create(value, NIL, result.pair);
-}
-
 extern SUBR(set_end) {
     Node head;
     Node tail;
@@ -3508,7 +3505,6 @@ void startEnkiLibrary() {
     MK_PRM(car);
     MK_PRM(cdr);
     MK_OPR(gc-scan,gc_scan);
-    MK_PRM(box);
     MK_OPR(set-end,set_end);
     MK_PRM(the);
     MK_PRM(not);
