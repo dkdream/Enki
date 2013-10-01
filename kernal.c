@@ -49,6 +49,7 @@ Node              true_v = NIL;
 Node             false_v = NIL;
 Node              unit_v = NIL;
 Node              void_v = NIL;
+Primitive  p_encode_args = 0;
 Primitive  p_eval_symbol = 0;
 Primitive    p_eval_pair = 0;
 Primitive p_apply_lambda = 0;
@@ -573,14 +574,23 @@ extern SUBR(type)
 
 extern void environ_Let(Node local, Node env, Target result)
 {
+    /*
+    ** local = symbol
+    **       | (symbol expr)
+    */
     Node symbol;
 
     if (isSymbol(local)) {
         symbol = local;
     } else if (isPair(local)) {
-        pair_GetCar(local.pair, &symbol);
-    } else if (isTuple(local)) {
-        tuple_GetItem(local.tuple, 0, &symbol);
+        Node expr = NIL;
+        list_GetItem(local.pair, 0, &symbol);
+        list_GetItem(local.pair, 1, &expr);
+        if (!isNil(expr)) {
+            Node nexpr = NIL;
+            encode(expr, env, &nexpr);
+            list_SetItem(local.pair, 1, nexpr);
+        }
     }
 
     pair_Create(symbol, NIL, result.pair);
@@ -589,17 +599,41 @@ extern void environ_Let(Node local, Node env, Target result)
 extern SUBR(encode_let)
 {
     /*
-    ** given args=((<binding>...) . body)
+    ** given args    = ((<binding>...) . body)
+    **       args    = (_ . body)
+    **       binding = name
+    **               | (name expr)
+    **               | (name type ... expr)
+    ** to-do
+    **       args    = ((binding...) [as name expr.r] . body)
+    **               | ([as name expr.r] . body)
+    **               | ([name.0 expr.0 ... name.n expr.n] [as name expr.r] initialize . body)
+    **               | ([name.0 expr.0 ... name.n expr.n] initialize . body)
+    **    initialize = bound...
+    **         bound = [bind name expr.b]
+    **         bound = [set  name expr.b]
+    **
     */
+
+    /* notes:
+    **   when using '(' ')'
+    **   - the expr's need to be evaluated in the current context
+    **   when using '[' ']'
+    **   - the expr.i, expr.r, expr.b's  needs to be encoded in the current context
+    */
+
     GC_Begin(4);
 
     Node bindings;
+    Node body;
     Node lenv;
 
     GC_Protect(bindings);
+    GC_Protect(body);
     GC_Protect(lenv);
 
     pair_GetCar(args.pair, &bindings);
+    pair_GetCdr(args.pair, &body);
 
     if (!isPair(bindings)) {
         encode(args, env, result);
@@ -610,17 +644,18 @@ extern SUBR(encode_let)
     list_Map(environ_Let, bindings.pair, env, &lenv);
     list_SetEnd(lenv.pair, env);
 
-    encode(args, lenv, result);
+    encode(body, lenv, &body);
+
+    pair_Create(bindings, body, result.pair);
 
     GC_End();
 }
 
-extern void eval_binding(Node local, Node env, Target result)
+extern void binding_Let(Node local, Node env, Target result)
 {
     /*
-    ** arg = name
-    **     | (name expr)
-    **     | (name type ... expr)
+    ** local = name
+    **       | (name expr)
     */
     GC_Begin(4);
 
@@ -642,24 +677,6 @@ extern void eval_binding(Node local, Node env, Target result)
     if (isPair(local)) { // name expr
         list_GetItem(local.pair, 0, &symbol);
         list_GetItem(local.pair, 1, &expr);
-        goto do_eval;
-    }
-
-    if (isTuple(local)) { // name type ... expr
-        unsigned long count = asKind(local.tuple)->count;
-        tuple_GetItem(local.tuple, 0, &symbol);
-
-        if (2 > count) {
-            value = NIL;
-            goto done;
-        }
-
-        tuple_GetItem(local.tuple, (count - 1), &expr);
-
-        if (2 < count) {
-            tuple_GetItem(local.tuple, 1, &type);
-        }
-
         goto do_eval;
     }
 
@@ -686,10 +703,29 @@ extern void eval_binding(Node local, Node env, Target result)
 extern SUBR(let)
 {
     /*
-    ** given args=((<binding>...) . body)
+    ** given args    = ((binding...) . body)
+    **       args    = (_ . body)
+    **       binding = name
+    **               | (name expr)
+    ** to-do
+    **       args    = ((binding...) [as name expr.r] . body)
+    **               | ([as name expr.r] . body)
+    **               | ([name.0 expr.0 ... name.n expr.n] [as name expr.r] initialize . body)
+    **               | ([name.0 expr.0 ... name.n expr.n] initialize . body)
+    **    initialize = bound...
+    **         bound = [bind name expr.b]
+    **         bound = [set  name expr.b]
+    */
+
+    /* notes:
+    **   when using '(' ')'
+    **   - the expr's need to be evaluated in the current context
+    **   when using '[' ']'
+    **   - the expr.i, expr.r, expr.b's need to be evaluated in the current context
     */
 
     GC_Begin(4);
+
     Node env2;
     Node bindings;
     Node body;
@@ -704,7 +740,108 @@ extern SUBR(let)
     if (!isPair(bindings)) {
         eval_begin(body, env, result);
     } else {
-        list_Map(eval_binding, bindings.pair, env, &(env2.pair));
+        list_Map(binding_Let, bindings.pair, env, &(env2.pair));
+
+        list_SetEnd(env2.pair, env);
+
+        eval_begin(body, env2, result);
+    }
+
+    GC_End();
+}
+
+extern SUBR(encode_fix)
+{
+    /*
+    ** given args    = ((<binding>...) . body)
+    **       args    = (_ . body)
+    **       binding = name
+    **               | (name expr)
+    **               | (name type ... expr)
+    ** to-do
+    **       args    = ((binding...) [as name expr.r] . body)
+    **               | ([as name expr.r] . body)
+    **               | ([name.0 expr.0 ... name.n expr.n] [as name expr.r] initialize . body)
+    **               | ([name.0 expr.0 ... name.n expr.n] initialize . body)
+    **    initialize = bound...
+    **         bound = [bind name expr.b]
+    **         bound = [set  name expr.b]
+    **
+    */
+
+    /* notes:
+    **   when using '(' ')'
+    **   - the expr's need to be evaluated in the inner context
+    **   when using '[' ']'
+    **   - the expr.i, expr.r, expr.b's  needs to be encoded in the current context
+    */
+
+    GC_Begin(4);
+
+    Node bindings;
+    Node lenv;
+
+    GC_Protect(bindings);
+    GC_Protect(lenv);
+
+    pair_GetCar(args.pair, &bindings);
+
+    if (!isPair(bindings)) {
+        encode(args, env, result);
+        GC_End();
+        return;
+    }
+
+    list_Map(environ_Let, bindings.pair, env, &lenv);
+    list_SetEnd(lenv.pair, env);
+
+    encode(args, lenv, result);
+
+    GC_End();
+}
+
+extern SUBR(fix)
+{
+    /*
+    ** given args    = ((binding...) . body)
+    **       args    = (_ . body)
+    **       binding = name
+    **               | (name expr)
+    ** to-do
+    **       args    = ((binding...) [as name expr.r] . body)
+    **               | ([as name expr.r] . body)
+    **               | ([name.0 expr.0 ... name.n expr.n] [as name expr.r] initialize . body)
+    **               | ([name.0 expr.0 ... name.n expr.n] initialize . body)
+    **    initialize = bound...
+    **         bound = [bind name expr.b]
+    **         bound = [set  name expr.b]
+    */
+
+    /* notes:
+    **   when using '(' ')'
+    **   - the expr's need to be evaluated in the inner context
+    **   when using '[' ']'
+    **   - the expr.i and expr.r needs to be evaluated in the current context
+    **   - the expr.b's needs to be evaluated in the inner context
+    */
+
+    GC_Begin(4);
+
+    Node env2;
+    Node bindings;
+    Node body;
+
+    GC_Protect(env2);
+    GC_Protect(bindings);
+    GC_Protect(body);
+
+    pair_GetCar(args.pair, &bindings);
+    pair_GetCdr(args.pair, &body);
+
+    if (!isPair(bindings)) {
+        eval_begin(body, env, result);
+    } else {
+        list_Map(binding_Let, bindings.pair, env, &(env2.pair));
 
         list_SetEnd(env2.pair, env);
 
@@ -806,7 +943,12 @@ extern void encode_Pattern(Node pattern, Node env, Target result)
 extern SUBR(encode_case)
 {
     /*
-    ** arg = (expr <pattern>...)
+    ** arg     = (expr <pattern>...)
+    ** pattern = (ctor (<binding>...) . body)
+    **         | (ctor name . body)
+    **         | (_ (<binding>...) . body)
+    **         | (_ name . body)
+    **         | (. body)
     */
     GC_Begin(4);
 
@@ -830,8 +972,15 @@ extern SUBR(encode_case)
     GC_End();
 }
 
-extern void bind_Pattern(Node names, Node object, Node env, Pair* result)
+extern void binding_Pattern(Node names, Node object, Node env, Pair* result)
 {
+    /*
+    ** pattern = (ctor (<binding>...) . body)
+    **         | (ctor name . body)
+    **         | (_ (<binding>...) . body)
+    **         | (_ name . body)
+    **         | (. body)
+    */
     GC_Begin(10);
 
     Node name;
@@ -1017,7 +1166,7 @@ extern SUBR(case)
             fflush(stderr);
         });
 
-    bind_Pattern(bindings, value, env, &(env2.pair));
+    binding_Pattern(bindings, value, env, &(env2.pair));
     eval_begin(body, env2, result);
     GC_End();
 }
@@ -1037,15 +1186,24 @@ extern void environ_Lambda(Node parameter, Node env, Target result)
 extern SUBR(encode_lambda)
 {
     /*
-    ** args = (formals . body)
-    **
-    ** (set lenv (map box formal))
-    ** (set-end lenv env)
-    **
-    ** result=(cons formals (encode body lenv))
+    ** args    = (formals . body)
+    ** formals = name
+    **         | ()
+    **         | (name ...)
+    **         | (name ... . name)
+    ** to-do
+    **         | [name.0 expr.0 ... name.n expr.n] [as name expr.r]
+    **         | [name.0 expr.0 ... name.n expr.n] [as name]
+    **         | [name.0 expr.0 ... name.n expr.n]
+    */
+
+    /* notes:
+    **    when using '[' ']'
+    **    the expr.i needs to be encoded in the current context
     */
 
     GC_Begin(4);
+
     Node formals;
     Node body;
     Node lenv;
@@ -1074,15 +1232,21 @@ extern SUBR(encode_lambda)
 extern SUBR(lambda)
 {
     /*
-    ** given
-    **   args=(formals . body)
+    ** args    = (formals . body)
+    ** formals = name
+    **         | ()
+    **         | (name ...)
+    **         | (name ... . name)
+    ** to-do
+    **         | [name.0 expr.0 ... name.n expr.n] [as name expr.r]
+    **         | [name.0 expr.0 ... name.n expr.n] [as name]
+    **         | [name.0 expr.0 ... name.n expr.n]
     */
 
-#if 0
-    fprintf(stderr, "lambda [");
-    prettyPrint(stderr, args);
-    fprintf(stderr, "]\n");
-#endif
+    /* notes:
+    **    when using '[' ']'
+    **    the expr.i needs to be evaluated in the current context to get the type (constraints)
+    */
 
     pair_Create(args, env, result.pair);
     setConstructor(*result.reference, s_lambda);
@@ -1090,6 +1254,24 @@ extern SUBR(lambda)
 
 extern SUBR(apply_lambda)
 {
+    /*
+    ** args   = (<lambda> value...)
+    ** lambda = (formals . body)
+    ** formals = name
+    **         | ()
+    **         | (name ...)
+    **         | (name ... . name)
+    ** to-do
+    **         | [name.0 type.0 ... name.n type.n] [as name type.r]
+    **         | [name.0 type.0 ... name.n type.n] [as name]
+    **         | [name.0 type.0 ... name.n type.n]
+    */
+
+    /* notes:
+    **    when using '[' ']'
+    **    the value of each expr.i is the type of the argument
+    */
+
     GC_Begin(3);
     Node cenv, tmp;
 
@@ -1114,6 +1296,9 @@ extern SUBR(apply_lambda)
     Node vars  = formals;
     Node vlist = arguments;
 
+    // formals = ()
+    //         | (name ...)
+    //
     // bind parameters to values
     // extending the closure enviroment
     while (isPair(formals)) {
@@ -1141,6 +1326,9 @@ extern SUBR(apply_lambda)
         pair_Create(tmp, cenv, &cenv.pair);
     }
 
+    // formals = name
+    //         | . name)
+    //
     // bind (rest) parameter to remaining values
     // extending the closure enviroment
     if (isSymbol(formals)) {
@@ -1564,9 +1752,10 @@ extern SUBR(fixed)
       tuple_SetItem(tuple, fxd_encode, enc);
   } else if (1 < count) {
       forceArgs(args, &name, &func, 0);
-      tuple_Create(2, &tuple);
+      tuple_Create(3, &tuple);
       tuple_SetItem(tuple, fxd_name, name);
       tuple_SetItem(tuple, fxd_eval, func);
+      tuple_SetItem(tuple, fxd_encode, p_encode_args);
   } else {
       ASSIGN(result, NIL);
       return;
@@ -3426,6 +3615,8 @@ void startEnkiLibrary() {
     MK_PRM(member);
     MK_PRM(find);
     MK_PRM(map);
+
+    p_encode_args  = MK_OPR(%encode_args, encode_args);
 
     p_eval_symbol  = MK_OPR(%eval-symbol,eval_symbol);
     p_eval_pair    = MK_OPR(%eval-pair,eval_pair);

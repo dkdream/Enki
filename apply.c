@@ -161,11 +161,11 @@ extern void encode(const Node expr, const Node env, Target result)
 
     encode(head, env, &head);
 
+    Node value = NIL;
+
     if (!isSymbol(head)) {
         goto list_begin;
     } else {
-        Node value = NIL;
-
         // check if the enviroment
         if (!alist_Get(env.pair, head, &value)) {
             alist_Get(enki_globals.pair, head, &value);
@@ -176,26 +176,27 @@ extern void encode(const Node expr, const Node env, Target result)
             goto list_begin;
         }
 
-        if (isFixed(value)) {
-            head = value;
-        } else {
-            goto list_begin;
-        }
+        if (!isFixed(value)) goto list_begin;
     }
 
     Node action = NIL;
 
-    tuple_GetItem(head.tuple, fxd_encode, &action);
+    tuple_GetItem(value.tuple, fxd_encode, &action);
 
-    if (isNil(action)) goto list_begin;
+    if (isNil(action)) {
+        fprintf(stderr, "no encode for fixed: ");
+        prettyPrint(stderr, head);
+        fprintf(stderr, "\n");
+        fatal(0);
+    }
 
     apply(action, tail, env, &(tail.pair));
-    goto list_done;
+
+    pair_Create(value, tail, result.pair);
+    goto done;
 
  list_begin:
     list_Map(encode, tail.pair, env, &(tail.pair));
-
- list_done:
     pair_Create(head, tail, result.pair);
 
  done:
@@ -249,7 +250,6 @@ extern void eval(const Node expr, const Node env, Target result)
 
     pair_Create(expr, NIL, &(args.pair));
 
-    ASSIGN(result, NIL);
     apply(evaluator, args, env, result);
 
  done:
@@ -309,7 +309,6 @@ extern void apply(Node fun, Node args, const Node env, Target result)
     fatal(0);
 
  done:
-
     VM_ON_DEBUG(9, {
             fprintf(stderr, "apply => ");
             prettyPrint(stderr, *result.reference);
