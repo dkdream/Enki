@@ -178,8 +178,8 @@ extern void clink_Final(Clink *link)                             __attribute__((
 
 typedef void (*Closure)(void *buffer, Target result);
 
-extern void clink_InitLabel(Closure thunk, Target result);
-extern void clink_GotoLabel(void *buffer, Node value);
+extern void clink_Label(Closure thunk, Target result);
+extern void clink_Goto(void *buffer, const Node value);
 
 #define GC_Begin(MAX) \
     struct { Clink link; Target array[MAX];} __LOCAL_GC; \

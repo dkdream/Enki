@@ -1077,62 +1077,43 @@ extern void clink_Final(Clink *link) {
     fatal("clink is not linked corectly");
 }
 
+typedef struct gc_label *GC_label;
+
 struct gc_label {
-    jmp_buf marker;
-    int     code;
-    Target  result;
-    Clink*  before;
-    Clink*  after;
+    jmp_buf  location;
+    GC_label next;
+    Target   result;
+    Clink*   before;
+    Clink*   after;
 };
 
-static struct gc_label* call_setjump(struct gc_label* marker) {
-    return (struct gc_label*) sigsetjmp(marker->marker, 0);
-}
+static GC_label _active_labels = 0;
 
-static void call_longjump(struct gc_label* marker) {
-    marker->code = 1;
-    siglongjmp(marker->marker, (int) marker);
-}
-
-extern void clink_InitLabel(Closure thunk, Target result) {
-    struct gc_label __LABEL_GC;
-
+extern void clink_Label(Closure thunk, Target result) {
     const Space space = _zero_space;
 
     if (!space) {
         fatal("Unable to use InitLabel: no space");
     }
 
-    if (sizeof(void*) != sizeof(int)) {
-        fatal("Unable to use InitLabel: %d != %d",
-              sizeof(void*),
-              sizeof(int));
-    }
-
     if (!thunk) {
         fatal("Unable to use InitLabel: no thunk");
     }
 
-    __LABEL_GC.code   = 0;
+    struct gc_label __LABEL_GC;
+
     __LABEL_GC.result = result;
+    __LABEL_GC.next   = _active_labels;
     __LABEL_GC.before = space->start_clinks.before;
     __LABEL_GC.after  = space->start_clinks.after;
 
-    struct gc_label *value = call_setjump(&__LABEL_GC);
-
-    if (!value) {
-        thunk(&__LABEL_GC, result);
-    } else {
-        const Space space = _zero_space;
-        if (!space) {
-            fatal("Error using LongJmp: no space");
-        }
-        space->start_clinks.before = __LABEL_GC.before;
-        space->start_clinks.after  = __LABEL_GC.after;
+    if (0 == sigsetjmp(__LABEL_GC.location, 0)) {
+        thunk(&(__LABEL_GC), result);
+        _active_labels = __LABEL_GC.next;
     }
 }
 
-extern void clink_GotoLabel(void *buffer, Node value) {
+extern void clink_Goto(void *buffer, Node value) {
     if (!buffer) {
         fatal("Unable to use SetLabel: buffer");
     }
@@ -1143,11 +1124,30 @@ extern void clink_GotoLabel(void *buffer, Node value) {
               sizeof(int));
     }
 
-    struct gc_label *result = (struct gc_label *)buffer;
+    GC_label label   = (GC_label)buffer;
+    GC_label current = _active_labels;
 
-    ASSIGN(result->result, value);
+    const Space space = _zero_space;
 
-    call_longjump(result);
+    if (!space) {
+        fatal("Error using LongJmp: no space");
+    }
+
+    for (;;) {
+        if (!current) {
+            fatal("Error using LongJmp: label not active");
+        }
+        if (current == label) break;
+        current = current->next;
+    }
+
+    _active_labels             = label->next;
+    space->start_clinks.before = label->before;
+    space->start_clinks.after  = label->after;
+
+    ASSIGN(label->result, value);
+
+    siglongjmp(label->location, 1);
 }
 
 
