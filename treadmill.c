@@ -72,6 +72,7 @@
 /* */
 #include <string.h>
 #include <stdlib.h>
+#include <setjmp.h>
 
 
 /* */
@@ -969,6 +970,12 @@ extern void clink_Init(Clink *link, Target* slots, unsigned max) {
         return;
     }
 
+    /*
+     * if
+     *    before <--> start <--> first
+     * then
+     *    before <--> link <--> start <--> first
+     */
     Clink *before = mark->before;
 
     link->before = before;
@@ -1069,6 +1076,80 @@ extern void clink_Final(Clink *link) {
  error:
     fatal("clink is not linked corectly");
 }
+
+struct gc_label {
+    jmp_buf marker;
+    int     code;
+    Target  result;
+    Clink*  before;
+    Clink*  after;
+};
+
+static struct gc_label* call_setjump(struct gc_label* marker) {
+    return (struct gc_label*) sigsetjmp(marker->marker, 0);
+}
+
+static void call_longjump(struct gc_label* marker) {
+    marker->code = 1;
+    siglongjmp(marker->marker, (int) marker);
+}
+
+extern void clink_InitLabel(Closure thunk, Target result) {
+    struct gc_label __LABEL_GC;
+
+    const Space space = _zero_space;
+
+    if (!space) {
+        fatal("Unable to use InitLabel: no space");
+    }
+
+    if (sizeof(void*) != sizeof(int)) {
+        fatal("Unable to use InitLabel: %d != %d",
+              sizeof(void*),
+              sizeof(int));
+    }
+
+    if (!thunk) {
+        fatal("Unable to use InitLabel: no thunk");
+    }
+
+    __LABEL_GC.code   = 0;
+    __LABEL_GC.result = result;
+    __LABEL_GC.before = space->start_clinks.before;
+    __LABEL_GC.after  = space->start_clinks.after;
+
+    struct gc_label *value = call_setjump(&__LABEL_GC);
+
+    if (!value) {
+        thunk(&__LABEL_GC, result);
+    } else {
+        const Space space = _zero_space;
+        if (!space) {
+            fatal("Error using LongJmp: no space");
+        }
+        space->start_clinks.before = __LABEL_GC.before;
+        space->start_clinks.after  = __LABEL_GC.after;
+    }
+}
+
+extern void clink_GotoLabel(void *buffer, Node value) {
+    if (!buffer) {
+        fatal("Unable to use SetLabel: buffer");
+    }
+
+    if (sizeof(void*) != sizeof(int)) {
+        fatal("Unable to use GotoLabel: %d != %d",
+              sizeof(void*),
+              sizeof(int));
+    }
+
+    struct gc_label *result = (struct gc_label *)buffer;
+
+    ASSIGN(result->result, value);
+
+    call_longjump(result);
+}
+
 
 /*****************
  ** end of file **

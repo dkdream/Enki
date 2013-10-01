@@ -236,6 +236,15 @@ extern void eval_begin(Node body, Node env, Target last)
     GC_End();
 }
 
+extern void call_begin(Node variables,
+                       Node body,
+                       Symbol exit,
+                       Node env,
+                       Node values,
+                       Target result)
+{
+}
+
 extern SUBR(system_check)
 {
     check_SymbolTable__(__FILE__, __LINE__);

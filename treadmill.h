@@ -176,6 +176,11 @@ extern void clink_Manage(Clink *link, Target slot, bool zero)    __attribute__((
 extern void clink_UnManage(Clink *link, Target slot)             __attribute__((nonnull));
 extern void clink_Final(Clink *link)                             __attribute__((nonnull));
 
+typedef void (*Closure)(void *buffer, Target result);
+
+extern void clink_InitLabel(Closure thunk, Target result);
+extern void clink_GotoLabel(void *buffer, Node value);
+
 #define GC_Begin(MAX) \
     struct { Clink link; Target array[MAX];} __LOCAL_GC; \
     clink_Init((Clink*)(& __LOCAL_GC), __LOCAL_GC.array, MAX)
