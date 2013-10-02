@@ -1087,30 +1087,55 @@ struct gc_label {
     Clink*   after;
 };
 
-static GC_label _active_labels = 0;
+static struct   gc_label all_labels[500];
+static volatile GC_label active_labels = 0;
+static volatile GC_label free_labels = 0;
 
-extern void clink_Label(Closure thunk, Target result) {
+extern void clink_Label(Closure function, void *context, Target result) {
     const Space space = _zero_space;
 
     if (!space) {
         fatal("Unable to use InitLabel: no space");
     }
 
-    if (!thunk) {
-        fatal("Unable to use InitLabel: no thunk");
+    if (!function) {
+        fatal("Unable to use InitLabel: no function");
     }
 
-    struct gc_label __LABEL_GC;
-
-    __LABEL_GC.result = result;
-    __LABEL_GC.next   = _active_labels;
-    __LABEL_GC.before = space->start_clinks.before;
-    __LABEL_GC.after  = space->start_clinks.after;
-
-    if (0 == sigsetjmp(__LABEL_GC.location, 0)) {
-        thunk(&(__LABEL_GC), result);
-        _active_labels = __LABEL_GC.next;
+    if (!active_labels) {
+        if (!free_labels) {
+            int counter = 500;
+            for (; 0 < counter-- ;) {
+                all_labels[counter].next = free_labels;
+                free_labels = &(all_labels[counter]);
+            }
+        }
     }
+
+    GC_label label = free_labels;
+
+    if (!label) {
+        fatal("Unable to use Label: no more labels");
+    } else {
+        free_labels = label->next;
+    }
+
+    label->result = result;
+    label->next   = active_labels;
+    label->before = space->start_clinks.before;
+    label->after  = space->start_clinks.after;
+
+    volatile GC_label volatile_label = label;
+
+    if (0 == sigsetjmp(label->location, 0)) {
+        function(label, context, result);
+    }
+
+    label = volatile_label;
+
+    active_labels = label->next;
+    label->next   = free_labels;
+    free_labels   = label;
 }
 
 extern void clink_Goto(void *buffer, Node value) {
@@ -1118,14 +1143,8 @@ extern void clink_Goto(void *buffer, Node value) {
         fatal("Unable to use SetLabel: buffer");
     }
 
-    if (sizeof(void*) != sizeof(int)) {
-        fatal("Unable to use GotoLabel: %d != %d",
-              sizeof(void*),
-              sizeof(int));
-    }
-
     GC_label label   = (GC_label)buffer;
-    GC_label current = _active_labels;
+    GC_label current = active_labels;
 
     const Space space = _zero_space;
 
@@ -1133,6 +1152,7 @@ extern void clink_Goto(void *buffer, Node value) {
         fatal("Error using LongJmp: no space");
     }
 
+#if 0
     for (;;) {
         if (!current) {
             fatal("Error using LongJmp: label not active");
@@ -1140,8 +1160,8 @@ extern void clink_Goto(void *buffer, Node value) {
         if (current == label) break;
         current = current->next;
     }
+#endif
 
-    _active_labels             = label->next;
     space->start_clinks.before = label->before;
     space->start_clinks.after  = label->after;
 

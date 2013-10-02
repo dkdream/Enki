@@ -86,7 +86,7 @@
            | <name> _
            | _      <core>
 
-<result> = [as <name> <core>? ]
+<result> = [as <name> <core>?]
 
 <action-pattern>  = <fiber-pattern> | <timer-pattern> | <conduit-pattern>
 

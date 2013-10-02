@@ -320,6 +320,44 @@ extern void apply(Node fun, Node args, const Node env, Target result)
     return;
 }
 
+extern void eval_begin(Node body, Node env, Target last)
+{
+    GC_Begin(2);
+
+    Node expr, value;
+
+    GC_Protect(expr);
+    GC_Protect(value);
+
+    while (isPair(body)) {
+        pair_GetCar(body.pair, &expr);
+        pair_GetCdr(body.pair, &body);
+        eval(expr, env, &value);
+    }
+
+    ASSIGN(last, value);
+    GC_End();
+}
+
+extern void eval_block(Symbol escape, Node body, Node env, Target last)
+{
+    GC_Begin(2);
+
+    Node expr, value;
+
+    GC_Protect(expr);
+    GC_Protect(value);
+
+    while (isPair(body)) {
+        pair_GetCar(body.pair, &expr);
+        pair_GetCdr(body.pair, &body);
+        eval(expr, env, &value);
+    }
+
+    ASSIGN(last, value);
+    GC_End();
+}
+
 /*****************
  ** end of file **
  *****************/

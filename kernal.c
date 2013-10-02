@@ -83,8 +83,6 @@ extern bool opaque_Create(Node type, const Symbol ctor, long size, Reference* ta
 
     memset(result, 0, size);
 
-    //    if (isIdentical(type, t_symbol)) return true;
-
     setType(result, type);
     setConstructor(result, ctor);
 
@@ -217,34 +215,6 @@ extern int fetchArgs(Node args, ...)
     return count;
 }
 
-extern void eval_begin(Node body, Node env, Target last)
-{
-    GC_Begin(2);
-
-    Node expr, value;
-
-    GC_Protect(expr);
-    GC_Protect(value);
-
-    while (isPair(body)) {
-        pair_GetCar(body.pair, &expr);
-        pair_GetCdr(body.pair, &body);
-        eval(expr, env, &value);
-    }
-
-    ASSIGN(last, value);
-    GC_End();
-}
-
-extern void call_begin(Node variables,
-                       Node body,
-                       Symbol exit,
-                       Node env,
-                       Node values,
-                       Target result)
-{
-}
-
 extern SUBR(system_check)
 {
     check_SymbolTable__(__FILE__, __LINE__);
@@ -269,6 +239,28 @@ extern SUBR(if)
         eval_begin(e_body, env, result);
     } else {
         eval(t_expr, env, result);
+    }
+    GC_End();
+}
+
+extern SUBR(unless)
+{ //Fixed
+    GC_Begin(2);
+
+    Node tst, val, t_expr, e_body;
+
+    GC_Protect(val);
+
+    list_GetItem(args.pair, 0, &tst);
+    list_GetItem(args.pair, 1, &t_expr);
+    list_GetTail(args.pair, 1, &e_body);
+
+    eval(tst, env, &val);
+
+    if (isNil(val)) {
+        eval(t_expr, env, result);
+    } else {
+        eval_begin(e_body, env, result);
     }
     GC_End();
 }
@@ -614,7 +606,8 @@ extern SUBR(encode_let)
     **               | (name expr)
     **               | (name type ... expr)
     ** to-do
-    **       args    = ((binding...) [as name expr.r] . body)
+    **       args    = (name . body)
+    **               | ((binding...) [as name expr.r] . body)
     **               | ([as name expr.r] . body)
     **               | ([name.0 expr.0 ... name.n expr.n] [as name expr.r] initialize . body)
     **               | ([name.0 expr.0 ... name.n expr.n] initialize . body)
@@ -631,28 +624,41 @@ extern SUBR(encode_let)
     **   - the expr.i, expr.r, expr.b's  needs to be encoded in the current context
     */
 
-    GC_Begin(4);
+    GC_Begin(7);
 
     Node bindings;
     Node body;
     Node lenv;
+    Node hold;
 
     GC_Protect(bindings);
     GC_Protect(body);
     GC_Protect(lenv);
+    GC_Protect(hold);
 
     pair_GetCar(args.pair, &bindings);
     pair_GetCdr(args.pair, &body);
 
-    if (!isPair(bindings)) {
-        encode(args, env, result);
-        GC_End();
-        return;
+    if (isPair(bindings)) {
+        list_Map(environ_Let, bindings.pair, env, &lenv);
+        list_SetEnd(lenv.pair, env);
+        goto body;
     }
 
-    list_Map(environ_Let, bindings.pair, env, &lenv);
-    list_SetEnd(lenv.pair, env);
+    if (isSymbol(bindings)) {
+        if (isIdentical(bindings, s_uscore)) {
+            lenv = env;
+            goto body;
+        }
+        pair_Create(bindings, NIL, &(hold.pair));
+        pair_Create(hold, env, &(lenv.pair));
+        goto body;
+    }
 
+    /* default */
+    lenv = env;
+
+body:
     encode(body, lenv, &body);
 
     pair_Create(bindings, body, result.pair);
@@ -746,16 +752,28 @@ extern SUBR(let)
     pair_GetCar(args.pair, &bindings);
     pair_GetCdr(args.pair, &body);
 
-    if (!isPair(bindings)) {
-        eval_begin(body, env, result);
-    } else {
+    if (isPair(bindings)) {
         list_Map(binding_Let, bindings.pair, env, &(env2.pair));
-
         list_SetEnd(env2.pair, env);
-
-        eval_begin(body, env2, result);
+        goto done;
     }
 
+    if (isSymbol(bindings)) {
+        if (isIdentical(bindings, s_uscore)) {
+            env2 = env;
+            goto done;
+        }
+        eval_block(bindings.symbol, body, env, result);
+        goto exit;
+    }
+
+    /* default */
+    env2 = env;
+
+ done:
+    eval_begin(body, env2, result);
+
+ exit:
     GC_End();
 }
 
@@ -3589,6 +3607,7 @@ void startEnkiLibrary() {
     MK_FXD(type,encode_type);
 
     MK_FXD(if,encode_args);
+    MK_FXD(unless,encode_args);
     MK_FXD(and,encode_args);
     MK_FXD(or,encode_args);
     MK_FXD(bind,encode_define);
@@ -3604,6 +3623,7 @@ void startEnkiLibrary() {
 
     MK_OPR(%type,type);
     MK_OPR(%if,if);
+    MK_OPR(%unless,unless);
     MK_OPR(%and,and);
     MK_OPR(%or,or);
     MK_OPR(%set,set);
