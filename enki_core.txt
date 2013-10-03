@@ -10,8 +10,7 @@
        | <predicate>
        | (<core> <core>*)
 
-<constructor> = (lambda <arguments> <result>? <core>* <core>)
-              | (thunk <result>? <core>* <core>)
+<constructor> = (lambda <arguments> <return>? <core>* <core>)
               | (<formula> <parameters> <core>* <core>)
               | (index <integer> <core>)
               | (label <symbol> <core>)
@@ -39,7 +38,7 @@
 
 <enviroment> = (define <name> <core>)
              | (effect <core>)            -- 
-             | (require <object> <name>?) -- ???
+             | (require <object> <name>?) -- load a library of this
 
 <filter> = (cast <core> <core> <core>?) -- arg1 is a type, arg2 is expr, [arg3 is an error handler]
 
@@ -64,14 +63,13 @@
 
 <locals>     = [ <local>+ ]
 
-<parameters> = [ <local>+ ] <result>? <initialize>*
-             | ( <assignment>+ ) <result>?
-             | <result>?
+<parameters> = <result>? [ <local>+ ] <initialize>*
+             | <result>? ( <assignment>+ )
 
 <arguments>  = [ <argument>+ ]
              | <name>
              | ( <name>+ )
-             | ( <name>+ . <name>)
+             | ( <name>+ . <name> )
 
 <local> = <name> <core>
         | <name> _
@@ -86,7 +84,10 @@
            | <name> _
            | _      <core>
 
-<result> = [as <name> <core>?]
+<result> = <name>
+         | <return>
+
+<return> = [as <name> <core>?]
 
 <action-pattern>  = <fiber-pattern> | <timer-pattern> | <conduit-pattern>
 
@@ -110,7 +111,6 @@
 -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -
 
 lambda    := construct a function/procedure value  (lambda/Pi[?:?]/?sort)
-thunk     := construct a procedure value           (lambda/Pi[:?]/?sort)
 :         := ':' type expression
 pi        := construct a dependent function type   (pi/?sort/?sort)
 sigma     := construct a dependent tuple type      (sigma/?sort/?sort)
@@ -124,7 +124,7 @@ fiber     := construct a fiber value               (fiber/Fiber/Zero)
 timer     := construct a timer value               (timer/Timer/Zero)
 conduit   := construct a conduit value             (conduit/Conduit[?]/Zero)
 delay     := construct a lazy value                (delay/Lazy[?type]/?sort)
-ctor      := construct a value                     (?ctor/?type/?sort)
+ctor      := construct a compound value            (?ctor/?type/?sort)
 type      := construct a type                      (type/?sort/?sort)
 syntax    := construct a syntax function           (macro/Pi[ASTree:ASTree]/Symbol)
 '         := construct (quote) a syntax tree value (quote/ASTree/Symbol)
@@ -157,6 +157,8 @@ alarm     := the 'alarm' timer pattern
 done      := the 'done' fiber pattern
 recieve   := the 'recieve' conduit pattern
 send      := the 'send' conduit pattern
+
+-  =  -  =  -  =  -  =  -  =  -  =  -  =  -  =  -  =  -  =  -  =  -  =  -  =  -  =  -  =  -
 
 +- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -+ 
 | = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = |
@@ -202,10 +204,10 @@ Pattern Matching on Lists: http://www.erlang.org/course/sequential_programming.h
 Happens Before: http://golang.org/ref/mem
 
 let v be a variable then
-  bind(v,y)  is defined as the event that writes to the variable v the first value y
+  bind(v,y)  is defined as the event that writes to the variable v its first value y and marks it visible
   read(x,v)  is defined as the event that reads from the variable v into the registor x
-  set(v,y)   is defined as the event that writes to the variable v from the next value y
-  fini(v)    is defined as the event that writes to the variable v the last value -never seen-
+  set(v,y)   is defined as the event that writes to the variable v its the next value y
+  fini(v)    is defined as the event that marks the variable v as hidden
 
 let e,e' be events then
   before(e,e') is defined as the parital order (e happens-before e').
@@ -234,14 +236,15 @@ a variable can only be fini-ed when all the fiber the use it exit.
 
 example:
 
-(let (a :int b :string c :fiber)
-     (bind c (fiber (print b a)))
-     (bind a 1)
-     (bind b "a =")
+(let [a int b string c fiber d symbol]
+     [bind c (fiber (print b a))]
+     [bind a 1]
+     [bind b "a ="]
+     [bind d 'one]
      (print "ok"))
 
-the fiber c will not start until after (bind b 2)
-and the context (a,b,c) will not be GC-ed until after both the let and the fiber exit.
+the fiber c will not start until after d is bound 
+and the context (a,b,c,d) will not be GC-ed until after both the let and the fiber exit.
 
 - - - - - - - - - - - - - - - - - - - - - 
 
@@ -254,7 +257,7 @@ let c be a conduit then
 the life cycle of a conduit is:
   1. init(c)
      -- before this no events are possible
-  2. for every recieve r the must be a send s such that before(s,r) == true
+  2. for every recieve r there must be a send s such that before(s,r) == true
   3. fini(c)
      -- after this only recieve are possible
 
