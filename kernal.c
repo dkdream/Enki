@@ -601,13 +601,13 @@ extern SUBR(encode_let)
 {
     /*
     ** given args    = ((<binding>...) . body)
-    **       args    = (_ . body)
+    **               | (name . body)
+    **               | (_ . body)
     **       binding = name
     **               | (name expr)
     **               | (name type ... expr)
     ** to-do
-    **       args    = (name . body)
-    **               | ((binding...) [as name expr.r] . body)
+    **       args    = ((binding...) [as name expr.r] . body)
     **               | ([as name expr.r] . body)
     **               | ([name.0 expr.0 ... name.n expr.n] [as name expr.r] initialize . body)
     **               | ([name.0 expr.0 ... name.n expr.n] initialize . body)
@@ -676,11 +676,9 @@ extern void binding_Let(Node local, Node env, Target result)
 
     Node symbol;
     Node expr;
-    Node type;
     Node value;
 
     GC_Protect(expr);
-    GC_Protect(type);
     GC_Protect(value);
 
     if (isSymbol(local)) { // name
@@ -702,13 +700,6 @@ extern void binding_Let(Node local, Node env, Target result)
         value = NIL;
     }
 
-    if (!isNil(type)) {
-        eval(type, env, &type);
-        if (!inType(value, type)) {
-            value = void_v;
-        }
-    }
-
   done:
     pair_Create(symbol, value, result.pair);
 
@@ -719,7 +710,8 @@ extern SUBR(let)
 {
     /*
     ** given args    = ((binding...) . body)
-    **       args    = (_ . body)
+    **               | (name . body)
+    **               | (_ . body)
     **       binding = name
     **               | (name expr)
     ** to-do
@@ -781,13 +773,11 @@ extern SUBR(encode_fix)
 {
     /*
     ** given args    = ((<binding>...) . body)
-    **       args    = (_ . body)
     **       binding = name
     **               | (name expr)
     **               | (name type ... expr)
     ** to-do
     **       args    = ((binding...) [as name expr.r] . body)
-    **               | ([as name expr.r] . body)
     **               | ([name.0 expr.0 ... name.n expr.n] [as name expr.r] initialize . body)
     **               | ([name.0 expr.0 ... name.n expr.n] initialize . body)
     **    initialize = bound...
@@ -831,12 +821,10 @@ extern SUBR(fix)
 {
     /*
     ** given args    = ((binding...) . body)
-    **       args    = (_ . body)
     **       binding = name
     **               | (name expr)
     ** to-do
     **       args    = ((binding...) [as name expr.r] . body)
-    **               | ([as name expr.r] . body)
     **               | ([name.0 expr.0 ... name.n expr.n] [as name expr.r] initialize . body)
     **               | ([name.0 expr.0 ... name.n expr.n] initialize . body)
     **    initialize = bound...
@@ -1396,6 +1384,16 @@ extern SUBR(delay)
     setConstructor(tuple, s_delay);
 
     ASSIGN(result, tuple);
+}
+
+extern SUBR(depart)
+{
+    Node label = NIL;
+    Node value = NIL;
+
+    forceArgs(args, &label, &value, 0);
+
+    eval_escape(label, value);
 }
 
 extern SUBR(gensym)
@@ -2618,7 +2616,7 @@ extern SUBR(close_in) {
 
     ((OSFile)(file.reference))->file = 0;
 
-    setType(file, s_opaque);
+    setType(file, t_closed);
 }
 
 extern SUBR(close_out) {
@@ -2638,7 +2636,7 @@ extern SUBR(close_out) {
 
     ((OSFile)(file.reference))->file = 0;
 
-    setType(file, s_opaque);
+    setType(file, t_closed);
 }
 
 extern SUBR(fprint) {
@@ -3085,7 +3083,7 @@ extern SUBR(close_buffer) {
 
     buffer_free(buff);
 
-    setType(buffer, s_opaque);
+    setType(buffer, t_closed);
 }
 
 extern SUBR(forced_q) {
@@ -3640,6 +3638,7 @@ void startEnkiLibrary() {
     MK_OPR(%encode-lambda,encode_lambda);
     MK_OPR(%encode-case,encode_case);
 
+    MK_PRM(depart);
     MK_PRM(gensym);
     MK_PRM(member);
     MK_PRM(find);

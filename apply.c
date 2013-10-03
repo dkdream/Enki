@@ -22,6 +22,8 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
+extern bool opaque_Create(Node type, const Symbol ctor, long size, Reference* target);
+
 static Pair traceStack = 0;
 
 extern void dump_enki_stack() {
@@ -339,22 +341,75 @@ extern void eval_begin(Node body, Node env, Target last)
     GC_End();
 }
 
+struct raw_frame {
+    Symbol escape;
+    Node body;
+    Node env;
+};
+
+struct raw_label {
+    void *label;
+};
+
+static void eval_closure(void *label, struct raw_frame *context, Target last)
+{
+    GC_Begin(3);
+
+    Reference escape;
+    Pair entry;
+    Pair env2;
+
+    GC_Protect(escape);
+    GC_Protect(entry);
+    GC_Protect(env2);
+
+    if (!opaque_Create(t_continuation, s_escape, sizeof(struct raw_label), &escape)) {
+        fatal("failed to allocate opaque object");
+    }
+
+    ((struct raw_label*)(escape))->label = label;
+
+    pair_Create(context->escape, escape, &entry);
+    pair_Create(entry, context->env, &env2);
+
+    eval_begin(context->body, env2, last);
+
+    setType(escape, t_closed);
+
+    GC_End();
+}
+
+extern void eval_escape(Node node, Node result)
+{
+    Reference escape = node.reference;
+
+    if (!inType(node, t_continuation)) {
+        fatal("eval_escape: not a continuation");
+    }
+
+    if (!fromCtor(node, s_escape)) {
+        fatal("eval_escape: not a escape");
+    }
+
+    setType(escape, t_closed);
+
+    void *label = ((struct raw_label*)(escape))->label;
+
+    clink_Goto(label, result);
+}
+
 extern void eval_block(Symbol escape, Node body, Node env, Target last)
 {
     GC_Begin(2);
 
-    Node expr, value;
+    struct raw_frame frame;
 
-    GC_Protect(expr);
-    GC_Protect(value);
+    frame.escape = escape;
+    frame.body   = body;
+    frame.env    = env;
 
-    while (isPair(body)) {
-        pair_GetCar(body.pair, &expr);
-        pair_GetCdr(body.pair, &body);
-        eval(expr, env, &value);
-    }
+    clink_Label((Operator)eval_closure, &frame, last);
 
-    ASSIGN(last, value);
     GC_End();
 }
 

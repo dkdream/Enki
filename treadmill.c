@@ -964,7 +964,7 @@ extern void clink_Init(Clink *link, Target* slots, unsigned max) {
     /* CLINK_LOCK */
     Clink *mark = &space->start_clinks;
 
-    if (mark == link) {
+    if (mark == link) { // clink_Init(&space->start_clinks,...)
         link->before = mark;
         link->after  = mark;
         return;
@@ -1056,6 +1056,13 @@ extern void clink_Final(Clink *link) {
     link->index = 0;
 
     /* CLINK_LOCK */
+
+    /*
+     * if
+     *    before <--> link <--> after
+     * then
+     *    before <--> after
+     */
 
     Clink *before = link->before;
     Clink *after  = link->after;
@@ -1162,8 +1169,16 @@ extern void clink_Goto(void *buffer, Node value) {
     }
 #endif
 
-    space->start_clinks.before = label->before;
-    space->start_clinks.after  = label->after;
+    Clink *start  = &space->start_clinks;
+    Clink *before = label->before;
+    Clink *after  = label->after;
+
+    start->before = before;
+    start->after  = after;
+
+    before->after = start;
+    after->before = start;
+
 
     ASSIGN(label->result, value);
 

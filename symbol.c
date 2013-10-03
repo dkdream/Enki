@@ -38,6 +38,7 @@ Symbol s_branch = 0;
 Symbol s_clink = 0;
 Symbol s_current = 0;
 Symbol s_delay = 0;
+Symbol s_escape = 0;
 Symbol s_expression = 0;
 Symbol s_fixed = 0;
 Symbol s_forced = 0;
@@ -140,6 +141,7 @@ extern void init_global_symboltable() {
     MK_SYM(clink);
     MK_SYM(current);
     MK_SYM(delay);
+    MK_SYM(escape);
     MK_SYM(fixed);
     MK_SYM(forced);
     MK_SYM(form);

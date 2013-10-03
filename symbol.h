@@ -42,6 +42,7 @@ extern Symbol s_branch;
 extern Symbol s_clink;
 extern Symbol s_current;
 extern Symbol s_delay;
+extern Symbol s_escape; // escape continuation
 extern Symbol s_fixed;
 extern Symbol s_forced;
 extern Symbol s_form;

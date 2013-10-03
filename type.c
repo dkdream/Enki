@@ -55,6 +55,8 @@ Constant unit_s = 0;
 
 Constant t_ASTree = 0;
 
+Constant t_nil = 0;
+
 Constant t_integer = 0;
 Constant t_pair = 0;
 Constant t_symbol = 0;
@@ -62,8 +64,9 @@ Constant t_text = 0;
 Constant t_tuple = 0;
 
 Constant t_buffer = 0;
+Constant t_closed = 0;
+Constant t_continuation = 0;
 Constant t_infile = 0;
-Constant t_nil = 0;
 Constant t_outfile = 0;
 
 static void make_sort(const char* value, Constant* target) {
@@ -83,6 +86,7 @@ static void make_basetype(const char* value, Constant sort, Constant* target) {
 }
 
 #define MK_BTYPE(x) make_basetype(#x, zero_s, &t_ ##x)
+#define MK_OTYPE(x) make_basetype(#x, opaque_s, &t_ ##x)
 
 extern void init_global_typetable() {
     if (_global_typetable) return;
@@ -111,16 +115,19 @@ extern void init_global_typetable() {
 
     MK_BTYPE(ASTree);
 
+    MK_BTYPE(nil);
+
     MK_BTYPE(integer);
     MK_BTYPE(pair);
     MK_BTYPE(symbol);
     MK_BTYPE(text);
     MK_BTYPE(tuple);
 
-    MK_BTYPE(buffer);
-    MK_BTYPE(infile);
-    MK_BTYPE(nil);
-    MK_BTYPE(outfile);
+    MK_OTYPE(buffer);
+    MK_OTYPE(infile);
+    MK_OTYPE(outfile);
+    MK_OTYPE(continuation);
+    MK_OTYPE(closed);
 
     retype_global_symboltable();
 }

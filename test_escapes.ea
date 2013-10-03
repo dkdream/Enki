@@ -1,0 +1,24 @@
+
+
+(println "ok")
+
+(let _
+   (println "exited with " 
+            (let name
+               (println "one")
+               (depart name "done")
+               (println "never seen"))))
+
+(println "ok")
+
+(let name
+   ((lambda (ext a b c)
+       (println a)
+       (println b)
+       (println c)
+       (depart name "done")
+       (println "never seen"))
+    name 1 2 3))
+    
+
+(println "after done")
