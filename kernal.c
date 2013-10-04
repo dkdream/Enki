@@ -49,6 +49,9 @@ Node              true_v = NIL;
 Node             false_v = NIL;
 Node              unit_v = NIL;
 Node              void_v = NIL;
+Node          fixed_bind = NIL;
+Node           fixed_set = NIL;
+Node         fixed_begin = NIL;
 Primitive  p_encode_args = 0;
 Primitive  p_eval_symbol = 0;
 Primitive    p_eval_pair = 0;
@@ -57,7 +60,9 @@ Primitive  p_apply_delay = 0;
 Primitive p_apply_forced = 0;
 Primitive   p_apply_form = 0;
 
+
 #define SUBR(NAME) void opr_##NAME(Node args, Node env, Target result)
+#define APPLY(NAME,ARGS,ENV,RESULT) opr_##NAME(ARGS,ENV,RESULT)
 
 extern void defineValue(Node symbol, const Node value) {
     GC_Begin(2);
@@ -605,9 +610,8 @@ extern SUBR(encode_let)
     **               | (_ . body)
     **       binding = name
     **               | (name expr)
-    **               | (name type ... expr)
     ** to-do
-    **       args    = ((binding...) [as name expr.r] . body)
+    **       args    = (name (binding...) . body)
     **               | ([as name expr.r] . body)
     **               | ([name.0 expr.0 ... name.n expr.n] [as name expr.r] initialize . body)
     **               | ([name.0 expr.0 ... name.n expr.n] initialize . body)
@@ -769,15 +773,70 @@ extern SUBR(let)
     GC_End();
 }
 
+extern void variable_Fix(Node local, Node env, Target result)
+{
+    /*
+    ** local = symbol
+    **       | (symbol expr)
+    */
+    Node symbol;
+
+    if (isSymbol(local)) {
+        ASSIGN(result, local);
+    } else if (isPair(local)) {
+        list_GetItem(local.pair, 0, result);
+    }
+}
+
+extern void frame_Fix(Node local, Node env, Target result)
+{
+    /*
+    ** local = symbol
+    **       | (symbol expr)
+    */
+    Node symbol;
+
+    if (isSymbol(local)) {
+        symbol = local;
+    } else if (isPair(local)) {
+        Node expr = NIL;
+        list_GetItem(local.pair, 0, &symbol);
+    }
+
+    pair_Create(symbol, NIL, result.pair);
+}
+
+extern void initialize_Fix(Node local, Node env, Target result)
+{
+    /*
+    ** local = symbol
+    **       | (symbol expr)
+    */
+    GC_Begin(2);
+
+    Pair temp;
+
+    GC_Protect(temp);
+
+    if (isSymbol(local)) {
+        pair_Create(local, NIL, &temp);
+    } else if (isPair(local)) {
+        APPLY(encode_define, local, env, &temp);
+    }
+
+    pair_Create(fixed_bind, temp, result.pair);
+
+    GC_End();
+}
+
 extern SUBR(encode_fix)
 {
     /*
     ** given args    = ((<binding>...) . body)
     **       binding = name
     **               | (name expr)
-    **               | (name type ... expr)
     ** to-do
-    **       args    = ((binding...) [as name expr.r] . body)
+    **       args    = (name (<binding>...) . body)
     **               | ([name.0 expr.0 ... name.n expr.n] [as name expr.r] initialize . body)
     **               | ([name.0 expr.0 ... name.n expr.n] initialize . body)
     **    initialize = bound...
@@ -793,26 +852,41 @@ extern SUBR(encode_fix)
     **   - the expr.i, expr.r, expr.b's  needs to be encoded in the current context
     */
 
-    GC_Begin(4);
+    GC_Begin(6);
 
     Node bindings;
+    Node variables;
+    Node initializers;
+    Node body;
     Node lenv;
 
     GC_Protect(bindings);
+    GC_Protect(variables);
+    GC_Protect(initializers);
+    GC_Protect(body);
     GC_Protect(lenv);
 
     pair_GetCar(args.pair, &bindings);
 
-    if (!isPair(bindings)) {
+    if (isPair(bindings)) {
+        pair_GetCdr(args.pair, &body);
+    } else {
         encode(args, env, result);
         GC_End();
         return;
     }
 
-    list_Map(environ_Let, bindings.pair, env, &lenv);
+    list_Map(variable_Fix, bindings.pair, env, &variables);
+
+    list_Map(frame_Fix, bindings.pair, env, &lenv);
     list_SetEnd(lenv.pair, env);
 
-    encode(args, lenv, result);
+    list_Map(initialize_Fix, bindings.pair, lenv, &initializers);
+
+    encode(body, lenv, &body);
+
+    list_SetEnd(initializers.pair, body);
+    pair_Create(variables, initializers, result.pair);
 
     GC_End();
 }
@@ -822,9 +896,9 @@ extern SUBR(fix)
     /*
     ** given args    = ((binding...) . body)
     **       binding = name
-    **               | (name expr)
+    **               | (name expr) -- removed by encode_fix
     ** to-do
-    **       args    = ((binding...) [as name expr.r] . body)
+    **       args    = (name (<binding>...) . body)
     **               | ([name.0 expr.0 ... name.n expr.n] [as name expr.r] initialize . body)
     **               | ([name.0 expr.0 ... name.n expr.n] initialize . body)
     **    initialize = bound...
@@ -2728,9 +2802,6 @@ extern SUBR(eof_in) {
 }
 
 extern SUBR(read_sexpr) {
-    static TextBuffer buffer = BUFFER_INITIALISER;
-    buffer_reset(&buffer);
-
     Node file;
 
     checkArgs(args, "read-sexpr", 1, t_infile);
@@ -3608,14 +3679,16 @@ void startEnkiLibrary() {
     MK_FXD(unless,encode_args);
     MK_FXD(and,encode_args);
     MK_FXD(or,encode_args);
-    MK_FXD(bind,encode_define);
-    MK_FXD(set,encode_define);
     MK_FXD(delay,encode_args);
 
+    fixed_bind  = MK_FXD(bind,encode_define);
+    fixed_set   = MK_FXD(set,encode_define);
+    fixed_begin = MK_FXD(begin,encode_args);
+
     MK_FXD(while,encode_args);
-    MK_FXD(begin,encode_args);
 
     MK_FXD(let,encode_let);
+    MK_FXD(fix,encode_fix);
     MK_FXD(lambda,encode_lambda);
     MK_FXD(case,encode_case);
 
@@ -3624,10 +3697,11 @@ void startEnkiLibrary() {
     MK_OPR(%unless,unless);
     MK_OPR(%and,and);
     MK_OPR(%or,or);
-    MK_OPR(%set,set);
 
-    MK_OPR(%while,while);
+    MK_OPR(%bind,bind);
+    MK_OPR(%set,set);
     MK_OPR(%begin,begin);
+    MK_OPR(%while,while);
 
     MK_OPR(%let,let);
     MK_OPR(%lambda,lambda);
