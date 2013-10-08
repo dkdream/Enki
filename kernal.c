@@ -1758,7 +1758,6 @@ extern SUBR(eval_tuple)
 
   no_op:
     tuple_Map(eval, args.tuple, env, result);
-    //    ASSIGN(result, args);
 
   done:
     popTrace();
