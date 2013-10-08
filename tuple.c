@@ -115,3 +115,50 @@ extern bool tuple_Convert(Pair list, Tuple* target) {
 
     return true;
 }
+
+extern bool tuple_Map(Operator func, Tuple tuple, const Node env, Target target) {
+    if (!tuple) {
+        ASSIGN(target, NIL);
+        return true;
+    }
+
+    if (!func) {
+        fatal("\nerror: list_Map applied to a null function");
+        return false;
+    }
+
+    if (!isTuple(tuple)) {
+        func(tuple, env, target);
+        return true;
+    }
+
+    Kind kind = asKind(tuple);
+
+    if (!kind)      return false;
+    if (kind->atom) return false;
+
+    const unsigned count = kind->count;
+
+    GC_Begin(7);
+
+    Tuple result;
+    Node  value;
+
+    GC_Protect(result);
+    GC_Protect(value);
+
+    if (!tuple_Create(count, &result)) return false;
+
+    unsigned inx = 0;
+
+    for (; inx < count ; ++inx) {
+        Node item = tuple->item[inx];
+
+        func(item, env, &value);
+
+        result->item[inx] = value;
+    }
+
+    GC_End();
+    return true;
+}

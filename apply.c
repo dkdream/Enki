@@ -213,13 +213,6 @@ extern void encode(const Node expr, const Node env, Target result)
 
 extern void eval(const Node expr, const Node env, Target result)
 {
-    GC_Begin(3);
-
-    Primitive evaluator; Node args;
-
-    GC_Protect(evaluator);
-    GC_Protect(args);
-
     pushTrace(expr);
 
     VM_ON_DEBUG(2, {
@@ -229,15 +222,18 @@ extern void eval(const Node expr, const Node env, Target result)
         });
 
     if (isQuote(expr)) {
-        evaluator = p_eval_pair;
+        apply(p_eval_pair, expr, env, result);
+        goto done;
     }
 
     if (isPair(expr)) {
-        evaluator = p_eval_pair;
+        apply(p_eval_pair, expr, env, result);
+        goto done;
     }
 
     if (isSymbol(expr)) {
-        evaluator = p_eval_symbol;
+        apply(p_eval_symbol, expr, env, result);
+        goto done;
     }
 
     if (isForced(expr)) {
@@ -245,17 +241,16 @@ extern void eval(const Node expr, const Node env, Target result)
         goto done;
     }
 
-    if (!evaluator) {
-        ASSIGN(result, expr);
+#if 1
+    if (isTuple(expr)) {
+        apply(p_eval_tuple, expr, env, result);
         goto done;
     }
+#endif
 
-    pair_Create(expr, NIL, &(args.pair));
-
-    apply(evaluator, args, env, result);
+    ASSIGN(result, expr);
 
  done:
-
     VM_ON_DEBUG(9, {
             fprintf(stderr, "eval => ");
             prettyPrint(stderr, *result.reference);
@@ -263,8 +258,6 @@ extern void eval(const Node expr, const Node env, Target result)
         });
 
     popTrace();
-
-    GC_End();
 }
 
 extern void apply(Node fun, Node args, const Node env, Target result)
@@ -308,6 +301,8 @@ extern void apply(Node fun, Node args, const Node env, Target result)
  error:
     fprintf(stderr, "\nerror: cannot apply: ");
     dump(stderr, fun);
+    fprintf(stderr,"\n  to: ");
+    dump(stderr, args);
     fatal(0);
 
  done:

@@ -23,6 +23,7 @@ struct primitive {
 
 extern Primitive p_eval_symbol;
 extern Primitive p_eval_pair;
+extern Primitive p_eval_tuple;
 extern Primitive p_apply_lambda;
 extern Primitive p_apply_form;
 

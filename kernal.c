@@ -55,6 +55,7 @@ Node         fixed_begin = NIL;
 Primitive  p_encode_args = 0;
 Primitive  p_eval_symbol = 0;
 Primitive    p_eval_pair = 0;
+Primitive   p_eval_tuple = 0;
 Primitive p_apply_lambda = 0;
 Primitive  p_apply_delay = 0;
 Primitive p_apply_forced = 0;
@@ -1618,12 +1619,18 @@ extern SUBR(map) {
 extern SUBR(eval_symbol)
 {
     GC_Begin(2);
-    Node symbol, tmp;
-    Pair entry;
+
+    Symbol symbol;
+    Node   tmp;
+    Pair   entry;
 
     GC_Protect(tmp);
 
+#ifdef OLD
     pair_GetCar(args.pair, &symbol);
+#else
+    symbol = args.symbol;
+#endif
 
     // lookup symbol in the current enviroment
     if (!alist_Entry(env.pair, symbol, &entry)) {
@@ -1647,7 +1654,7 @@ extern SUBR(eval_symbol)
     if (!isSymbol(symbol)) {
         fatal("undefined variable: <non-symbol>");
     } else {
-        fatal("undefined variable: %s", symbol_Text(symbol.symbol));
+        fatal("undefined variable: %s", symbol_Text(symbol));
     }
 }
 
@@ -1661,10 +1668,19 @@ extern SUBR(eval_pair)
     GC_Protect(tail);
     GC_Protect(tmp);
 
-    // (subr_eval_pair obj)
+#ifdef OLD
+    // (eval_pair pair)
     pair_GetCar(args.pair, &obj);
     pair_GetCar(obj.pair, &head);
     pair_GetCdr(obj.pair, &tail);
+
+    pushTrace(obj);
+#else
+    pair_GetCar(args.pair, &head);
+    pair_GetCdr(args.pair, &tail);
+
+    pushTrace(args);
+#endif
 
     pushTrace(obj);
 
@@ -1700,6 +1716,50 @@ extern SUBR(eval_pair)
     apply(head, tail, env, result);
 
  done:
+    popTrace();
+
+    GC_End();
+}
+
+extern SUBR(eval_tuple)
+{
+    GC_Begin(5);
+
+    Node head;
+    Node func;
+    Pair entry;
+
+    GC_Protect(head);
+    GC_Protect(func);
+    GC_Protect(entry);
+
+    tuple_GetItem(args.tuple, 0, &head);
+
+    if (!isSymbol(head)) goto no_op;
+
+    if (!alist_Entry(env.pair, head.symbol, &entry)) {
+        if (!alist_Entry(enki_globals.pair,  head.symbol, &entry)) goto no_op;
+    }
+
+    pair_GetCdr(entry, &head);
+
+    if (fromCtor(head, s_box)) {
+        pair_GetCar(head.pair, &head);
+    }
+
+    if (!fromCtor(head, s_fixed)) goto no_op;
+
+    // apply Fixed to un-evaluated arguments
+
+    tuple_GetItem(head.tuple, fxd_eval, &func);
+
+    apply(func, args, env, result);
+    goto done;
+
+  no_op:
+    ASSIGN(result, args);
+
+  done:
     popTrace();
 
     GC_End();
@@ -3722,6 +3782,7 @@ void startEnkiLibrary() {
 
     p_eval_symbol  = MK_OPR(%eval-symbol,eval_symbol);
     p_eval_pair    = MK_OPR(%eval-pair,eval_pair);
+    p_eval_tuple   = MK_OPR(%eval-tuple,eval_tuple);
 
     p_apply_lambda = MK_OPR(%apply-lambda,apply_lambda);
     p_apply_form   = MK_OPR(%apply-form,apply_form);
