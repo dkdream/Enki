@@ -1757,7 +1757,8 @@ extern SUBR(eval_tuple)
     goto done;
 
   no_op:
-    ASSIGN(result, args);
+    tuple_Map(eval, args.tuple, env, result);
+    //    ASSIGN(result, args);
 
   done:
     popTrace();

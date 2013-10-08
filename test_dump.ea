@@ -2,6 +2,8 @@
 
 dump
 
+(define d 4)
+
 (dumpln (~ 1))
 (dumpln "1")
 (dumpln '1)
@@ -11,7 +13,17 @@ dump
 (dumpln nil)
 (dumpln (type-of [1 2 3 4]))
 
-(define ttest [1 2 3 4])
+(define ttest [1 2 3 d])
+
+(dumpln "ttest " ttest)
+(dumpln "ttest.type " (type-of ttest))
+(dumpln "ttest.ctor " (ctor-of ttest))
+
+(define btest { 1 2 3 4 d })
+
+(dumpln "btest " btest)
+(dumpln "btest.type " (type-of btest))
+(dumpln "btest.ctor " (ctor-of btest))
 
 (dumpln 'x0 :integer (type-of 1))
 (assert (iso 10 :integer (type-of 1)))

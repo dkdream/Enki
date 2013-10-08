@@ -159,6 +159,8 @@ extern bool tuple_Map(Operator func, Tuple tuple, const Node env, Target target)
         result->item[inx] = value;
     }
 
+    ASSIGN(target, result);
+
     GC_End();
     return true;
 }
