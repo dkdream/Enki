@@ -27,7 +27,8 @@
           | (unless <core> <core> <core>*)
           | (case <core> <ctor-pattern>* <tuple-pattern>* <else-pattern>)
           | (select <action-pattern>* <else-pattern>)
-          | (depart <name> <core>+)
+          | (marker <name> <core>+) -- create a new context with <name> defined as a one-shot-continuation
+          | (depart <core> <core>+) -- if arg1 is a  one-shot-continuation call it with arg2..argn
 
 <context> = (constrain <locals> <core>* <core>)
           | (fix <parameters> <core>* <core>)
@@ -63,8 +64,8 @@
 
 <locals>     = [ <local>+ ]
 
-<parameters> = <result>? [ <local>+ ] <initialize>*
-             | <result>? ( <assignment>+ )
+<parameters> = [ <local>+ ] <initialize>*
+             | ( <assignment>+ )
 
 <arguments>  = [ <argument>+ ]
              | <name>
