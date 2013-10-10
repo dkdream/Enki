@@ -612,8 +612,7 @@ extern SUBR(encode_let)
     **       binding = name
     **               | (name expr)
     ** to-do
-    **       args    = (name (binding...) . body)
-    **               | ([as name expr.r] . body)
+    **       args    = ([as name expr.r] . body)
     **               | ([name.0 expr.0 ... name.n expr.n] [as name expr.r] initialize . body)
     **               | ([name.0 expr.0 ... name.n expr.n] initialize . body)
     **    initialize = bound...

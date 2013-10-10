@@ -241,12 +241,10 @@ extern void eval(const Node expr, const Node env, Target result)
         goto done;
     }
 
-#if 1
     if (isTuple(expr)) {
         apply(p_eval_tuple, expr, env, result);
         goto done;
     }
-#endif
 
     ASSIGN(result, expr);
 
