@@ -448,6 +448,10 @@ static bool readList(FILE *fp, int delim, Target result)
     return false;
 }
 
+static bool matchItem(Node value, Node env) {
+    return isIdentical(value, env);
+}
+
 // [...] - tuple
 // {...} - block
 static bool readTuple(FILE *fp, Symbol ctor, int delim, Target result)
@@ -478,7 +482,7 @@ static bool readTuple(FILE *fp, Symbol ctor, int delim, Target result)
         goto failure;
     }
 
-    for (;list_SplitLast(list, s_dot, &tail);) {
+    for (;list_SplitLast(matchItem, list, s_dot, &tail);) {
         Pair next = tail;
 
         if (!isPair(next->cdr)) {

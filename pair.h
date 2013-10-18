@@ -14,6 +14,9 @@ struct pair {
     Node cdr;
 };
 
+typedef bool (*Folder)(Node left, Node right, Node env, Target result);
+typedef bool (*Predicate)(Node value, Node env);
+
 extern bool pair_Create(const Node car, const Node cdr, Pair* target);
 extern bool pair_SetCar(Pair pair, const Node car);
 extern bool pair_SetCdr(Pair pair, const Node cdr);
@@ -38,14 +41,8 @@ extern bool list_GetTail(Pair pair, unsigned index, Target value);
 extern bool list_SetEnd(Pair pair, const Node value);
 extern bool list_GetEnd(Pair pair, Target value);
 
-// split
-// when car(cdr(pair)) == v
-//    target = cdr(pair)
-//    setcdr(pair,null)
-//    exit t
-// exit f
-extern bool list_SplitFirst(Pair pair, const Node value, Target target);
-extern bool list_SplitLast(Pair pair, const Node value, Target target);
+//extern bool list_SplitFirst(Pair pair, const Node value, Target target);
+//extern bool list_SplitLast(Pair pair, const Node value, Target target);
 
 // find the entry=(label,value) for label
 extern bool alist_Entry(Pair pair, const Node label, Pair* entry);
@@ -58,6 +55,18 @@ extern bool alist_Add(Pair pair, const Node label, const Node value, Pair* targe
 
 //
 extern bool list_Map(Operator func, Pair pair, const Node env, Target target);
+extern bool list_FoldLeft(Folder func, Pair pair, const Node init, const Node env, Target target);
+extern bool list_Reverse(Pair pair, Pair* target);
+extern bool list_Find(Predicate func, Pair pair, const Node env, Target target);
+
+// split
+// when predicate(car(cdr(pair)))
+//    target = cdr(pair)
+//    setcdr(pair,null)
+//    exit t
+// exit f
+extern bool list_SplitFirst(Predicate func, Pair pair, const Node env, Pair* target);
+extern bool list_SplitLast(Predicate func, Pair pair, const Node env, Pair* target);
 
 /******************
   inline functions

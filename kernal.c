@@ -215,8 +215,6 @@ extern int fetchArgs(Node args, ...)
     return count;
 }
 
-
-
 extern SUBR(system_check)
 {
     check_SymbolTable__(__FILE__, __LINE__);
@@ -575,7 +573,7 @@ extern SUBR(type)
     return;
 }
 
-extern void environ_Let(Node local, Node env, Target result)
+static void environ_Let(Node local, Node env, Target result)
 {
     /*
     ** local = symbol
@@ -587,13 +585,14 @@ extern void environ_Let(Node local, Node env, Target result)
         symbol = local;
     } else if (isPair(local)) {
         Node expr = NIL;
-        list_GetItem(local.pair, 0, &symbol);
-        list_GetItem(local.pair, 1, &expr);
-        if (!isNil(expr)) {
-            Node nexpr = NIL;
-            encode(expr, env, &nexpr);
-            list_SetItem(local.pair, 1, nexpr);
-        }
+        Node nexpr = NIL;
+
+        pair_GetCar(local.pair, &symbol);
+        pair_GetCdr(local.pair, &expr);
+
+        encode(expr, env, &nexpr);
+
+        pair_SetCdr(local.pair, nexpr);
     }
 
     pair_Create(symbol, NIL, result.pair);
@@ -665,8 +664,7 @@ extern SUBR(encode_let)
     }
 
     if (isSymbol(marker)) {
-        pair_Create(marker, NIL, &(hold.pair));
-        pair_Create(hold, lenv, &(lenv.pair));
+        alist_Add(lenv.pair, marker, NIL, &(lenv.pair));
     }
 
 body:
@@ -682,7 +680,7 @@ body:
     GC_End();
 }
 
-extern void binding_Let(Node local, Node env, Target result)
+static void binding_Let(Node local, Node env, Target result)
 {
     /*
     ** local = name
@@ -879,6 +877,46 @@ extern SUBR(encode_fix)
     GC_End();
 }
 
+static void binding_Fix(Node local, Node env, Target result)
+{
+    /*
+    ** local = name
+    **       | (name expr)
+    */
+    GC_Begin(4);
+
+    Node symbol;
+    Node expr;
+    Node value;
+
+    GC_Protect(expr);
+    GC_Protect(value);
+
+    if (isSymbol(local)) { // name
+        symbol = local;
+        value  = void_v;
+        goto done;
+    }
+
+    if (isPair(local)) { // name expr
+        list_GetItem(local.pair, 0, &symbol);
+        list_GetItem(local.pair, 1, &expr);
+        goto do_eval;
+    }
+
+  do_eval:
+    if (!isNil(expr)) {
+        eval(expr, env, &value);
+    } else {
+        value = NIL;
+    }
+
+  done:
+    pair_Create(symbol, value, result.pair);
+
+    GC_End();
+}
+
 extern SUBR(fix)
 {
     /*
@@ -918,7 +956,7 @@ extern SUBR(fix)
     if (!isPair(bindings)) {
         eval_begin(body, env, result);
     } else {
-        list_Map(binding_Let, bindings.pair, env, &(env2.pair));
+        list_Map(binding_Fix, bindings.pair, env, &(env2.pair));
 
         list_SetEnd(env2.pair, env);
 
@@ -926,6 +964,30 @@ extern SUBR(fix)
     }
 
     GC_End();
+}
+
+static void environ_Pattern(Node local, Node env, Target result)
+{
+    /*
+    ** local = symbol
+    **       | (symbol expr)
+    */
+    Node symbol;
+
+    if (isSymbol(local)) {
+        symbol = local;
+    } else if (isPair(local)) {
+        Node expr = NIL;
+        list_GetItem(local.pair, 0, &symbol);
+        list_GetItem(local.pair, 1, &expr);
+        if (!isNil(expr)) {
+            Node nexpr = NIL;
+            encode(expr, env, &nexpr);
+            list_SetItem(local.pair, 1, nexpr);
+        }
+    }
+
+    pair_Create(symbol, NIL, result.pair);
 }
 
 extern void encode_Pattern(Node pattern, Node env, Target result)
@@ -997,7 +1059,7 @@ extern void encode_Pattern(Node pattern, Node env, Target result)
     }
 
     if (isPair(bindings)) {
-        list_Map(environ_Let, bindings.pair, env, &lenv);
+        list_Map(environ_Pattern, bindings.pair, env, &lenv);
         list_SetEnd(lenv.pair, env);
 
         encode(body, lenv, &(body.pair));

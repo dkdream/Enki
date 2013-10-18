@@ -159,4 +159,10 @@
    (integer x (dumpln "x=" x))
    (. (println "else")))
 
-(dumpln "output=" (case value (_ (_ b) (case b (_ (a _) a)))))
+
+(println)
+(println "type is " (type-of value))
+(println "ctor is " (ctor-of value))
+(print "val  is ")  (dumpln value)
+
+(dumpln "output=" (case value (pair (_ b) (case b (pair (a _) a)))))

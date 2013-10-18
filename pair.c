@@ -214,63 +214,6 @@ extern bool list_GetEnd(Pair pair, Target value) {
      return false;
 }
 
-extern bool list_SplitFirst(Pair pair, const Node value, Pair* target) {
-    if (!pair) return false;
-
-    darken_Node(pair);
-
-    if (!isPair(pair)) return false;
-
-    for (;;) {
-        if (!isPair(pair->cdr)) return false;
-
-        Pair next = pair->cdr.pair;
-
-        if (!isIdentical(next->car, value)) {
-            pair = next;
-            continue;
-        }
-
-        pair->cdr = NIL;
-        ASSIGN(target, next);
-        return true;
-    }
-
-    return false;
-}
-
-extern bool list_SplitLast(Pair pair, const Node value, Pair* target) {
-    if (!pair) return false;
-
-    darken_Node(pair);
-
-    Pair last = ((Pair)0);
-
-    if (!isPair(pair)) return false;
-
-    for (;;) {
-        if (!isPair(pair->cdr)) break;
-
-        Pair next = pair->cdr.pair;
-
-        if (isIdentical(next->car, value)) {
-            last = pair;
-        }
-
-        pair = next;
-    }
-
-    if (!last) return false;
-
-    {
-        Pair next = last->cdr.pair;
-        last->cdr = NIL;
-        ASSIGN(target, next);
-    }
-
-    return true;
-}
-
 extern bool alist_Entry(Pair pair, const Node label, Pair* value) {
     if (!pair) return false;
 
@@ -431,3 +374,162 @@ extern bool list_Map(Operator func, Pair pair, const Node env, Target target) {
     GC_End();
     return false;
 }
+
+extern bool list_FoldLeft(Folder func, Pair pair, const Node init, const Node env, Target target) {
+    if (!pair) {
+        ASSIGN(target, init);
+        return true;
+    }
+
+    GC_Begin(4);
+
+    Node collector;
+    Node left;
+    Node right;
+
+    GC_Protect(collector);
+    GC_Protect(left);
+    GC_Protect(right);
+
+    left  = pair->car;
+    right = init;
+
+    if (!func(left, right, env, &collector)) goto error;
+
+    for (; isPair(pair->cdr.pair) ;) {
+        pair  = pair->cdr.pair;
+        left  = pair->car;
+        right = collector;
+        if (!func(left, right, env, &collector)) goto error;
+    }
+
+    ASSIGN(target, collector);
+    GC_End();
+    return true;
+
+  error:
+    GC_End();
+    return false;
+}
+
+extern bool list_Reverse(Pair pair, Pair* target) {
+    if (!pair) {
+        ASSIGN(target, NIL);
+        return true;
+    }
+
+    GC_Begin(4);
+
+    Pair collector;
+    Node left;
+    Node right;
+
+    GC_Protect(collector);
+    GC_Protect(left);
+    GC_Protect(right);
+
+    left = pair->car;
+
+    if (!pair_Create(left, NIL, &collector)) goto error;
+
+    for (; isPair(pair->cdr.pair) ;) {
+        pair       = pair->cdr.pair;
+        left       = pair->car;
+        right.pair = collector;
+
+        if (!pair_Create(left, right, &collector)) goto error;
+    }
+
+    ASSIGN(target, collector);
+
+    GC_End();
+    return true;
+
+  error:
+    GC_End();
+    return false;
+}
+
+extern bool list_Find(Predicate func, Pair pair, const Node env, Target target) {
+    if (!pair) return false;
+
+    Node left = pair->car;
+
+    if (func(left,env)) {
+        ASSIGN(target,left);
+        return true;
+    }
+
+    for (; isPair(pair->cdr.pair) ;) {
+        pair  = pair->cdr.pair;
+        left  = pair->car;
+
+        if (func(left,env)) {
+            ASSIGN(target,left);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
+extern bool list_SplitFirst(Predicate func, Pair pair, const Node env, Pair* target) {
+    if (!pair) return false;
+
+    darken_Node(pair);
+
+    if (!isPair(pair)) return false;
+
+    for (;;) {
+        if (!isPair(pair->cdr)) return false;
+
+        Pair next = pair->cdr.pair;
+
+        if (!func(next->car, env)) {
+            pair = next;
+            continue;
+        }
+
+        pair->cdr = NIL;
+        ASSIGN(target, next);
+        return true;
+    }
+
+    return false;
+}
+
+extern bool list_SplitLast(Predicate func, Pair pair, const Node env, Pair* target) {
+    if (!pair) return false;
+
+    darken_Node(pair);
+
+    Pair last = ((Pair)0);
+
+    if (!isPair(pair)) return false;
+
+    for (;;) {
+        if (!isPair(pair->cdr)) break;
+
+        Pair next = pair->cdr.pair;
+
+        if (func(next->car, env)) {
+            last = pair;
+        }
+
+        pair = next;
+    }
+
+    if (!last) return false;
+
+    {
+        Pair next = last->cdr.pair;
+        last->cdr = NIL;
+        ASSIGN(target, next);
+    }
+
+    return true;
+}
+
+
+
