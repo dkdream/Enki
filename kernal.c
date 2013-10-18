@@ -628,12 +628,14 @@ extern SUBR(encode_let)
 
     GC_Begin(7);
 
-    Node bindings;
-    Node marker;
-    Node body;
-    Node lenv;
-    Node hold;
+    Tuple  frame;
+    Node   bindings;
+    Symbol marker;
+    Node   body;
+    Node   lenv;
+    Node   hold;
 
+    GC_Protect(frame);
     GC_Protect(bindings);
     GC_Protect(marker);
     GC_Protect(body);
@@ -641,41 +643,40 @@ extern SUBR(encode_let)
     GC_Protect(hold);
 
     pair_GetCar(args.pair, &bindings);
-    pair_GetCdr(args.pair, &body);
+    pair_GetCdr(args.pair, &hold);
 
-    if (isPair(bindings)) { // (let (binding...) ...)
+    if (!isSymbol(bindings)) { // (let (binding...) ...)
+        body = hold;
+    } else if (isIdentical(bindings, s_uscore)) { // (let _ ...)
+        bindings = NIL;
+        body     = hold;
+    } else { // (let name (binding...) ...)
+        marker = bindings.symbol;
+        pair_GetCar(hold.pair, &bindings);
+        pair_GetCdr(hold.pair, &body);
+    }
+
+    if (!isPair(bindings)) {
+        lenv = env;
+    } else { // (binding...)
         list_Map(environ_Let, bindings.pair, env, &lenv);
         list_SetEnd(lenv.pair, env);
-        goto body;
     }
 
-    if (isSymbol(bindings)) { // (let name ...)
-        if (isIdentical(bindings, s_uscore)) {  // (let _ ...)
-            bindings = NIL;
-            lenv = env;
-            goto body;
-        }
-//        marker = bindings;
-        pair_Create(bindings, NIL, &(hold.pair));
-        pair_Create(hold, env, &(lenv.pair));
-        goto body;
+    if (isSymbol(marker)) {
+        pair_Create(marker, NIL, &(hold.pair));
+        pair_Create(hold, lenv, &(lenv.pair));
     }
-
-    /* default */
-    lenv = env;
 
 body:
     encode(body, lenv, &body);
 
-#if 0
-    tuple_Create(3, result.tuple);
-    tuple_SetItem(tuple, 0, bindings);
-    tuple_SetItem(tuple, 1, marker);
-    tuple_SetItem(tuple, 2, body);
-#else
-    pair_Create(bindings, body, result.pair);
-#endif
+    tuple_Create(3, &frame);
+    tuple_SetItem(frame, 0, bindings);
+    tuple_SetItem(frame, 1, marker);
+    tuple_SetItem(frame, 2, body);
 
+    ASSIGN(result, frame);
 
     GC_End();
 }
@@ -745,41 +746,38 @@ extern SUBR(let)
     **   - the expr.i, expr.r, expr.b's need to be evaluated in the current context
     */
 
-    GC_Begin(4);
+    GC_Begin(7);
 
-    Node env2;
-    Node bindings;
-    Node marker;
-    Node body;
+    Tuple frame;
+    Node  env2;
+    Node  bindings;
+    Node  marker;
+    Node  body;
 
+    GC_Protect(frame);
     GC_Protect(env2);
     GC_Protect(bindings);
     GC_Protect(marker);
     GC_Protect(body);
 
-    pair_GetCar(args.pair, &bindings);
-    pair_GetCdr(args.pair, &body);
+    frame = args.tuple;
 
-    if (isPair(bindings)) { // (let (binding...) ...)
+    tuple_GetItem(frame, 0, &bindings);
+    tuple_GetItem(frame, 1, &marker);
+    tuple_GetItem(frame, 2, &body);
+
+    if (!isPair(bindings)) {
+        env2 = env;
+    } else {
         list_Map(binding_Let, bindings.pair, env, &(env2.pair));
         list_SetEnd(env2.pair, env);
-        goto done;
     }
 
-    if (isSymbol(bindings)) { // (let name ...)
-        if (isIdentical(bindings, s_uscore)) { // (let _ ...)
-            env2 = env;
-            goto done;
-        }
-        eval_block(bindings.symbol, body, env, result);
-        goto exit;
+    if (isSymbol(marker)) {
+        eval_block(marker.symbol, body, env2, result);
+    } else {
+        eval_begin(body, env2, result);
     }
-
-    /* default */
-    env2 = env;
-
- done:
-    eval_begin(body, env2, result);
 
  exit:
     GC_End();

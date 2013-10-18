@@ -4,14 +4,14 @@
 
 (begin
    (println "exited with " 
-            (let name
+            (let name _
                (println "one")
                (depart name "done")
                (println "never seen"))))
 
 (println "ok")
 
-(let name
+(let name _
    ((lambda (ext a b c)
        (println a)
        (println b)
