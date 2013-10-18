@@ -50,8 +50,6 @@ Node             false_v = NIL;
 Node              unit_v = NIL;
 Node              void_v = NIL;
 Node          fixed_bind = NIL;
-Node           fixed_set = NIL;
-Node         fixed_begin = NIL;
 Primitive  p_encode_args = 0;
 Primitive  p_eval_symbol = 0;
 Primitive    p_eval_pair = 0;
@@ -612,9 +610,11 @@ extern SUBR(encode_let)
     **       binding = name
     **               | (name expr)
     ** to-do
-    **       args    = ([as name expr.r] . body)
-    **               | ([name.0 expr.0 ... name.n expr.n] [as name expr.r] initialize . body)
-    **               | ([name.0 expr.0 ... name.n expr.n] initialize . body)
+    **       args    = ([<declaring>...] initialize . body)
+    **               | ([as name expr.r] . body)
+    **               | ([<declaring>...] [as name expr.r] initialize . body)
+    **       declaring = name type
+    **
     **    initialize = bound...
     **         bound = [bind name expr.b]
     **         bound = [set  name expr.b]
@@ -643,14 +643,14 @@ extern SUBR(encode_let)
     pair_GetCar(args.pair, &bindings);
     pair_GetCdr(args.pair, &body);
 
-    if (isPair(bindings)) {
+    if (isPair(bindings)) { // (let (binding...) ...)
         list_Map(environ_Let, bindings.pair, env, &lenv);
         list_SetEnd(lenv.pair, env);
         goto body;
     }
 
-    if (isSymbol(bindings)) {
-        if (isIdentical(bindings, s_uscore)) {
+    if (isSymbol(bindings)) { // (let name ...)
+        if (isIdentical(bindings, s_uscore)) {  // (let _ ...)
             lenv = env;
             goto body;
         }
@@ -748,14 +748,14 @@ extern SUBR(let)
     pair_GetCar(args.pair, &bindings);
     pair_GetCdr(args.pair, &body);
 
-    if (isPair(bindings)) {
+    if (isPair(bindings)) { // (let (binding...) ...)
         list_Map(binding_Let, bindings.pair, env, &(env2.pair));
         list_SetEnd(env2.pair, env);
         goto done;
     }
 
-    if (isSymbol(bindings)) {
-        if (isIdentical(bindings, s_uscore)) {
+    if (isSymbol(bindings)) { // (let name ...)
+        if (isIdentical(bindings, s_uscore)) { // (let _ ...)
             env2 = env;
             goto done;
         }
@@ -1611,155 +1611,6 @@ extern SUBR(map) {
     }
 
     ASSIGN(result, first);
-
-    GC_End();
-}
-
-extern SUBR(eval_symbol)
-{
-    GC_Begin(2);
-
-    Symbol symbol;
-    Node   tmp;
-    Pair   entry;
-
-    GC_Protect(tmp);
-
-#ifdef OLD
-    pair_GetCar(args.pair, &symbol);
-#else
-    symbol = args.symbol;
-#endif
-
-    // lookup symbol in the current enviroment
-    if (!alist_Entry(env.pair, symbol, &entry)) {
-        if (!alist_Entry(enki_globals.pair,  symbol, &entry)) goto error;
-    }
-
-    pair_GetCdr(entry, &tmp);
-
-    if (fromCtor(tmp, s_forced)) {
-        tuple_GetItem(tmp.tuple, 0, &tmp);
-        pair_SetCdr(entry, tmp);
-    }
-
-    ASSIGN(result, tmp);
-
-    GC_End();
-    return;
-
- error:
-    GC_End();
-    if (!isSymbol(symbol)) {
-        fatal("undefined variable: <non-symbol>");
-    } else {
-        fatal("undefined variable: %s", symbol_Text(symbol));
-    }
-}
-
-extern SUBR(eval_pair)
-{
-    GC_Begin(5);
-    Node obj, head, tail, tmp;
-
-    GC_Protect(obj);
-    GC_Protect(head);
-    GC_Protect(tail);
-    GC_Protect(tmp);
-
-#ifdef OLD
-    // (eval_pair pair)
-    pair_GetCar(args.pair, &obj);
-    pair_GetCar(obj.pair, &head);
-    pair_GetCdr(obj.pair, &tail);
-
-    pushTrace(obj);
-#else
-    pair_GetCar(args.pair, &head);
-    pair_GetCdr(args.pair, &tail);
-
-    pushTrace(args);
-#endif
-
-    pushTrace(obj);
-
-    // first eval the head
-    eval(head, env, &head);
-
-    if (fromCtor(head, s_box)) {
-        pair_GetCar(head.pair, &head);
-    }
-
-    if (fromCtor(head, s_delay)) {
-        Node dexpr, denv;
-        tuple_GetItem(head.tuple, 1, &dexpr);
-        tuple_GetItem(head.tuple, 2, &denv);
-        eval(dexpr, denv, &tmp);
-        tuple_SetItem(head.tuple, 0, tmp);
-        setConstructor(head.tuple, s_forced);
-        head = tmp;
-    }
-
-    if (fromCtor(head, s_fixed)) {
-        // apply Fixed to un-evaluated arguments
-        Node func = NIL;
-        tuple_GetItem(head.tuple, fxd_eval, &func);
-        apply(func, tail, env, result);
-        goto done;
-    }
-
-    // evaluate the arguments
-    list_Map(eval, tail.pair, env, &tail.pair);
-
-    // now apply the head to the evaluated arguments
-    apply(head, tail, env, result);
-
- done:
-    popTrace();
-
-    GC_End();
-}
-
-extern SUBR(eval_tuple)
-{
-    GC_Begin(5);
-
-    Node head;
-    Node func;
-    Pair entry;
-
-    GC_Protect(head);
-    GC_Protect(func);
-    GC_Protect(entry);
-
-    tuple_GetItem(args.tuple, 0, &head);
-
-    if (!isSymbol(head)) goto no_op;
-
-    if (!alist_Entry(env.pair, head.symbol, &entry)) {
-        if (!alist_Entry(enki_globals.pair,  head.symbol, &entry)) goto no_op;
-    }
-
-    pair_GetCdr(entry, &head);
-
-    if (fromCtor(head, s_box)) {
-        pair_GetCar(head.pair, &head);
-    }
-
-    if (!fromCtor(head, s_fixed)) goto no_op;
-
-    // apply Fixed to un-evaluated arguments
-
-    tuple_GetItem(head.tuple, fxd_eval, &func);
-
-    apply(func, args, env, result);
-    goto done;
-
-  no_op:
-    tuple_Map(eval, args.tuple, env, result);
-
-  done:
-    popTrace();
 
     GC_End();
 }
@@ -3731,7 +3582,31 @@ void startEnkiLibrary() {
     MK_PRM(system_check);
 
     MK_FXD(define,encode_define);
+    MK_FXD(lambda,encode_lambda);
     MK_FXD(quote,list);
+
+    MK_OPR(%and,and);
+    MK_OPR(%begin,begin);
+    MK_OPR(%bind,bind);
+    MK_OPR(%case,case);
+    MK_OPR(%delay,delay);
+    MK_OPR(%encode-case,encode_case);
+    MK_OPR(%encode-lambda,encode_lambda);
+    MK_OPR(%encode-let,encode_let);
+    MK_OPR(%encode-define, encode_define);
+    MK_OPR(%if,if);
+    MK_OPR(%lambda,lambda);
+    MK_OPR(%let,let);
+    MK_OPR(%or,or);
+    MK_OPR(%set,set);
+    MK_OPR(%type,type);
+    MK_OPR(%unless,unless);
+    MK_OPR(%while,while);
+
+    p_encode_args  = MK_OPR(%encode-args, encode_args);
+    p_apply_lambda = MK_OPR(%apply-lambda,apply_lambda);
+    p_apply_form   = MK_OPR(%apply-form,apply_form);
+
     MK_FXD(type,encode_type);
 
     MK_FXD(if,encode_args);
@@ -3741,35 +3616,15 @@ void startEnkiLibrary() {
     MK_FXD(delay,encode_args);
 
     fixed_bind  = MK_FXD(bind,encode_define);
-    fixed_set   = MK_FXD(set,encode_define);
-    fixed_begin = MK_FXD(begin,encode_args);
+
+    MK_FXD(set,encode_define);
+    MK_FXD(begin,encode_args);
 
     MK_FXD(while,encode_args);
 
     MK_FXD(let,encode_let);
     MK_FXD(fix,encode_fix);
-    MK_FXD(lambda,encode_lambda);
     MK_FXD(case,encode_case);
-
-    MK_OPR(%type,type);
-    MK_OPR(%if,if);
-    MK_OPR(%unless,unless);
-    MK_OPR(%and,and);
-    MK_OPR(%or,or);
-
-    MK_OPR(%bind,bind);
-    MK_OPR(%set,set);
-    MK_OPR(%begin,begin);
-    MK_OPR(%while,while);
-
-    MK_OPR(%let,let);
-    MK_OPR(%lambda,lambda);
-    MK_OPR(%delay,delay);
-    MK_OPR(%case,case);
-
-    MK_OPR(%encode-let,encode_let);
-    MK_OPR(%encode-lambda,encode_lambda);
-    MK_OPR(%encode-case,encode_case);
 
     MK_PRM(depart);
     MK_PRM(gensym);
@@ -3777,14 +3632,6 @@ void startEnkiLibrary() {
     MK_PRM(find);
     MK_PRM(map);
 
-    p_encode_args  = MK_OPR(%encode_args, encode_args);
-
-    p_eval_symbol  = MK_OPR(%eval-symbol,eval_symbol);
-    p_eval_pair    = MK_OPR(%eval-pair,eval_pair);
-    p_eval_tuple   = MK_OPR(%eval-tuple,eval_tuple);
-
-    p_apply_lambda = MK_OPR(%apply-lambda,apply_lambda);
-    p_apply_form   = MK_OPR(%apply-form,apply_form);
 
     MK_PRM(expand);
     MK_PRM(encode);

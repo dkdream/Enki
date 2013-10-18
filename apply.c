@@ -211,6 +211,141 @@ extern void encode(const Node expr, const Node env, Target result)
     GC_End();
 }
 
+extern void eval_pair(const Node args, const Node env, Target result)
+{
+    GC_Begin(5);
+    Node obj, head, tail, tmp;
+
+    GC_Protect(obj);
+    GC_Protect(head);
+    GC_Protect(tail);
+    GC_Protect(tmp);
+
+    pair_GetCar(args.pair, &head);
+    pair_GetCdr(args.pair, &tail);
+
+    pushTrace(args);
+
+    // first eval the head
+    eval(head, env, &head);
+
+    if (fromCtor(head, s_box)) {
+        pair_GetCar(head.pair, &head);
+    }
+
+    if (fromCtor(head, s_delay)) {
+        Node dexpr, denv;
+        tuple_GetItem(head.tuple, 1, &dexpr);
+        tuple_GetItem(head.tuple, 2, &denv);
+        eval(dexpr, denv, &tmp);
+        tuple_SetItem(head.tuple, 0, tmp);
+        setConstructor(head.tuple, s_forced);
+        head = tmp;
+    }
+
+    if (fromCtor(head, s_fixed)) {
+        // apply Fixed to un-evaluated arguments
+        Node func = NIL;
+        tuple_GetItem(head.tuple, fxd_eval, &func);
+        apply(func, tail, env, result);
+        goto done;
+    }
+
+    // evaluate the arguments
+    list_Map(eval, tail.pair, env, &tail.pair);
+
+    // now apply the head to the evaluated arguments
+    apply(head, tail, env, result);
+
+ done:
+    popTrace();
+
+    GC_End();
+}
+
+extern void eval_symbol(const Node args, const Node env, Target result)
+{
+    GC_Begin(2);
+
+    Symbol symbol;
+    Node   tmp;
+    Pair   entry;
+
+    GC_Protect(tmp);
+
+    symbol = args.symbol;
+
+    // lookup symbol in the current enviroment
+    if (!alist_Entry(env.pair, symbol, &entry)) {
+        if (!alist_Entry(enki_globals.pair,  symbol, &entry)) goto error;
+    }
+
+    pair_GetCdr(entry, &tmp);
+
+    if (fromCtor(tmp, s_forced)) {
+        tuple_GetItem(tmp.tuple, 0, &tmp);
+        pair_SetCdr(entry, tmp);
+    }
+
+    ASSIGN(result, tmp);
+
+    GC_End();
+    return;
+
+ error:
+    GC_End();
+    if (!isSymbol(symbol)) {
+        fatal("undefined variable: <non-symbol>");
+    } else {
+        fatal("undefined variable: %s", symbol_Text(symbol));
+    }
+}
+
+extern void eval_tuple(const Node args, const Node env, Target result)
+{
+    GC_Begin(5);
+
+    Node head;
+    Node func;
+    Pair entry;
+
+    GC_Protect(head);
+    GC_Protect(func);
+    GC_Protect(entry);
+
+    tuple_GetItem(args.tuple, 0, &head);
+
+    if (!isSymbol(head)) goto no_op;
+
+    if (!alist_Entry(env.pair, head.symbol, &entry)) {
+        if (!alist_Entry(enki_globals.pair,  head.symbol, &entry)) goto no_op;
+    }
+
+    pair_GetCdr(entry, &head);
+
+    if (fromCtor(head, s_box)) {
+        pair_GetCar(head.pair, &head);
+    }
+
+    if (!fromCtor(head, s_fixed)) goto no_op;
+
+    // apply Fixed to un-evaluated arguments
+
+    tuple_GetItem(head.tuple, fxd_eval, &func);
+
+    apply(func, args, env, result);
+    goto done;
+
+  no_op:
+    tuple_Map(eval, args.tuple, env, result);
+
+  done:
+    popTrace();
+
+    GC_End();
+}
+
+
 extern void eval(const Node expr, const Node env, Target result)
 {
     pushTrace(expr);
@@ -221,28 +356,28 @@ extern void eval(const Node expr, const Node env, Target result)
             fprintf(stderr, "\n");
         });
 
-    if (isQuote(expr)) {
-        apply(p_eval_pair, expr, env, result);
-        goto done;
-    }
-
-    if (isPair(expr)) {
-        apply(p_eval_pair, expr, env, result);
-        goto done;
-    }
-
-    if (isSymbol(expr)) {
-        apply(p_eval_symbol, expr, env, result);
-        goto done;
-    }
-
     if (isForced(expr)) {
         tuple_GetItem(expr.tuple, 0, result);
         goto done;
     }
 
+    if (isSymbol(expr)) {
+        eval_symbol(expr, env, result);
+        goto done;
+    }
+
+    if (isQuote(expr)) {
+        eval_pair(expr, env, result);
+        goto done;
+    }
+
+    if (isPair(expr)) {
+        eval_pair(expr, env, result);
+        goto done;
+    }
+
     if (isTuple(expr)) {
-        apply(p_eval_tuple, expr, env, result);
+        eval_tuple(expr, env, result);
         goto done;
     }
 

@@ -10,10 +10,12 @@
        | <predicate>
        | (<core> <core>*)
 
-<constructor> = (lambda <arguments> <return>? <core>* <core>)
-              | (<formula> <parameters> <core>* <core>)
-              | (index <integer> <core>)
-              | (label <symbol> <core>)
+<constructor> = (lambda <arguments> <return>? <core>+)
+              | (thunk <return>? <core>+)
+              | (<formula> <parameters> <core>+)
+              | (self <core> <core>)                  -- self type (a singleton subset type)
+              | (index <integer> <core>)              -- index type (tuple element type) 
+              | (label <symbol> <core>)               -- label type (record element type)
               | (fiber <core>* <core>)                -- this is like a block
               | (timer <core> <core>)                 -- arg1 is an interval, arg2 is start second)
               | (conduit <core>)                      -- arg1 is a type
@@ -27,12 +29,13 @@
           | (unless <core> <core> <core>*)
           | (case <core> <ctor-pattern>* <tuple-pattern>* <else-pattern>)
           | (select <action-pattern>* <else-pattern>)
-          | (marker <name> <core>+) -- create a new context with <name> defined as a one-shot-continuation
-          | (depart <core> <core>+) -- if arg1 is a  one-shot-continuation call it with arg2..argn
+          | (depart <core> <core>+)   -- if arg1 is a  one-shot-continuation call it with arg2..argn
 
-<context> = (constrain <locals> <core>* <core>)
-          | (fix <parameters> <core>* <core>)
-          | (let <parameters> <core>* <core>)
+<context> = (constrain <locals> <core>+)
+          | (fix <parameters> <core>+)
+          | (let <parameters> <core>+)
+          | (let <name> <core>+)
+          | (let _ <core>+)
 
 <binding> = (bind <name>+ <core>) -- bind a collecton of names to the output of expression
           | (set <name>+ <core>)  -- set a collecton of names to the boxed output of expression
@@ -43,52 +46,40 @@
 
 <filter> = (cast <core> <core> <core>?) -- arg1 is a type, arg2 is expr, [arg3 is an error handler]
 
-<reflector> = (ctor-of <core>)
-            | (type-of <core>)
-            | (sort-of <core>)
+<reflector> = (ctor-of <core>)  -- arg is object -> constructor symbol
+            | (type-of <core>)  -- arg is object -> type of object
+            | (sort-of <core>)  -- arg is object -> sort of object
+            | (domain <core>)   -- arg is lambda.type -> input type
+            | (codomain <core>) -- arg is lambda.type -> output type
 
-<predicate> = (ctor? <core> <core>)           -- arg1 is object, arg2 is constructor symbol
-            | (type? <core> <core>)           -- arg1 is object, arg2 is container
-            | (sort? <core> <core>)           -- arg1 is object, arg2 is universe
-            | (iso? <core> <core> <core>*)    -- arg1 is object.1, arg2 is object.2
-            | (co? <core> <core> <core>*)     -- arg1 is object.1, arg2 is object.2
-            | (contra? <core> <core> <core>*) -- arg1 is object.1, arg2 is object.2
-            | (subset? <core> <core> <core>*) -- arg1 is object.1, arg2 is object.2
-            | (eq? <core> <core>)             -- arg1 is object.1, arg2 is object.2
+<predicate> = (ctor? <core> <core>)       -- arg1 is object, arg2 is constructor symbol
+            | (type? <core> <core>)       -- arg1 is object, arg2 is container
+            | (sort? <core> <core>)       -- arg1 is object, arg2 is universe
+            | (iso? <core> <core> <core>) -- arg1 is depth,  arg2 is object.1, arg3 is object.2
+            | (subset? <core> <core>)     -- arg1 is subset,   arg2 is superset 
+            | (eq? <core> <core>)         -- arg1 is object.1, arg2 is object.2
 
 -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -
 
-<formula> = pi | sigma | any | all | subset | mu
+<formula> = pi | sigma | any | all | subset | mu | exists
 
 <quote>      = '<core>
 
+<parameters> = <locals> <return>? <initialize>+
 <locals>     = [ <local>+ ]
-
-<parameters> = [ <local>+ ] <initialize>*
-             | ( <assignment>+ )
+<local>      = <name> <core>
+             | <name> _
 
 <arguments>  = [ <argument>+ ]
-             | <name>
-             | ( <name>+ )
-             | ( <name>+ . <name> )
-
-<local> = <name> <core>
-        | <name> _
+             | <name>               # infered-typ
+<argument>   = <name> <core>  # name declared-type 
+             | <name> _       # name infered-type
+             | _      <core>  # slot declared-type 
 
 <initialize> = [bind <name>+ <core>]
              | [set <name>+ <core>]
 
-<assignment> = ( <name> <core> )
-             | name
-
-<argument> = <name> <core>
-           | <name> _
-           | _      <core>
-
-<result> = <name>
-         | <return>
-
-<return> = [as <name> <core>?]
+<return> = [as <name> <core>*] -- define name as the one-shot-continuation for this lambda
 
 <action-pattern>  = <fiber-pattern> | <timer-pattern> | <conduit-pattern>
 
@@ -150,8 +141,6 @@ ctor?     := the 'ctor?'   predicate function (predicate/Pi[_,_:Boolean]/?sort)
 type?     := the 'type?'   predicate function (predicate/Pi[_,_:Boolean]/?sort)
 sort?     := the 'sort?'   predicate function (predicate/Pi[_,_:Boolean]/?sort)
 iso?      := the 'iso?'    predicate function (predicate/Pi[_,_:Boolean]/?sort)
-co?       := the 'co?'     predicate function (predicate/Pi[_,_:Boolean]/?sort)
-contra?   := the 'contra?' predicate function (predicate/Pi[_,_:Boolean]/?sort)
 subset?   := the 'subset?' predicate function (predicate/Pi[_,_:Boolean]/?sort)
 eq?       := the 'eq?'     predicate function (predicate/Pi[_,_:Boolean]/?sort)
 alarm     := the 'alarm' timer pattern
@@ -262,3 +251,76 @@ the life cycle of a conduit is:
   3. fini(c)
      -- after this only recieve are possible
 
+- - - - - - - - - - - - - - - - - - - - - 
+Composible Types
+
+-- construct a member of an indexed type
+-
+(subset [a A] (pred a))  -- subset type                (forall x in A where (pred a))
+(self A expr)            -- self type (singleton type) (forall x in A where (eq? x expr))
+ 
+-- combined and indexed type
+-
+(pi [a A] (B a))         -- depended lambda type - set of functions to an indexed type
+(exists [a A] (B a))     -- existential type - select a member of an indexed typ
+(sigma  [a A] (B a))     -- dependent tuple type - B is an indexed type
+(any [a A] (B a))        -- dependent union type - B is an indexed type
+(all [a A] (B a))        -- dependent intersection type - B is an indexed type
+
+(mu [a A] (B a))         -- recursive subset type
+
+(pi A B)    -- lambda type
+(sigma A B) -- tuple type
+(any A B)   -- union type
+(all A B)   -- intersection type
+
+(all A A)                       <-> A
+(all A (mu [a A] (B a)))        <-> (mu [a A] (B a))
+(all A (subset [a A] (pred a))) <-> (subset [a A] (pred a))
+(all A (self A expr))           <-> (self A expr)
+
+(any A A)                       <-> A
+(any A (mu [a A] (B a)))        <-> A
+(any A (subset [a A] (pred a))) <-> A
+(any A (self A expr))           <-> A
+
+(self A expr)                              -> (subset [a A] (eq? a expr))
+(self (pi [a A] (B a)) expr)               -> (pi [a A] (self (B a) (expr a)))
+(subset [f (pi [a A] (B a))] (eq? f expr)) -> (pi [a A] (subset [b (B a)] (eq? b (expr a))))
+
+
+(subset? (self A expr) A) -> true
+(subset? (all A B) A)     -> true
+(subset? A A)             -> true
+
+(domain (pi A B))               -> A
+(domain (pi [a A] (B a)))       -> A
+(domain (pi [a A] B (C a)))     -> (sigma A B)
+(domain (pi [a A] [b (B a)] C)) -> (sigma [a A] (B a))
+
+(codomain (pi A B))         -> B
+(codomain (pi [a A] (B a))) -> (exists [a A] (B a))
+
+----------------------------------
+
+(thunk [as foo int string type]
+       ...
+       (depart foo 1 "test" Integer))
+
+->
+
+(thunk (marker [as foo int string type]
+               ...     
+               (depart foo 1 "test" Integer)))
+
+- - -
+
+(lambda (one two three) 
+        (+ one two three))
+
+->
+
+(lambda [one _ two _ three _]
+        (marker result
+                (depart result (+ one two three))))
+        
