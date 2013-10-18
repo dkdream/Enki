@@ -602,8 +602,9 @@ extern void environ_Let(Node local, Node env, Target result)
 extern SUBR(encode_let)
 {
     /*
-    ** given args    = ((<binding>...) . body)
-    **               | (name . body)
+    ** given args    = (name (<binding>...) . body)
+    **               | ((<binding>...) . body)
+    **               | (name _ . body)
     **               | (_ . body)
     **       binding = name
     **               | (name expr)
@@ -723,29 +724,6 @@ extern void binding_Let(Node local, Node env, Target result)
 
 extern SUBR(let)
 {
-    /*
-    ** given args    = ((binding...) . body)
-    **               | (name . body)
-    **               | (_ . body)
-    **       binding = name
-    **               | (name expr)
-    ** to-do
-    **       args    = ((binding...) [as name expr.r] . body)
-    **               | ([as name expr.r] . body)
-    **               | ([name.0 expr.0 ... name.n expr.n] [as name expr.r] initialize . body)
-    **               | ([name.0 expr.0 ... name.n expr.n] initialize . body)
-    **    initialize = bound...
-    **         bound = [bind name expr.b]
-    **         bound = [set  name expr.b]
-    */
-
-    /* notes:
-    **   when using '(' ')'
-    **   - the expr's need to be evaluated in the current context
-    **   when using '[' ']'
-    **   - the expr.i, expr.r, expr.b's need to be evaluated in the current context
-    */
-
     GC_Begin(7);
 
     Tuple frame;
