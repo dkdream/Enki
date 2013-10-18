@@ -181,18 +181,18 @@ extern void encode(const Node expr, const Node env, Target result)
         if (!isFixed(value)) goto list_begin;
     }
 
-    Node action = NIL;
+    Node encode_action = NIL;
 
-    tuple_GetItem(value.tuple, fxd_encode, &action);
+    tuple_GetItem(value.tuple, fxd_encode, &encode_action);
 
-    if (isNil(action)) {
+    if (isNil(encode_action)) {
         fprintf(stderr, "no encode for fixed: ");
         prettyPrint(stderr, head);
         fprintf(stderr, "\n");
         fatal(0);
     }
 
-    apply(action, tail, env, &(tail.pair));
+    apply(encode_action, tail, env, &(tail.pair));
 
     pair_Create(value, tail, result.pair);
     goto done;

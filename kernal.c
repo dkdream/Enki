@@ -50,13 +50,9 @@ Node             false_v = NIL;
 Node              unit_v = NIL;
 Node              void_v = NIL;
 Node          fixed_bind = NIL;
+Node          fixed_set  = NIL;
 Primitive  p_encode_args = 0;
-Primitive  p_eval_symbol = 0;
-Primitive    p_eval_pair = 0;
-Primitive   p_eval_tuple = 0;
 Primitive p_apply_lambda = 0;
-Primitive  p_apply_delay = 0;
-Primitive p_apply_forced = 0;
 Primitive   p_apply_form = 0;
 
 
@@ -218,6 +214,8 @@ extern int fetchArgs(Node args, ...)
 
     return count;
 }
+
+
 
 extern SUBR(system_check)
 {
@@ -631,11 +629,13 @@ extern SUBR(encode_let)
     GC_Begin(7);
 
     Node bindings;
+    Node marker;
     Node body;
     Node lenv;
     Node hold;
 
     GC_Protect(bindings);
+    GC_Protect(marker);
     GC_Protect(body);
     GC_Protect(lenv);
     GC_Protect(hold);
@@ -651,9 +651,11 @@ extern SUBR(encode_let)
 
     if (isSymbol(bindings)) { // (let name ...)
         if (isIdentical(bindings, s_uscore)) {  // (let _ ...)
+            bindings = NIL;
             lenv = env;
             goto body;
         }
+//        marker = bindings;
         pair_Create(bindings, NIL, &(hold.pair));
         pair_Create(hold, env, &(lenv.pair));
         goto body;
@@ -665,7 +667,15 @@ extern SUBR(encode_let)
 body:
     encode(body, lenv, &body);
 
+#if 0
+    tuple_Create(3, result.tuple);
+    tuple_SetItem(tuple, 0, bindings);
+    tuple_SetItem(tuple, 1, marker);
+    tuple_SetItem(tuple, 2, body);
+#else
     pair_Create(bindings, body, result.pair);
+#endif
+
 
     GC_End();
 }
@@ -739,10 +749,12 @@ extern SUBR(let)
 
     Node env2;
     Node bindings;
+    Node marker;
     Node body;
 
     GC_Protect(env2);
     GC_Protect(bindings);
+    GC_Protect(marker);
     GC_Protect(body);
 
     pair_GetCar(args.pair, &bindings);
@@ -1759,12 +1771,6 @@ extern SUBR(fixed)
       tuple_SetItem(tuple, fxd_name, name);
       tuple_SetItem(tuple, fxd_eval, func);
       tuple_SetItem(tuple, fxd_encode, enc);
-  } else if (1 < count) {
-      forceArgs(args, &name, &func, 0);
-      tuple_Create(3, &tuple);
-      tuple_SetItem(tuple, fxd_name, name);
-      tuple_SetItem(tuple, fxd_eval, func);
-      tuple_SetItem(tuple, fxd_encode, p_encode_args);
   } else {
       ASSIGN(result, NIL);
       return;
@@ -2503,12 +2509,6 @@ extern SUBR(require) {
 
     long long id = stbuf.st_ino;
 
-#if 0
-
-    readFile(file);
-    fclose(file);
-
-#else
 
     switch (set_add(&loaded_inodes, id)) {
     case -1:
@@ -2522,8 +2522,6 @@ extern SUBR(require) {
     default: // found
         break;
     }
-
-#endif
 
     integer_Create(id, result.integer);
 
@@ -3566,7 +3564,6 @@ void startEnkiLibrary() {
     MK_CONST(false,false_v);
     MK_CONST(true,true_v);
 
-
     MK_CONST(integer,t_integer);
     MK_CONST(pair,t_pair);
     MK_CONST(symbol,t_symbol);
@@ -3585,25 +3582,6 @@ void startEnkiLibrary() {
     MK_FXD(lambda,encode_lambda);
     MK_FXD(quote,list);
 
-    MK_OPR(%and,and);
-    MK_OPR(%begin,begin);
-    MK_OPR(%bind,bind);
-    MK_OPR(%case,case);
-    MK_OPR(%delay,delay);
-    MK_OPR(%encode-case,encode_case);
-    MK_OPR(%encode-lambda,encode_lambda);
-    MK_OPR(%encode-let,encode_let);
-    MK_OPR(%encode-define, encode_define);
-    MK_OPR(%if,if);
-    MK_OPR(%lambda,lambda);
-    MK_OPR(%let,let);
-    MK_OPR(%or,or);
-    MK_OPR(%set,set);
-    MK_OPR(%type,type);
-    MK_OPR(%unless,unless);
-    MK_OPR(%while,while);
-
-    p_encode_args  = MK_OPR(%encode-args, encode_args);
     p_apply_lambda = MK_OPR(%apply-lambda,apply_lambda);
     p_apply_form   = MK_OPR(%apply-form,apply_form);
 
@@ -3614,13 +3592,11 @@ void startEnkiLibrary() {
     MK_FXD(and,encode_args);
     MK_FXD(or,encode_args);
     MK_FXD(delay,encode_args);
-
-    fixed_bind  = MK_FXD(bind,encode_define);
-
-    MK_FXD(set,encode_define);
     MK_FXD(begin,encode_args);
-
     MK_FXD(while,encode_args);
+
+    fixed_bind = MK_FXD(bind,encode_define);
+    fixed_set  = MK_FXD(set,encode_define);
 
     MK_FXD(let,encode_let);
     MK_FXD(fix,encode_fix);
@@ -3631,7 +3607,6 @@ void startEnkiLibrary() {
     MK_PRM(member);
     MK_PRM(find);
     MK_PRM(map);
-
 
     MK_PRM(expand);
     MK_PRM(encode);
