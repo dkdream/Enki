@@ -12,53 +12,63 @@
 
 struct bit_array {
     char *buffer;
-    int size;
-    int marker;
+    unsigned size;
+    unsigned marker;
 };
 
 typedef struct bit_array BitArray;
 
-#define ARRAY_INITIALISER { 0, 0, 0 }
+#define BITS_INITIALISER { 0, 0, 0 }
 
-extern inline void array_init(BitArray *array) __attribute__((always_inline nonnull(1)));
-extern inline void array_init(BitArray *array) {
+extern inline void bits_init(BitArray *array) __attribute__((always_inline nonnull(1)));
+extern inline void bits_init(BitArray *array) {
     array->buffer = 0;
     array->size   = 0;
     array->marker = 0;
 }
 
-extern inline void array_reset(BitArray *array) __attribute__((always_inline nonnull(1)));
-extern inline void array_reset(BitArray *array) {
+extern inline void bits_reset(BitArray *array) __attribute__((always_inline nonnull(1)));
+extern inline void bits_reset(BitArray *array) {
     array->marker = 0;
 }
 
-extern inline unsigned array_marker(const BitArray *array) __attribute__((always_inline nonnull(1)));
-extern inline unsigned array_marker(const BitArray *array) {
-    if (0 > array->marker) return 0;
+extern inline unsigned bits_marker(const BitArray *array) __attribute__((always_inline nonnull(1)));
+extern inline unsigned bits_marker(const BitArray *array) {
     return array->marker;
 }
 
-extern inline void array_extendBy(BitArray *array, unsigned count) __attribute__((always_inline nonnull(1)));
-extern inline void array_extendBy(BitArray *array,
-                                  unsigned count)
+extern inline unsigned bits_size(const BitArray *array) __attribute__((always_inline nonnull(1)));
+extern inline unsigned bits_size(const BitArray *array) {
+    return array->size;
+}
+
+extern inline unsigned long bits_count(const BitArray *array) __attribute__((always_inline nonnull(1)));
+extern inline unsigned long bits_count(const BitArray *array) {
+    unsigned long count = array->size;
+    return count * CHAR_BIT;
+}
+
+
+extern inline void bits_extendTo(BitArray *array, const unsigned count) __attribute__((always_inline nonnull(1)));
+extern inline void bits_extendTo(BitArray *array, const unsigned count)
 {
-    while ((array->marker + count + 2) > array->size) {
+    while (count >= array->size) {
         if (array->buffer) {
             array->buffer = realloc(array->buffer, array->size *= 2);
         } else {
             array->buffer = malloc(array->size = 32);
         }
     }
+    array->marker = count + 1;
 }
 
-extern inline bool array_get(const BitArray *array, unsigned index) __attribute__((always_inline nonnull(1)));
-extern inline bool array_get(const BitArray *array,
-                             unsigned index)
+extern inline bool bits_get(const BitArray *array, const unsigned index) __attribute__((always_inline nonnull(1)));
+extern inline bool bits_get(const BitArray *array, const unsigned index)
 {
     const unsigned offset = index / CHAR_BIT;
     const unsigned mask   = 1 << (index % CHAR_BIT);
 
-    if (offset < array->marker) return false;
+    if (offset >= array->marker) return false;
 
     char slot = array->buffer[offset];
 
@@ -67,18 +77,15 @@ extern inline bool array_get(const BitArray *array,
     return false;
 }
 
-extern inline void array_set(BitArray *array, unsigned index, bool value) __attribute__((always_inline nonnull(1)));
-extern inline void array_set(BitArray *array,
-                             unsigned index,
-                             bool     value)
+extern inline void bits_set(BitArray *array, const unsigned index, const bool value) __attribute__((always_inline nonnull(1)));
+extern inline void bits_set(BitArray *array, const unsigned index, const bool value)
 {
     const unsigned offset = index / CHAR_BIT;
     const unsigned mask   = 1 << (index % CHAR_BIT);
 
     if (offset >= array->marker) {
         if (!value) return;
-        array_extendBy(array, offset);
-        array->marker = offset;
+        bits_extendTo(array, offset);
     }
 
     char slot = array->buffer[offset];
@@ -90,9 +97,8 @@ extern inline void array_set(BitArray *array,
     }
 }
 
-extern inline int array_walk(const BitArray *array, int last) __attribute__((always_inline nonnull(1)));
-extern inline int array_walk(const BitArray *array,
-                             const int last)
+extern inline int bits_walk(const BitArray *array, const int last) __attribute__((always_inline nonnull(1)));
+extern inline int bits_walk(const BitArray *array, const int last)
 {
     int index = (0 > last) ? 0 : (last + 1);
 
@@ -114,12 +120,12 @@ extern inline int array_walk(const BitArray *array,
     }
 }
 
-extern inline void array_free(BitArray *array)  __attribute__((always_inline nonnull(1)));
-extern inline void array_free(BitArray *array) {
+extern inline void bits_free(BitArray *array)  __attribute__((always_inline nonnull(1)));
+extern inline void bits_free(BitArray *array) {
     if (array->buffer) {
         free(array->buffer);
     }
-    array_init(array);
+    bits_init(array);
 }
 
 /***************************

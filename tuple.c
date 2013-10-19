@@ -190,7 +190,7 @@ extern bool tuple_Filter(Selector func, Tuple tuple, const Node env, Target targ
 
     BitArray array;
 
-    array_init(&array);
+    bits_init(&array);
 
     unsigned max   = kind->count;
     unsigned count = 0;
@@ -200,7 +200,7 @@ extern bool tuple_Filter(Selector func, Tuple tuple, const Node env, Target targ
         Node value = tuple->item[inx];
         if (func(inx, value, env)) {
             ++count;
-            array_set(&array, inx, true);
+            bits_set(&array, inx, true);
         }
     }
 
@@ -219,13 +219,13 @@ extern bool tuple_Filter(Selector func, Tuple tuple, const Node env, Target targ
 
     if (!tuple_Create(count, &result)) goto error;
 
-    int      at  = array_walk(&array, -1);
+    int      at  = bits_walk(&array, -1);
     unsigned jnx = 0;
 
     for (;; ++jnx) {
         if (0 > at) break;
         result->item[jnx] = tuple->item[at];
-        at = array_walk(&array, at);
+        at = bits_walk(&array, at);
     }
 
     ASSIGN(target, result);

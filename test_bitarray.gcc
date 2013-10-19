@@ -5,26 +5,37 @@
 
 
 int main(int argc, char** argv) {
-    BitArray array;
+    BitArray array = BITS_INITIALISER;
 
-    array_init(&array);
+    bits_init(&array);
 
-    array_set(&array, 10,  true);
-    array_set(&array, 100, true);
-    array_set(&array, 110, true);
-    array_set(&array, 120, true);
-    array_set(&array, 130, true);
-    array_set(&array, 140, true);
-    array_set(&array, 150, true);
+    bits_set(&array, 0,   true);
+    bits_set(&array, 10,  true);
+    bits_set(&array, 100, true);
+    bits_set(&array, 110, true);
+    bits_set(&array, 120, true);
+    bits_set(&array, 130, true);
+    bits_set(&array, 140, true);
+    bits_set(&array, 145, true);
+    bits_set(&array, 145, false);
+    bits_set(&array, 150, true);
+    bits_set(&array, 255, true);
 
-    int at = array_walk(&array, -1);
+    int at = bits_walk(&array, -1);
+
+    printf("marker %u count %lu size %u\n",
+           bits_marker(&array),
+           bits_count(&array),
+           bits_size(&array));
+
+    printf("first offset %d\n", at);
 
     for (;;) {
         if (0 > at) break;
 
         printf("index set %d\n", at);
 
-        at = array_walk(&array, at);
+        at = bits_walk(&array, at);
     }
     return 0;
 }

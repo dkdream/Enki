@@ -16,10 +16,12 @@
  ***************************
  **
  **/
+#include <limits.h>
+
 typedef unsigned long ptr;
 typedef int bool;
 
-#define BITS_PER_WORD (sizeof(long) * 8)
+#define BITS_PER_WORD (sizeof(long) * CHAR_BIT)
 #define WORD_SIZE     (sizeof(long))
 #define POINTER_SIZE  (sizeof(void*))
 #define PTR_SIZE      (sizeof(ptr))
