@@ -51,17 +51,16 @@ MAINS     := enki_main.c $(notdir $(wildcard link_*.c))
 FOOS      := $(notdir $(wildcard foo_*.c))
 C_SOURCES := $(filter-out $(MAINS) $(FOOS) $(CTESTS),$(notdir $(wildcard *.c)))
 H_SOURCES := $(filter-out enki.h, $(notdir $(wildcard *.h)))
-GCC_SRCS  := $(notdir $(wildcard *.gcc))
 BUILDINS  := $(wildcard ./buildins/*.c)
 
-OBJS    := $(C_SOURCES:%.c=.objects/%_32.o)
-TSTS    := $(notdir $(wildcard test_*.ea))
-RUNS    := $(TSTS:test_%.ea=.run/test_%.log)
+OBJS := $(C_SOURCES:%.c=.objects/%_32.o)
+TSTS := $(notdir $(wildcard test_*.ea))
+RUNS := $(TSTS:test_%.ea=.run/test_%.log)
 
 DEPENDS := $(C_SOURCES:%.c=.depends/%.d)
 DEPENDS += $(MAINS:%.c=.depends/%.d)
 
-UNIT_TESTS := test_reader.gcc test_sizes.gcc test_bitarray.gcc
+UNIT_TESTS := $(notdir $(wildcard test_*.gcc))
 
 all   :: enki test asm
 enki  :: enki.vm | lib

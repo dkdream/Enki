@@ -1,0 +1,6 @@
+This directory contains example C-code for the buildins
+
+It is use to see what the gcc would produce for assemble code.
+
+It is NOT used by enki.vm.
+ 
