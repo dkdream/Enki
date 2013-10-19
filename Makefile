@@ -49,7 +49,7 @@ ARFLAGS  := rcu
 
 MAINS     := enki_main.c $(notdir $(wildcard link_*.c))
 FOOS      := $(notdir $(wildcard foo_*.c))
-C_SOURCES := $(filter-out $(MAINS) $(FOOS),$(notdir $(wildcard *.c)))
+C_SOURCES := $(filter-out $(MAINS) $(FOOS) $(CTESTS),$(notdir $(wildcard *.c)))
 H_SOURCES := $(filter-out enki.h, $(notdir $(wildcard *.h)))
 GCC_SRCS  := $(notdir $(wildcard *.gcc))
 BUILDINS  := $(wildcard ./buildins/*.c)
@@ -61,7 +61,7 @@ RUNS    := $(TSTS:test_%.ea=.run/test_%.log)
 DEPENDS := $(C_SOURCES:%.c=.depends/%.d)
 DEPENDS += $(MAINS:%.c=.depends/%.d)
 
-UNIT_TESTS := test_reader.gcc test_sizes.gcc
+UNIT_TESTS := test_reader.gcc test_sizes.gcc test_bitarray.gcc
 
 all   :: enki test asm
 enki  :: enki.vm | lib
@@ -69,6 +69,8 @@ lib   :: libEnki_32.a
 test  :: $(RUNS)
 asm   :: $(FOOS:%.c=.dumps/%_32.s)
 units :: $(UNIT_TESTS:%.gcc=%.x)
+	@ls -l $(UNIT_TESTS:%.gcc=%.x)
+
 atoms :: $(BUILDINS:./buildins/%.c=.dumps/%_atom.s)
 	@echo finished atoms
 
@@ -205,6 +207,14 @@ echo_begin :: ; @echo begin atoms
 
 .assembly/%_atom.s : ./buildins/%.c | .assembly
 	@$(GCC) $(SFLAGS) -S -m32 -fverbose-asm -o $@ $<
+
+## ## ## ##
+
+.objects/%_gcc.o : %.gcc
+	$(GCC) $(CFLAGS) -m32 -x c -c -o $@ $<
+
+test_%.x : .objects/test_%_gcc.o
+	$(GCC) $(CFLAGS) -m32 -o $@ $< -L. -lEnki_32
 
 ## ## ## ##
 

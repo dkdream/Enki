@@ -16,6 +16,14 @@ typedef enum fixed_slots {
 
 typedef void (*Operator)(Node args, Node env, Target result);
 
+/* List/Pair operations */
+typedef bool (*Folder)(Node left, Node right, Node env, Target result);
+typedef bool (*Predicate)(Node value, Node env);
+
+/* Tuple operations */
+typedef bool (*Flexor)(unsigned index, Node left, Node right, Node env, Target result);
+typedef bool (*Selector)(unsigned index, Node value, Node env);
+
 struct primitive {
     Symbol   label;
     Operator function;

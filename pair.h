@@ -14,9 +14,6 @@ struct pair {
     Node cdr;
 };
 
-typedef bool (*Folder)(Node left, Node right, Node env, Target result);
-typedef bool (*Predicate)(Node value, Node env);
-
 extern bool pair_Create(const Node car, const Node cdr, Pair* target);
 extern bool pair_SetCar(Pair pair, const Node car);
 extern bool pair_SetCdr(Pair pair, const Node cdr);
@@ -55,6 +52,7 @@ extern bool alist_Add(Pair pair, const Node label, const Node value, Pair* targe
 
 //
 extern bool list_Map(Operator func, Pair pair, const Node env, Target target);
+extern bool list_Filter(Predicate func, Pair pair, const Node env, Target target);
 extern bool list_FoldLeft(Folder func, Pair pair, const Node init, const Node env, Target target);
 extern bool list_Reverse(Pair pair, Pair* target);
 extern bool list_Find(Predicate func, Pair pair, const Node env, Target target);

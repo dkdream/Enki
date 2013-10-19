@@ -579,7 +579,7 @@ static void environ_Let(Node local, Node env, Target result)
     ** local = symbol
     **       | (symbol expr)
     */
-    Node symbol;
+    Node symbol = NIL;
 
     if (isSymbol(local)) {
         symbol = local;
@@ -593,6 +593,16 @@ static void environ_Let(Node local, Node env, Target result)
         encode(expr, env, &nexpr);
 
         pair_SetCdr(local.pair, nexpr);
+    } else if (isTuple(local)) {
+        Node expr = NIL;
+        Node nexpr = NIL;
+
+        tuple_GetItem(local.tuple, 0, &symbol);
+        tuple_GetItem(local.tuple, 1, &expr);
+
+        encode(expr, env, &nexpr);
+
+        tuple_SetItem(local.tuple, 1, nexpr);
     }
 
     pair_Create(symbol, NIL, result.pair);

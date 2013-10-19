@@ -1,0 +1,32 @@
+
+#include "bit_array.h"
+#include <stdio.h>
+
+
+
+int main(int argc, char** argv) {
+    BitArray array;
+
+    array_init(&array);
+
+    array_set(&array, 10,  true);
+    array_set(&array, 100, true);
+    array_set(&array, 110, true);
+    array_set(&array, 120, true);
+    array_set(&array, 130, true);
+    array_set(&array, 140, true);
+    array_set(&array, 150, true);
+
+    int at = array_walk(&array, -1);
+
+    for (;;) {
+        if (0 > at) break;
+
+        printf("index set %d\n", at);
+
+        at = array_walk(&array, at);
+    }
+    return 0;
+}
+
+

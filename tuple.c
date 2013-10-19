@@ -9,6 +9,7 @@
 #include "pair.h"
 #include "treadmill.h"
 #include "type.h"
+#include "bit_array.h"
 
 #include <stdarg.h>
 
@@ -123,7 +124,7 @@ extern bool tuple_Map(Operator func, Tuple tuple, const Node env, Target target)
     }
 
     if (!func) {
-        fatal("\nerror: list_Map applied to a null function");
+        fatal("\nerror: tuple_Map applied to a null function");
         return false;
     }
 
@@ -139,7 +140,7 @@ extern bool tuple_Map(Operator func, Tuple tuple, const Node env, Target target)
 
     const unsigned count = kind->count;
 
-    GC_Begin(7);
+    GC_Begin(3);
 
     Tuple result;
     Node  value;
@@ -147,7 +148,7 @@ extern bool tuple_Map(Operator func, Tuple tuple, const Node env, Target target)
     GC_Protect(result);
     GC_Protect(value);
 
-    if (!tuple_Create(count, &result)) return false;
+    if (!tuple_Create(count, &result)) goto error;
 
     unsigned inx = 0;
 
@@ -163,4 +164,76 @@ extern bool tuple_Map(Operator func, Tuple tuple, const Node env, Target target)
 
     GC_End();
     return true;
+
+  error:
+    GC_End();
+    return false;
+}
+
+extern bool tuple_Filter(Selector func, Tuple tuple, const Node env, Target target) {
+    if (!tuple) {
+        ASSIGN(target, NIL);
+        return true;
+    }
+
+    if (!func) {
+        fatal("\nerror: tuple_Filter applied to a null function");
+        return false;
+    }
+
+    if (!isTuple(tuple)) {
+        fatal("\nerror: tupleFilter applied to a non-tuple");
+        return false;
+    }
+
+    Kind kind = asKind(tuple);
+
+    BitArray array;
+
+    array_init(&array);
+
+    unsigned max   = kind->count;
+    unsigned count = 0;
+    unsigned inx   = 0;
+
+    for (; inx < max ;++inx) {
+        Node value = tuple->item[inx];
+        if (func(inx, value, env)) {
+            ++count;
+            array_set(&array, inx, true);
+        }
+    }
+
+    if (0 >= count) {
+        ASSIGN(target, NIL);
+        return true;
+    }
+
+    GC_Begin(3);
+
+    Tuple result;
+    Node  value;
+
+    GC_Protect(result);
+    GC_Protect(value);
+
+    if (!tuple_Create(count, &result)) goto error;
+
+    int      at  = array_walk(&array, -1);
+    unsigned jnx = 0;
+
+    for (;; ++jnx) {
+        if (0 > at) break;
+        result->item[jnx] = tuple->item[at];
+        at = array_walk(&array, at);
+    }
+
+    ASSIGN(target, result);
+
+    GC_End();
+    return true;
+
+  error:
+    GC_End();
+    return false;
 }

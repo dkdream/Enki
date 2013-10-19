@@ -375,6 +375,94 @@ extern bool list_Map(Operator func, Pair pair, const Node env, Target target) {
     return false;
 }
 
+extern bool list_Filter(Predicate func, Pair pair, const Node env, Target target) {
+    if (!pair) {
+        ASSIGN(target, NIL);
+        return true;
+    }
+
+    if (!func) {
+        fatal("\nerror: list_Filter applied to a null function");
+        return false;
+    }
+
+    if (!isPair(pair)) {
+        if (func(pair, env)) {
+            ASSIGN(target, pair);
+        } else {
+            ASSIGN(target, NIL);
+        }
+        return true;
+    }
+
+    GC_Begin(7);
+
+    Node first;
+    Pair last;
+    Node input;
+    Node output;
+    Pair hold;
+
+    GC_Protect(first);
+    GC_Protect(last);
+    GC_Protect(input);
+    GC_Protect(hold);
+
+    input = pair->car;
+
+    for (; !func(input, env) ;) {
+        pair = pair->cdr.pair;
+        if (isPair(pair)) {
+            input = pair->car;
+            continue;
+        }
+        if (isNil(pair)) {
+            ASSIGN(target, NIL);
+        } else {
+            if (func(pair, env)) {
+                ASSIGN(target, pair);
+            } else {
+                ASSIGN(target, NIL);
+            }
+        }
+        goto done;
+    }
+
+    if (!pair_Create(input,NIL, &first.pair)) goto error;
+
+    last = first.pair;
+
+    for (; isPair(pair->cdr.pair) ;) {
+        hold   = 0;
+        pair   = pair->cdr.pair;
+        input  = pair->car;
+
+        if (!func(input, env)) continue;
+
+        if (!pair_Create(input,NIL, &hold)) goto error;
+        if (!pair_SetCdr(last, hold))       goto error;
+
+        last = hold;
+    }
+
+    if (!isNil(pair->cdr.pair)) {
+        input = pair->cdr;
+        if (func(input, env)) {
+            if (!pair_SetCdr(last, output)) goto error;
+        }
+    }
+
+    ASSIGN(target, first);
+
+  done:
+    GC_End();
+    return true;
+
+ error:
+    GC_End();
+    return false;
+}
+
 extern bool list_FoldLeft(Folder func, Pair pair, const Node init, const Node env, Target target) {
     if (!pair) {
         ASSIGN(target, init);
