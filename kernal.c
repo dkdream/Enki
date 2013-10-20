@@ -59,6 +59,9 @@ Primitive   p_apply_form = 0;
 #define SUBR(NAME) void opr_##NAME(Node args, Node env, Target result)
 #define APPLY(NAME,ARGS,ENV,RESULT) opr_##NAME(ARGS,ENV,RESULT)
 
+extern SUBR(elet);
+extern SUBR(encode_let);
+
 extern void defineValue(Node symbol, const Node value) {
     GC_Begin(2);
     Node globals;
@@ -598,6 +601,7 @@ static void environ_Let(Node local, Node env, Target result)
         Node nexpr = NIL;
 
         tuple_GetItem(local.tuple, 0, &symbol);
+
         tuple_GetItem(local.tuple, 1, &expr);
 
         encode(expr, env, &nexpr);
@@ -617,6 +621,7 @@ extern SUBR(encode_let)
     **               | (_ . body)
     **       binding = name
     **               | (name expr)
+    **               | [name type expr]
     ** to-do
     **       args    = ([<declaring>...] initialize . body)
     **               | ([as name expr.r] . body)
@@ -3649,6 +3654,8 @@ void startEnkiLibrary() {
     MK_FXD(let,encode_let);
     MK_FXD(fix,encode_fix);
     MK_FXD(case,encode_case);
+
+    MK_FXD(elet,encode_let);
 
     MK_PRM(depart);
     MK_PRM(gensym);

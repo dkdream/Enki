@@ -1,0 +1,23 @@
+/***************************
+ **
+ ** Project: *current project*
+ **
+ ** Routine List:
+ **    <routine-list-end>
+ **/
+#include "treadmill.h"
+#include "tuple.h"
+
+
+int main(int argc, char **argv)
+{
+     startEnkiLibrary();
+
+     Tuple tuple;
+
+     tuple_Create(5, &tuple);
+
+     stopEnkiLibrary();
+
+     return 0;
+}

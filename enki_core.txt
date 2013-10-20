@@ -34,8 +34,6 @@
 <context> = (constrain <locals> <core>+)
           | (fix <parameters> <core>+)
           | (let <parameters> <core>+)
-          | (let <name> <core>+)
-          | (let _ <core>+)
 
 <binding> = (bind <name>+ <core>) -- bind a collecton of names to the output of expression
           | (set <name>+ <core>)  -- set a collecton of names to the boxed output of expression
@@ -65,8 +63,8 @@
 
 <quote>      = '<core>
 
-<parameters> = <locals> <return>? <initialize>+
-<locals>     = [ <local>+ ]
+<parameters> = <locals>? <return>? <initialize>+
+<locals>     = [with <local>+ ]
 <local>      = <name> <core>
              | <name> _
 

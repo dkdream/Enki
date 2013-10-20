@@ -8,6 +8,7 @@
  **/
 #include "reference.h"
 #include "primitive.h"
+#include "bit_array.h"
 
 struct tuple {
     Node item[1];
@@ -25,6 +26,8 @@ extern bool tuple_FoldLeft(Flexor func, Pair pair, const Node init, const Node e
 extern bool tuple_FoldRight(Flexor func, Pair pair, const Node init, const Node env, Target target);
 extern bool tuple_Reverse(Pair pair, Pair* target);
 extern bool tuple_Find(Selector func, Pair pair, const Node env, Target target);
+extern bool tuple_Section(Tuple tuple, unsigned start, unsigned end, Tuple* target);
+extern bool tuple_Select(Tuple tuple, unsigned count, BitArray *array, Tuple* target);
 
 /******************
   inline functions

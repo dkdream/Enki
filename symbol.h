@@ -34,8 +34,10 @@ extern Symbol s_bslash;
 extern Symbol s_bsat;
 extern Symbol s_uscore;
 
+extern Symbol s_as;
 extern Symbol s_axiom;
 extern Symbol s_base;
+extern Symbol s_bind;
 extern Symbol s_block;
 extern Symbol s_box;
 extern Symbol s_branch;
@@ -78,6 +80,7 @@ extern Symbol s_union;
 extern Symbol s_unquote;
 extern Symbol s_unquote_splicing;
 extern Symbol s_unsigned;
+extern Symbol s_with;
 extern Symbol s_word;
 
 extern bool symbol_Create(TextBuffer value, Symbol*);

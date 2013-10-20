@@ -182,7 +182,7 @@ extern bool tuple_Filter(Selector func, Tuple tuple, const Node env, Target targ
     }
 
     if (!isTuple(tuple)) {
-        fatal("\nerror: tupleFilter applied to a non-tuple");
+        fatal("\nerror: tuple_Filter applied to a non-tuple");
         return false;
     }
 
@@ -226,6 +226,123 @@ extern bool tuple_Filter(Selector func, Tuple tuple, const Node env, Target targ
         if (0 > at) break;
         result->item[jnx] = tuple->item[at];
         at = bits_walk(&array, at);
+    }
+
+    ASSIGN(target, result);
+
+    GC_End();
+    bits_free(&array);
+    return true;
+
+  error:
+    GC_End();
+    bits_free(&array);
+    return false;
+}
+
+extern bool tuple_Section(Tuple tuple, unsigned start, unsigned end, Tuple* target) {
+    if (!tuple) {
+        ASSIGN(target, NIL);
+        return true;
+    }
+
+    if (!isTuple(tuple)) {
+        fatal("\nerror: tuple_Section applied to a non-tuple");
+        return false;
+    }
+
+    Kind    kind = asKind(tuple);
+    unsigned max = kind->count;
+
+    if (max <= start) {
+        ASSIGN(target, NIL);
+        return true;
+    }
+
+    if (end > start) {
+        if (end < max) {
+            ++end;
+        } else {
+            end = max;
+        }
+    } else {
+        if (end > max) {
+            ASSIGN(target, NIL);
+            return true;
+        }
+        end = max - end;
+        if (end <= start) {
+            ASSIGN(target, NIL);
+            return true;
+        }
+    }
+
+    unsigned count = end - start;
+
+    GC_Begin(3);
+
+    Tuple result;
+
+    GC_Protect(result);
+
+    if (!tuple_Create(count, &result)) goto error;
+
+    unsigned inx = 0;
+
+    for (; inx < count ; ++inx, ++start) {
+        result->item[inx] = tuple->item[start];
+    }
+
+    ASSIGN(target, result);
+    GC_End();
+    return true;
+
+ error:
+    GC_End();
+    return true;
+}
+
+extern bool tuple_Select(Tuple tuple, unsigned count, BitArray *array, Target target) {
+    if (!tuple) {
+        ASSIGN(target, NIL);
+        return true;
+    }
+
+    if (!array) {
+        ASSIGN(target, NIL);
+        return true;
+    }
+
+    if (0 >= count) {
+        ASSIGN(target, NIL);
+        return true;
+    }
+
+    if (!isTuple(tuple)) {
+        fatal("\nerror: tuple_Select applied to a non-tuple");
+        return false;
+    }
+
+    Kind kind = asKind(tuple);
+
+    unsigned max = kind->count;
+    unsigned inx = 0;
+
+    GC_Begin(3);
+
+    Tuple result;
+
+    GC_Protect(result);
+
+    if (!tuple_Create(count, &result)) goto error;
+
+    int      at  = bits_walk(array, -1);
+    unsigned jnx = 0;
+
+    for (; jnx < count ; ++jnx) {
+        if (0 > at) break;
+        result->item[jnx] = tuple->item[at];
+        at = bits_walk(array, at);
     }
 
     ASSIGN(target, result);

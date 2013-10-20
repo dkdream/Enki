@@ -30,8 +30,10 @@ Symbol s_bslash = 0;
 Symbol s_bsat = 0;
 Symbol s_uscore = 0;
 
+Symbol s_as = 0;
 Symbol s_axiom = 0;
 Symbol s_base = 0;
+Symbol s_bind = 0;
 Symbol s_block = 0;
 Symbol s_box = 0;
 Symbol s_branch = 0;
@@ -76,6 +78,7 @@ Symbol s_union = 0;
 Symbol s_unquote = 0;
 Symbol s_unquote_splicing = 0;
 Symbol s_unsigned;
+Symbol s_with = 0;
 Symbol s_word = 0;
 
 static Header empty_symbol = 0;
@@ -133,8 +136,10 @@ extern void init_global_symboltable() {
 
     symbol_Convert("unquote-splicing", &s_unquote_splicing);
 
+    MK_SYM(as);
     MK_SYM(axiom);
     MK_SYM(base);
+    MK_SYM(bind);
     MK_SYM(block);
     MK_SYM(box);
     MK_SYM(branch);
@@ -177,6 +182,7 @@ extern void init_global_symboltable() {
     MK_SYM(union);
     MK_SYM(unquote);
     MK_SYM(unsigned);
+    MK_SYM(with);
     MK_SYM(word);
 }
 
