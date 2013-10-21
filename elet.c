@@ -141,9 +141,7 @@ Tuple find_body(Tuple frame) {
 
     Tuple result;
 
-
     tuple_Section(frame, inx, 0, &result);
-
 
     return result;
 }
@@ -257,7 +255,7 @@ extern SUBR(elet)
     if (!isPair(bindings)) {
         env2 = env;
     } else {
-        list_Map(binding_Let, bindings.pair, env, &(env2.pair));
+        list_Map(bindings.pair, binding_Let, env, &(env2.pair));
         list_SetEnd(env2.pair, env);
     }
 

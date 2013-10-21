@@ -15,19 +15,41 @@ struct tuple {
 };
 
 extern bool tuple_Create(unsigned size, Tuple* target);
-extern bool tuple_Convert(Pair pair, Tuple* target);
 extern bool tuple_SetItem(Tuple tuple, unsigned index, const Node value);
 extern bool tuple_GetItem(Tuple tuple, unsigned index, Target value);
+
+// fill a tuple from a (proper) list
 extern bool tuple_Fill(Tuple tuple, Pair list);
 
-extern bool tuple_Map(Operator func, Tuple tuple, const Node env, Target target);
-extern bool tuple_Filter(Selector func, Tuple tuple, const Node env, Target target);
-extern bool tuple_FoldLeft(Flexor func, Pair pair, const Node init, const Node env, Target target);
-extern bool tuple_FoldRight(Flexor func, Pair pair, const Node init, const Node env, Target target);
-extern bool tuple_Reverse(Pair pair, Pair* target);
-extern bool tuple_Find(Selector func, Pair pair, const Node env, Target target);
+// convert a (proper) list to a new tuple
+extern bool tuple_Convert(Pair pair, Tuple* target);
+
+// create an new tuple then map input to output by func
+extern bool tuple_Map(Tuple tuple, const Operator func, const Node env, Tuple* target);
+
+// create a new tuple from the selected parts of an old tuple
+extern bool tuple_Filter(Tuple tuple, const Selector func, const Node env, Tuple* target);
+
+// create a new tuple from a section of an old tuple
 extern bool tuple_Section(Tuple tuple, unsigned start, unsigned end, Tuple* target);
+
+// return the left fold of a tuple using the flexor
+extern bool tuple_FoldLeft(Tuple tuple, const Node init, const Flexor func, const Node env, Target target);
+
+// return the left fold of a tuple using the flexor
+extern bool tuple_FoldRight(Tuple tuple, const Node init, const Flexor func, const Node env, Target target);
+
+// create a new tuple reverse fill it from the input tuple
+extern bool tuple_Reverse(Tuple input, Tuple* target);
+
+// fill the bit array based on what elements the selector selected from the tuple
+extern bool tuple_Find(Tuple tuple, const Selector func, const Node env, BitArray *array);
+
+// create a new tuple from elements of an old tuple
 extern bool tuple_Select(Tuple tuple, unsigned count, BitArray *array, Tuple* target);
+
+// update select parts of the current tuple (update all when array==null)
+extern bool tuple_Update(Tuple tuple, const Operator func, const Node env, BitArray *array);
 
 /******************
   inline functions

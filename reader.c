@@ -482,7 +482,7 @@ static bool readTuple(FILE *fp, Symbol ctor, int delim, Target result)
         goto failure;
     }
 
-    for (;list_SplitLast(matchItem, list, s_dot, &tail);) {
+    for (;list_SplitLast(list, matchItem, s_dot, &tail);) {
         Pair next = tail;
 
         if (!isPair(next->cdr)) {

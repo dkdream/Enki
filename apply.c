@@ -119,7 +119,7 @@ extern void expand(const Node expr, const Node env, Target result)
 
  list_begin:
     // first expand all user defined forms
-    list_Map(expand, tail.pair, env, &(tail.pair));
+    list_Map(tail.pair, expand, env, &(tail.pair));
 
  list_done:
     pair_Create(head, tail, result.pair);
@@ -198,7 +198,7 @@ extern void encode(const Node expr, const Node env, Target result)
     goto done;
 
  list_begin:
-    list_Map(encode, tail.pair, env, &(tail.pair));
+    list_Map(tail.pair, encode, env, &(tail.pair));
     pair_Create(head, tail, result.pair);
 
  done:
@@ -252,7 +252,7 @@ extern void eval_pair(const Node args, const Node env, Target result)
     }
 
     // evaluate the arguments
-    list_Map(eval, tail.pair, env, &tail.pair);
+    list_Map(tail.pair, eval, env, &tail.pair);
 
     // now apply the head to the evaluated arguments
     apply(head, tail, env, result);
@@ -337,7 +337,7 @@ extern void eval_tuple(const Node args, const Node env, Target result)
     goto done;
 
   no_op:
-    tuple_Map(eval, args.tuple, env, result);
+    tuple_Map(args.tuple, eval, env, result.tuple);
 
   done:
     popTrace();

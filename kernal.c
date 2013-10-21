@@ -425,7 +425,7 @@ extern SUBR(set)
 
 extern SUBR(encode_args)
 {
-    list_Map(encode, args.pair, env, result);
+    list_Map(args.pair, encode, env, result.pair);
 }
 
 extern SUBR(encode_define)
@@ -674,7 +674,7 @@ extern SUBR(encode_let)
     if (!isPair(bindings)) {
         lenv = env;
     } else { // (binding...)
-        list_Map(environ_Let, bindings.pair, env, &lenv);
+        list_Map(bindings.pair, environ_Let, env, &(lenv.pair));
         list_SetEnd(lenv.pair, env);
     }
 
@@ -760,7 +760,7 @@ extern SUBR(let)
     if (!isPair(bindings)) {
         env2 = env;
     } else {
-        list_Map(binding_Let, bindings.pair, env, &(env2.pair));
+        list_Map(bindings.pair, binding_Let, env, &(env2.pair));
         list_SetEnd(env2.pair, env);
     }
 
@@ -877,12 +877,12 @@ extern SUBR(encode_fix)
         return;
     }
 
-    list_Map(variable_Fix, bindings.pair, env, &variables);
+    list_Map(bindings.pair, variable_Fix, env, &(variables.pair));
 
-    list_Map(frame_Fix, bindings.pair, env, &lenv);
+    list_Map(bindings.pair, frame_Fix, env, &(lenv.pair));
     list_SetEnd(lenv.pair, env);
 
-    list_Map(initialize_Fix, bindings.pair, lenv, &initializers);
+    list_Map(bindings.pair, initialize_Fix, lenv, &(initializers.pair));
 
     encode(body, lenv, &body);
 
@@ -971,7 +971,7 @@ extern SUBR(fix)
     if (!isPair(bindings)) {
         eval_begin(body, env, result);
     } else {
-        list_Map(binding_Fix, bindings.pair, env, &(env2.pair));
+        list_Map(bindings.pair, binding_Fix, env, &(env2.pair));
 
         list_SetEnd(env2.pair, env);
 
@@ -1074,7 +1074,7 @@ extern void encode_Pattern(Node pattern, Node env, Target result)
     }
 
     if (isPair(bindings)) {
-        list_Map(environ_Pattern, bindings.pair, env, &lenv);
+        list_Map(bindings.pair, environ_Pattern, env, &(lenv.pair));
         list_SetEnd(lenv.pair, env);
 
         encode(body, lenv, &(body.pair));
@@ -1119,7 +1119,7 @@ extern SUBR(encode_case)
 
     encode(expr, env, &(expr.pair));
 
-    list_Map(encode_Pattern, cases.pair, env, &(cases.pair));
+    list_Map(cases.pair, encode_Pattern, env, &(cases.pair));
 
     pair_Create(expr, cases, result.pair);
 
@@ -1372,7 +1372,7 @@ extern SUBR(encode_lambda)
     if (!isPair(formals)) {
         environ_Lambda(formals, env, &lenv);
     } else {
-        list_Map(environ_Lambda, formals.pair, env, &lenv);
+        list_Map(formals.pair, environ_Lambda, env, &(lenv.pair));
     }
     list_SetEnd(lenv.pair, env);
 

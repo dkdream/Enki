@@ -97,6 +97,29 @@ extern inline void bits_set(BitArray *array, const unsigned index, const bool va
     }
 }
 
+extern inline unsigned long bits_found(const BitArray *array) __attribute__((always_inline nonnull(1)));
+extern inline unsigned long bits_found(const BitArray *array)
+{
+    const unsigned boundry = 1 << CHAR_BIT;
+
+    unsigned long found = 0;
+    unsigned     offset = 0;
+    unsigned       mask = 1;
+
+    for (;; ++offset) {
+        if (offset >= array->marker) return found;
+
+        char slot = array->buffer[offset];
+
+        for (; mask < boundry ;) {
+            if (mask & slot) ++found;
+            mask = mask << 1;
+        }
+
+        mask = 1;
+    }
+}
+
 extern inline int bits_walk(const BitArray *array, const int last) __attribute__((always_inline nonnull(1)));
 extern inline int bits_walk(const BitArray *array, const int last)
 {

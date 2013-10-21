@@ -117,7 +117,7 @@ extern bool tuple_Convert(Pair list, Tuple* target) {
     return true;
 }
 
-extern bool tuple_Map(Operator func, Tuple tuple, const Node env, Target target) {
+extern bool tuple_Map(Tuple tuple, Operator func, const Node env, Target target) {
     if (!tuple) {
         ASSIGN(target, NIL);
         return true;
@@ -170,7 +170,7 @@ extern bool tuple_Map(Operator func, Tuple tuple, const Node env, Target target)
     return false;
 }
 
-extern bool tuple_Filter(Selector func, Tuple tuple, const Node env, Target target) {
+extern bool tuple_Filter(Tuple tuple, Selector func, const Node env, Target target) {
     if (!tuple) {
         ASSIGN(target, NIL);
         return true;
@@ -302,6 +302,26 @@ extern bool tuple_Section(Tuple tuple, unsigned start, unsigned end, Tuple* targ
     return true;
 }
 
+extern bool tuple_FoldLeft(Tuple tuple, const Node init, Flexor func, const Node env, Target target) {
+    fatal("\nerror: tuple_FoldLeft coded yet");
+    return false;
+}
+
+extern bool tuple_FoldRight(Tuple tuple, const Node init, Flexor func, const Node env, Target target) {
+    fatal("\nerror: tuple_FoldRight coded yet");
+    return false;
+}
+
+extern bool tuple_Reverse(Tuple input, Tuple* target) {
+    fatal("\nerror: tuple_Reverse coded yet");
+    return false;
+}
+
+extern bool tuple_Find(Tuple tuple, Selector func, const Node env, BitArray *array) {
+    fatal("\nerror: tuple_Find coded yet");
+    return false;
+}
+
 extern bool tuple_Select(Tuple tuple, unsigned count, BitArray *array, Target target) {
     if (!tuple) {
         ASSIGN(target, NIL);
@@ -309,8 +329,8 @@ extern bool tuple_Select(Tuple tuple, unsigned count, BitArray *array, Target ta
     }
 
     if (!array) {
-        ASSIGN(target, NIL);
-        return true;
+        fatal("\nerror: tuple_Select applied to a null bit array");
+        return false;
     }
 
     if (0 >= count) {
@@ -353,4 +373,51 @@ extern bool tuple_Select(Tuple tuple, unsigned count, BitArray *array, Target ta
   error:
     GC_End();
     return false;
+}
+
+
+extern bool tuple_Update(Tuple tuple, Operator func, const Node env, BitArray *array) {
+    if (!tuple) return true;
+
+    if (!isTuple(tuple)) {
+        fatal("\nerror: tuple_Update applied to a non-tuple");
+        return false;
+    }
+
+    Kind    kind = asKind(tuple);
+    unsigned max = kind->count;
+
+    GC_Begin(3);
+
+    Node output;
+
+    GC_Protect(output);
+
+    if (!array) {
+        unsigned inx = 0;
+        for (; inx < max ; ++inx) {
+            Node input = tuple->item[inx];
+
+            func(input, env, &output);
+
+            tuple->item[inx] = output;
+        }
+    } else {
+        int at = bits_walk(array, -1);
+
+        for(; at < max ;) {
+            if (0 > at) break;
+
+            Node input = tuple->item[at];
+
+            func(input, env, &output);
+
+            tuple->item[at] = output;
+
+            at = bits_walk(array, at);
+        }
+    }
+
+    GC_End();
+    return true;
 }

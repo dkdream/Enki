@@ -11,8 +11,6 @@
 #include "apply.h"
 #include "type.h"
 
-//extern Base t_pair;  // this need to be removed (use sigma-types)
-
 extern bool pair_Create(const Node car, const Node cdr, Pair* target) {
     if (!node_Allocate(_zero_space,
                        false,
@@ -304,7 +302,7 @@ extern bool alist_Add(Pair pair, const Node label, const Node value, Pair* targe
     return false;
 }
 
-extern bool list_Map(Operator func, Pair pair, const Node env, Target target) {
+extern bool list_Map(Pair pair, Operator func, const Node env, Target target) {
     if (!pair) {
         ASSIGN(target, NIL);
         return true;
@@ -375,24 +373,20 @@ extern bool list_Map(Operator func, Pair pair, const Node env, Target target) {
     return false;
 }
 
-extern bool list_Filter(Predicate func, Pair pair, const Node env, Target target) {
+extern bool list_Filter(Pair pair, Predicate func, const Node env, Pair* target) {
     if (!pair) {
         ASSIGN(target, NIL);
         return true;
     }
 
     if (!func) {
-        fatal("\nerror: list_Filter applied to a null function");
+        fatal("\nerror: list_Filter applied to a null predicate");
         return false;
     }
 
     if (!isPair(pair)) {
-        if (func(pair, env)) {
-            ASSIGN(target, pair);
-        } else {
-            ASSIGN(target, NIL);
-        }
-        return true;
+        fatal("\nerror: list_Filter applied to a non-list");
+        return false;
     }
 
     GC_Begin(7);
@@ -463,7 +457,7 @@ extern bool list_Filter(Predicate func, Pair pair, const Node env, Target target
     return false;
 }
 
-extern bool list_FoldLeft(Folder func, Pair pair, const Node init, const Node env, Target target) {
+extern bool list_FoldLeft(Pair pair, const Node init, Folder func, const Node env, Target target) {
     if (!pair) {
         ASSIGN(target, init);
         return true;
@@ -506,6 +500,11 @@ extern bool list_Reverse(Pair pair, Pair* target) {
         return true;
     }
 
+    if (!isPair(pair)) {
+        fatal("\nerror: list_Find applied to a non-list");
+        return false;
+    }
+
     GC_Begin(4);
 
     Pair collector;
@@ -520,12 +519,17 @@ extern bool list_Reverse(Pair pair, Pair* target) {
 
     if (!pair_Create(left, NIL, &collector)) goto error;
 
-    for (; isPair(pair->cdr.pair) ;) {
+    for (; isPair(pair->cdr) ;) {
         pair       = pair->cdr.pair;
         left       = pair->car;
         right.pair = collector;
 
         if (!pair_Create(left, right, &collector)) goto error;
+    }
+
+    if (!isNil(pair->cdr)) {
+        fatal("\nerror: list_Reverse applied to a non-proper-list");
+        return false;
     }
 
     ASSIGN(target, collector);
@@ -538,31 +542,60 @@ extern bool list_Reverse(Pair pair, Pair* target) {
     return false;
 }
 
-extern bool list_Find(Predicate func, Pair pair, const Node env, Target target) {
-    if (!pair) return false;
+extern bool list_Find(Pair pair, Predicate func, const Node env, BitArray *array) {
+    if (!pair) return true;
 
-    Node left = pair->car;
-
-    if (func(left,env)) {
-        ASSIGN(target,left);
-        return true;
+    if (!array) {
+        fatal("\nerror: list_Find applied to a null bit array");
+        return false;
     }
 
-    for (; isPair(pair->cdr.pair) ;) {
-        pair  = pair->cdr.pair;
-        left  = pair->car;
+    if (!func)  {
+        fatal("\nerror: list_Find applied to a null predicate");
+        return false;
+    }
 
-        if (func(left,env)) {
-            ASSIGN(target,left);
-            return true;
+    if (!isPair(pair)) {
+        fatal("\nerror: list_Find applied to a non-list");
+        return false;
+    }
+
+    Node head = pair->car;
+
+    if (func(head,env)) {
+        bits_set(array, 0, true);
+    }
+
+    unsigned count = 1;
+
+    for (; isPair(pair->cdr) ; ++count) {
+        pair = pair->cdr.pair;
+        head = pair->car;
+
+        if (func(head,env)) {
+            bits_set(array, count, true);
         }
     }
 
+    if (!isNil(pair->cdr)) {
+        fatal("\nerror: list_Find applied to a non-proper-list");
+        return false;
+    }
+
+    return true;
+}
+
+extern bool list_Select(Pair pair, BitArray *array, Pair* target) {
+    fatal("\nerror: list_Select coded yet");
     return false;
 }
 
+extern bool list_Update(Pair pair, Operator func, const Node env, BitArray *array) {
+    fatal("\nerror: list_Update coded yet");
+    return false;
+}
 
-extern bool list_SplitFirst(Predicate func, Pair pair, const Node env, Pair* target) {
+extern bool list_SplitFirst(Pair pair, Predicate func, const Node env, Pair* target) {
     if (!pair) return false;
 
     darken_Node(pair);
@@ -587,7 +620,7 @@ extern bool list_SplitFirst(Predicate func, Pair pair, const Node env, Pair* tar
     return false;
 }
 
-extern bool list_SplitLast(Predicate func, Pair pair, const Node env, Pair* target) {
+extern bool list_SplitLast(Pair pair, Predicate func, const Node env, Pair* target) {
     if (!pair) return false;
 
     darken_Node(pair);
