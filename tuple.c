@@ -177,7 +177,7 @@ extern bool tuple_Filter(Tuple tuple, Selector func, const Node env, Target targ
     }
 
     if (!func) {
-        fatal("\nerror: tuple_Filter applied to a null function");
+        fatal("\nerror: tuple_Filter applied to a null selector");
         return false;
     }
 
@@ -318,8 +318,32 @@ extern bool tuple_Reverse(Tuple input, Tuple* target) {
 }
 
 extern bool tuple_Find(Tuple tuple, Selector func, const Node env, BitArray *array) {
-    fatal("\nerror: tuple_Find coded yet");
-    return false;
+    if (!tuple) return true;
+
+    if (!func) {
+        fatal("\nerror: tuple_Find applied to a null selector");
+        return false;
+    }
+
+    if (!isTuple(tuple)) {
+        fatal("\nerror: tuple_Find applied to a non-tuple");
+        return false;
+    }
+
+    Kind kind = asKind(tuple);
+
+    unsigned max   = kind->count;
+    unsigned count = 0;
+    unsigned inx   = 0;
+
+    for (; inx < max ;++inx) {
+        Node value = tuple->item[inx];
+        if (func(inx, value, env)) {
+            bits_set(array, inx, true);
+        }
+    }
+
+    return true;
 }
 
 extern bool tuple_Select(Tuple tuple, unsigned count, BitArray *array, Target target) {
@@ -378,6 +402,11 @@ extern bool tuple_Select(Tuple tuple, unsigned count, BitArray *array, Target ta
 
 extern bool tuple_Update(Tuple tuple, Operator func, const Node env, BitArray *array) {
     if (!tuple) return true;
+
+    if (!func) {
+        fatal("\nerror: tuple_Update applied to a null function");
+        return false;
+    }
 
     if (!isTuple(tuple)) {
         fatal("\nerror: tuple_Update applied to a non-tuple");
