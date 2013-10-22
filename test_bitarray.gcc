@@ -1,3 +1,4 @@
+/*-*- mode: c;-*-*/
 
 #include "bit_array.h"
 #include <stdio.h>
@@ -50,17 +51,41 @@ static void test_section() {
     printf("\n\ntest-section\n");
 
     BitArray array = BITS_INITIALISER;
+    BitArray other = BITS_INITIALISER;
+    BitArray and   = BITS_INITIALISER;
 
     bits_init(&array);
+    bits_init(&other);
+    bits_init(&and);
 
-    bits_section(&array, 1, 100, true);
+    bits_extendTo(&other, 40);
+    bits_extendTo(&and, 40);
+
+    bits_section(&array, 1, 25, true);
 
     echo_array(&array);
 
-    bits_section(&array, 50, 60, false);
+    bits_section(&array, 20, 60, false);
+    bits_normalize(&array);
 
     echo_array(&array);
 
+    bits_section(&other, 16, 40, true);
+    bits_section(&and, 4, 12, true);
+
+    bits_or(&array, &other);
+
+    echo_array(&array);
+
+    bits_xor(&array, &other);
+
+    echo_array(&array);
+
+    bits_and(&array, &and);
+
+    echo_array(&array);
+
+    bits_free(&other);
     bits_free(&array);
 }
 
