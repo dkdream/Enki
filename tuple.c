@@ -312,8 +312,54 @@ extern bool tuple_FoldRight(Tuple tuple, const Node init, Flexor func, const Nod
     return false;
 }
 
-extern bool tuple_Reverse(Tuple input, Tuple* target) {
-    fatal("\nerror: tuple_Reverse coded yet");
+extern bool tuple_Reverse(Tuple tuple, Tuple* target) {
+    if (!tuple) {
+        ASSIGN(target, NIL);
+        return true;
+    }
+
+    if (!isTuple(tuple)) {
+        fatal("\nerror: tuple_Reverse applied to a non-tuple");
+        return false;
+    }
+
+    Kind    kind = asKind(tuple);
+    unsigned max = kind->count;
+
+    GC_Begin(3);
+
+    Tuple result;
+
+    GC_Protect(result);
+
+    if (!tuple_Create(max, &result)) goto error;
+
+    if (max < 1) goto done;
+
+    if (max < 2) {
+        result->item[0] = tuple->item[0];
+        goto done;
+    }
+
+    unsigned bottom = 0;
+    unsigned top    = max - 1;
+
+    for ( ; bottom < top ; ++bottom, --top) {
+        result->item[bottom] = tuple->item[top];
+        result->item[top]    = tuple->item[bottom];
+    }
+
+    if (bottom == top) {
+        result->item[bottom] = tuple->item[top];
+    }
+
+  done:
+    ASSIGN(target, result);
+    GC_End();
+    return true;
+
+ error:
+    GC_End();
     return false;
 }
 
@@ -398,7 +444,6 @@ extern bool tuple_Select(Tuple tuple, unsigned count, BitArray *array, Target ta
     GC_End();
     return false;
 }
-
 
 extern bool tuple_Update(Tuple tuple, Operator func, const Node env, BitArray *array) {
     if (!tuple) return true;

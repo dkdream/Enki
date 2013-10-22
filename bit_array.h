@@ -9,6 +9,7 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 struct bit_array {
     char *buffer;
@@ -47,7 +48,6 @@ extern inline unsigned long bits_count(const BitArray *array) {
     unsigned long count = array->size;
     return count * CHAR_BIT;
 }
-
 
 extern inline void bits_extendTo(BitArray *array, const unsigned count) __attribute__((always_inline nonnull(1)));
 extern inline void bits_extendTo(BitArray *array, const unsigned count)
@@ -93,6 +93,86 @@ extern inline void bits_set(BitArray *array, const unsigned index, const bool va
     if (value) {
         array->buffer[offset] = slot | mask;
     } else {
+        array->buffer[offset] = slot & (~mask);
+    }
+}
+
+extern inline void bits_section(BitArray *array, const unsigned bottom, const unsigned top, const bool value) __attribute__((always_inline nonnull(1)));
+extern inline void bits_section(BitArray *array, const unsigned bottom, const unsigned top, const bool value)
+{
+    if (bottom >= top) return;
+
+    const unsigned boundry = 1 << (CHAR_BIT - 1);
+
+    if (value) {
+        bits_extendTo(array, top / CHAR_BIT);
+
+        unsigned   mask = 0;
+        unsigned  count = bottom;
+        unsigned offset = bottom / CHAR_BIT;
+        char       slot = array->buffer[offset];
+
+        // mark to a byte boundry
+        for (; mask < boundry; ++count) {
+            if (count >= top) break;
+            mask = mask | (1 << (count % CHAR_BIT));
+        }
+
+        array->buffer[offset] = slot | mask;
+        ++offset;
+
+        for (;; ++offset) {
+            if (offset >= array->marker)   return;
+            if ((count + CHAR_BIT) >= top) break;
+            array->buffer[offset] = -1;
+            count += CHAR_BIT;
+        }
+
+        mask = 0;
+        slot = array->buffer[offset];
+
+        // mark the tail
+        for (; mask < boundry ; ++count) {
+            if (count >= top) break;
+            mask = mask | (1 << (count % CHAR_BIT));
+        }
+
+        array->buffer[offset] = slot | mask;
+
+    } else {
+        unsigned offset = bottom / CHAR_BIT;
+
+        if (offset >= array->marker)  return;
+
+        unsigned  mask = 0;
+        unsigned count = bottom;
+        char      slot = array->buffer[offset];
+
+        // mark to a byte boundry
+        for (; mask < boundry; ++count) {
+            if (count >= top) break;
+            mask = mask | (1 << (count % CHAR_BIT));
+        }
+
+        array->buffer[offset] = slot & (~mask);
+        ++offset;
+
+        for (;; ++offset) {
+            if (offset >= array->marker)   return;
+            if ((count + CHAR_BIT) >= top) break;
+            array->buffer[offset] = 0;
+            count += CHAR_BIT;
+        }
+
+        mask = 0;
+        slot = array->buffer[offset];
+
+        // mark the tail
+        for (; mask < boundry ; ++count) {
+            if (count >= top) break;
+            mask = mask | (1 << (count % CHAR_BIT));
+        }
+
         array->buffer[offset] = slot & (~mask);
     }
 }

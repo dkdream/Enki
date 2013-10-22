@@ -66,13 +66,11 @@
 <parameters> = <locals>? <return>? <initialize>+
 <locals>     = [with <local>+ ]
 <local>      = <name> <core>
-             | <name> _
 
 <arguments>  = [ <argument>+ ]
-             | <name>               # infered-typ
-<argument>   = <name> <core>  # name declared-type 
-             | <name> _       # name infered-type
-             | _      <core>  # slot declared-type 
+             | <name>        # infered-type
+<argument>   = <name> <core> # name declared-type 
+             | _      <core> # slot declared-type 
 
 <initialize> = [bind <name>+ <core>]
              | [set <name>+ <core>]
@@ -88,8 +86,11 @@
 
 <ctor-pattern>  = (<name> <variables> <core>)
 <tuple-pattern> = (_ <variables> <core>)
-<variables>     = <arguments>
+<variables>     = [ <variable>+ ]
                 | <name>
+<variable>      = <name> <core> # name declared-type
+                | _      <core> # slot declared-type 
+                | <name> _      # name infered-type
 
 <else-pattern>  = (. <core>)
 

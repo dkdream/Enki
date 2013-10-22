@@ -31,7 +31,31 @@
 #define APPLY(NAME,ARGS,ENV,RESULT) opr_##NAME(ARGS,ENV,RESULT)
 
 
-Tuple find_with(Tuple frame) {
+static bool with_types(unsigned index, Node value, Node env) {
+    if (0 == index) return false;
+
+    unsigned test = (index % 2);
+
+    if (1 == test) return false;
+    return true;
+}
+static bool with_names(unsigned index, Node value, Node env) {
+    if (0 == index) return false;
+
+    unsigned test = (index % 2);
+
+    if (1 == test) return false;
+    return true;
+}
+
+static bool as_types(unsigned index, Node value, Node env) {
+    return (2 < index);
+}
+static bool as_name(unsigned index, Node value, Node env) {
+    return (1 == index);
+}
+
+Tuple find_with(Tuple frame, const Node env) {
     if (!frame) return (Tuple) 0;
 
     Kind    kind = asKind(frame);
@@ -52,20 +76,26 @@ Tuple find_with(Tuple frame) {
     return (Tuple) 0;
 }
 
-Tuple find_as(Tuple frame) {
+
+Tuple find_as(Tuple frame, const Node env) {
     if (!frame) return (Tuple) 0;
 
     Kind    kind = asKind(frame);
     unsigned max = kind->count;
     unsigned inx = 0;
 
-    Node symbol;
+    BitArray array = BITS_INITIALISER;
+    Node     symbol;
 
     for (; inx < max ;++inx) {
         Node value = frame->item[inx];
         if (!isTuple(value)) return (Tuple) 0;
         tuple_GetItem(value.tuple, 0, &symbol);
         if (isIdentical(s_as, symbol)) {
+            bits_reset(&array);
+            tuple_Find(value.tuple, as_types, 0, &array);
+            tuple_Update(value.tuple, encode, env, &array);
+            bits_free(&array);
             return value.tuple;
         }
     }
@@ -73,7 +103,7 @@ Tuple find_as(Tuple frame) {
     return (Tuple) 0;
 }
 
-Tuple find_initialize(Tuple frame) {
+Tuple find_initialize(Tuple frame, const Node env) {
 
     if (!frame) return (Tuple) 0;
 
@@ -151,7 +181,6 @@ extern SUBR(encode_elet)
     /*
     ** given args    = ([with <declare>...]? [as name expr...]? <initialize>... body)
     **       declare = name expr
-    **               | name _
     **    initialize = [bind name... expr]
     **               | [set  name... expr]
     */
@@ -172,10 +201,10 @@ extern SUBR(encode_elet)
 
     tuple_Convert(args.pair, &frame);
 
-    with       = find_with(frame);
-    as         = find_as(frame);
-    initialize = find_initialize(frame);
-    //    body       = find_body(frame);
+    with       = find_with(frame, env);
+    as         = find_as(frame, env);
+    initialize = find_initialize(frame, env);
+    body       = find_body(frame);
 
 body:
     encode(body, env, &body);

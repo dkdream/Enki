@@ -2,9 +2,29 @@
 #include "bit_array.h"
 #include <stdio.h>
 
+static void echo_array(BitArray *array) {
 
+    int at = bits_walk(array, -1);
 
-int main(int argc, char** argv) {
+    printf("marker %u count %lu size %u\n",
+           bits_marker(array),
+           bits_count(array),
+           bits_size(array));
+
+    printf("first offset %d\n", at);
+
+    for (;;) {
+        if (0 > at) break;
+
+        printf("index set %d\n", at);
+
+        at = bits_walk(array, at);
+    }
+}
+
+static void test_walk() {
+    printf("\n\ntest-walk\n");
+
     BitArray array = BITS_INITIALISER;
 
     bits_init(&array);
@@ -21,22 +41,33 @@ int main(int argc, char** argv) {
     bits_set(&array, 150, true);
     bits_set(&array, 255, true);
 
-    int at = bits_walk(&array, -1);
+    echo_array(&array);
 
-    printf("marker %u count %lu size %u\n",
-           bits_marker(&array),
-           bits_count(&array),
-           bits_size(&array));
+    bits_free(&array);
+}
 
-    printf("first offset %d\n", at);
+static void test_section() {
+    printf("\n\ntest-section\n");
 
-    for (;;) {
-        if (0 > at) break;
+    BitArray array = BITS_INITIALISER;
 
-        printf("index set %d\n", at);
+    bits_init(&array);
 
-        at = bits_walk(&array, at);
-    }
+    bits_section(&array, 1, 100, true);
+
+    echo_array(&array);
+
+    bits_section(&array, 50, 60, false);
+
+    echo_array(&array);
+
+    bits_free(&array);
+}
+
+int main(int argc, char** argv) {
+    test_walk();
+    test_section();
+
     return 0;
 }
 
