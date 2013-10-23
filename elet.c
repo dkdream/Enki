@@ -62,13 +62,18 @@ Tuple find_with(Tuple frame, const Node env) {
     unsigned max = kind->count;
     unsigned inx = 0;
 
-    Node symbol;
+    BitArray array = BITS_INITIALISER;
+    Node     symbol;
 
     for (; inx < max ;++inx) {
         Node value = frame->item[inx];
         if (!isTuple(value)) return (Tuple) 0;
         tuple_GetItem(value.tuple, 0, &symbol);
         if (isIdentical(s_with, symbol)) {
+            bits_reset(&array);
+            tuple_Find(value.tuple, with_types, 0, &array);
+            tuple_Update(value.tuple, encode, env, &array);
+            bits_free(&array);
             return value.tuple;
         }
     }
@@ -185,23 +190,30 @@ extern SUBR(encode_elet)
     **               | [set  name... expr]
     */
 
-    GC_Begin(7);
+    GC_Begin(10);
 
     Tuple frame;
     Tuple with;
+    Tuple vars;
     Tuple as;
     Tuple initialize;
     Tuple body;
 
     GC_Protect(frame);
     GC_Protect(with);
+    GC_Protect(vars);
     GC_Protect(as);
     GC_Protect(initialize);
     GC_Protect(body);
 
     tuple_Convert(args.pair, &frame);
 
-    with       = find_with(frame, env);
+    with = find_with(frame, env);
+
+    if (with) {
+        tuple_Filter(with, with_names, 0, &vars);
+    }
+
     as         = find_as(frame, env);
     initialize = find_initialize(frame, env);
     body       = find_body(frame);

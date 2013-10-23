@@ -299,16 +299,106 @@ extern bool tuple_Section(Tuple tuple, unsigned start, unsigned end, Tuple* targ
 
  error:
     GC_End();
-    return true;
+    return false;
 }
 
 extern bool tuple_FoldLeft(Tuple tuple, const Node init, Flexor func, const Node env, Target target) {
-    fatal("\nerror: tuple_FoldLeft coded yet");
+    if (!tuple) {
+        fatal("\nerror: tuple_FoldRight applied to a null-tuple");
+        return false;
+    }
+
+    if (!isTuple(tuple)) {
+        fatal("\nerror: tuple_FoldRight applied to a non-tuple");
+        return false;
+    }
+
+    Kind    kind = asKind(tuple);
+    unsigned max = kind->count;
+
+    if (1 > max) {
+        ASSIGN(target, init);
+        return true;
+    }
+
+    GC_Begin(3);
+
+    Node left;
+    Node right;
+    Node result;
+
+    GC_Protect(left);
+    GC_Protect(right);
+    GC_Protect(result);
+
+    left = init;
+
+    unsigned index = 0;
+
+    for (; index < max ; ++index) {
+        right = tuple->item[index];
+
+        if (!func(index, left, right, env, &result)) goto error;
+
+        left = result;
+    }
+
+    ASSIGN(target, result);
+    GC_End();
+    return true;
+
+ error:
+    GC_End();
     return false;
 }
 
 extern bool tuple_FoldRight(Tuple tuple, const Node init, Flexor func, const Node env, Target target) {
-    fatal("\nerror: tuple_FoldRight coded yet");
+    if (!tuple) {
+        fatal("\nerror: tuple_FoldRight applied to a null-tuple");
+        return false;
+    }
+
+    if (!isTuple(tuple)) {
+        fatal("\nerror: tuple_FoldRight applied to a non-tuple");
+        return false;
+    }
+
+    Kind      kind = asKind(tuple);
+    unsigned index = kind->count;
+
+    if (1 > index) {
+        ASSIGN(target, init);
+        return true;
+    }
+
+    GC_Begin(3);
+
+    Node left;
+    Node right;
+    Node result;
+
+    GC_Protect(left);
+    GC_Protect(right);
+    GC_Protect(result);
+
+    right = init;
+
+    for (; 0 < index ;) {
+        --index;
+
+        left = tuple->item[index];
+
+        if (!func(index, left, right, env, &result)) goto error;
+
+        right = result;
+    }
+
+    ASSIGN(target, result);
+    GC_End();
+    return true;
+
+ error:
+    GC_End();
     return false;
 }
 
