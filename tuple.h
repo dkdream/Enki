@@ -18,6 +18,9 @@ extern bool tuple_Create(unsigned size, Tuple* target);
 extern bool tuple_SetItem(Tuple tuple, unsigned index, const Node value);
 extern bool tuple_GetItem(Tuple tuple, unsigned index, Target value);
 
+// construct a tuple
+extern bool tuple_Make(Tuple* target, const unsigned size, ...);
+
 // fill a tuple from a (proper) list
 extern bool tuple_Fill(Tuple tuple, Pair list);
 

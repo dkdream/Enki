@@ -10,6 +10,7 @@
 #include "debug.h"
 #include "apply.h"
 #include "type.h"
+#include <stdarg.h>
 
 extern bool pair_Create(const Node car, const Node cdr, Pair* target) {
     if (!node_Allocate(_zero_space,
@@ -66,6 +67,72 @@ extern bool pair_GetCdr(Pair pair, Target cdr) {
     ASSIGN(cdr, pair->cdr);
 
     return true;
+}
+
+extern bool list_Make(Pair* target, ...) {
+    va_list ap;
+    va_start(ap, target);
+
+    Node value = va_arg(ap, Node);
+
+    if (isNil(value)) {
+        fatal("\nerror: list_Make applied to no values");
+        return false;
+    }
+
+    GC_Begin(6);
+
+    Pair result;
+    Pair at;
+    Pair next;
+    Node tail;
+
+    GC_Protect(result);
+    GC_Protect(at);
+    GC_Protect(next);
+    GC_Protect(tail);
+
+    if (!pair_Create(value, NIL, &result)) goto error;
+
+    for (;;) {
+        value = va_arg(ap, Node);
+
+        if (isNil(value)) break;
+
+        tail.pair = result;
+
+        if (!pair_Create(value, tail, &result)) goto error;
+    }
+
+    if (isNil(result->cdr)) goto done;
+
+    at          = result->cdr.pair;
+    tail.pair   = result;
+    result->cdr = NIL;
+
+    for (;;) {
+        if (isNil(at->cdr)) {
+            at->cdr = tail;
+            result  = at;
+            break;
+        }
+
+        next      = at->cdr.pair;
+        at->cdr   = tail;
+        tail.pair = at;
+        at        = next;
+    }
+
+  done:
+    ASSIGN(target, result);
+    GC_End();
+    va_end(ap);
+    return true;
+
+  error:
+    GC_End();
+    va_end(ap);
+    return false;
 }
 
 extern bool list_State(Pair pair, unsigned *count, bool *dotted) {
@@ -465,27 +532,27 @@ extern bool list_FoldLeft(Pair pair, const Node init, Folder func, const Node en
 
     GC_Begin(4);
 
-    Node collector;
+    Node result;
     Node left;
     Node right;
 
-    GC_Protect(collector);
+    GC_Protect(result);
     GC_Protect(left);
     GC_Protect(right);
 
-    left  = pair->car;
-    right = init;
+    left  = init;
+    right = pair->car;
 
-    if (!func(left, right, env, &collector)) goto error;
+    if (!func(left, right, env, &result)) goto error;
 
     for (; isPair(pair->cdr.pair) ;) {
         pair  = pair->cdr.pair;
-        left  = pair->car;
-        right = collector;
-        if (!func(left, right, env, &collector)) goto error;
+        left  = result;
+        right = pair->car;
+        if (!func(left, right, env, &result)) goto error;
     }
 
-    ASSIGN(target, collector);
+    ASSIGN(target, result);
     GC_End();
     return true;
 
@@ -507,24 +574,24 @@ extern bool list_Reverse(Pair pair, Pair* target) {
 
     GC_Begin(4);
 
-    Pair collector;
+    Pair result;
     Node left;
     Node right;
 
-    GC_Protect(collector);
+    GC_Protect(result);
     GC_Protect(left);
     GC_Protect(right);
 
     left = pair->car;
 
-    if (!pair_Create(left, NIL, &collector)) goto error;
+    if (!pair_Create(left, NIL, &result)) goto error;
 
     for (; isPair(pair->cdr) ;) {
         pair       = pair->cdr.pair;
         left       = pair->car;
-        right.pair = collector;
+        right.pair = result;
 
-        if (!pair_Create(left, right, &collector)) goto error;
+        if (!pair_Create(left, right, &result)) goto error;
     }
 
     if (!isNil(pair->cdr)) {
@@ -532,7 +599,7 @@ extern bool list_Reverse(Pair pair, Pair* target) {
         return false;
     }
 
-    ASSIGN(target, collector);
+    ASSIGN(target, result);
 
     GC_End();
     return true;

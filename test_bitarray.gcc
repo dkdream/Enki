@@ -5,7 +5,7 @@
 
 static void echo_array(BitArray *array) {
 
-    int at = bits_walk(array, -1);
+    int at = bits_ascend(array, -1);
 
     printf("marker %u count %lu size %u\n",
            bits_marker(array),
@@ -19,9 +19,31 @@ static void echo_array(BitArray *array) {
 
         printf("index set %d\n", at);
 
-        at = bits_walk(array, at);
+        at = bits_ascend(array, at);
     }
 }
+
+static void test_descend(BitArray *array) {
+
+    int at = bits_descend(array, -1);
+
+    printf("marker %u count %lu size %u\n",
+           bits_marker(array),
+           bits_count(array),
+           bits_size(array));
+
+    printf("last offset %d\n", at);
+
+    for (;;) {
+        if (0 > at) break;
+
+        printf("index set %d\n", at);
+
+        at = bits_descend(array, at);
+    }
+}
+
+
 
 static void test_walk() {
     printf("\n\ntest-walk\n");
@@ -80,10 +102,12 @@ static void test_section() {
     bits_xor(&array, &other);
 
     echo_array(&array);
+    test_descend(&array);
 
     bits_and(&array, &and);
 
     echo_array(&array);
+    test_descend(&array);
 
     bits_free(&other);
     bits_free(&array);

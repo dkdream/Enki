@@ -282,8 +282,8 @@ extern inline unsigned long bits_found(const BitArray *array)
     }
 }
 
-extern inline int bits_walk(const BitArray *array, const int last) __attribute__((always_inline nonnull));
-extern inline int bits_walk(const BitArray *array, const int last)
+extern inline int bits_ascend(const BitArray *array, const int last) __attribute__((always_inline nonnull));
+extern inline int bits_ascend(const BitArray *array, const int last)
 {
     int index = (0 > last) ? 0 : (last + 1);
 
@@ -302,6 +302,44 @@ extern inline int bits_walk(const BitArray *array, const int last)
             mask = mask << 1;
         }
         mask = 1;
+    }
+}
+
+extern inline int bits_descend(const BitArray *array, const int last) __attribute__((always_inline nonnull));
+extern inline int bits_descend(const BitArray *array, const int last)
+{
+    if (1 > array->marker) return -1;
+
+    int      index;
+    unsigned offset;
+    unsigned mask;
+
+    if (0 > last) {
+        offset = (array->marker - 1);
+        index  = (offset * CHAR_BIT) + (CHAR_BIT - 1);
+        mask   = 1 << (CHAR_BIT - 1);
+    } else {
+        index  = (last - 1);
+        offset = index / CHAR_BIT;
+        mask   = 1 << (index % CHAR_BIT);
+    }
+
+    for (;; --offset) {
+
+        char slot = array->buffer[offset];
+
+        for (; 0 < mask ; --index) {
+            if (mask & slot) return index;
+            mask = mask >> 1;
+            if (0 < index) continue;
+            return -1;
+        }
+
+        mask = 1 << (CHAR_BIT - 1);
+
+        if (0 < offset) continue;
+
+        return -1;
     }
 }
 

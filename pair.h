@@ -21,6 +21,9 @@ extern bool pair_SetCdr(Pair pair, const Node cdr);
 extern bool pair_GetCar(Pair pair, Target car);
 extern bool pair_GetCdr(Pair pair, Target cdr);
 
+// construct a list
+extern bool list_Make(Pair* target, ...);
+
 // when using a pair as a list (proper when dotted != true)
 extern bool list_State(Pair pair, unsigned *count, bool *dotted);
 

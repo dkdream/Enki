@@ -1,3 +1,4 @@
+/*-*- mode: c;-*-*/
 /***************************
  **
  ** Project: *current project*
@@ -7,15 +8,60 @@
  **/
 #include "treadmill.h"
 #include "tuple.h"
+#include "symbol.h"
+#include "dump.h"
+#include "pair.h"
 
+#include <stdio.h>
+
+static bool binder(unsigned index, Node left, Node right, Node env, Target result) {
+    GC_Begin(2);
+
+    Pair slot;
+
+    GC_Protect(slot);
+
+    if (!pair_Create(left, NIL, &slot))    goto error;
+    if (!pair_Create(slot, right, result.pair)) goto error;
+
+    GC_End();
+    return true;
+
+  error:
+    GC_End();
+    return false;
+}
 
 int main(int argc, char **argv)
 {
      startEnkiLibrary();
 
-     Tuple tuple;
+     GC_Begin(6);
 
-     tuple_Create(5, &tuple);
+     Tuple result;
+     Node  test;
+     Node  test2;
+
+     GC_Protect(result);
+     GC_Protect(test);
+     GC_Protect(test2);
+
+     tuple_Make(&result, 5, s_box, s_target, s_symbol, s_pointer, s_text, NIL);
+
+     prettyPrint(stdout, result);
+     printf("\n");
+
+     tuple_FoldRight(result, NIL, binder, NIL, &test);
+
+     prettyPrint(stdout, test);
+     printf("\n");
+
+     tuple_FoldRight(result, test, binder, NIL, &test2);
+
+     prettyPrint(stdout, test2);
+     printf("\n");
+
+     GC_End();
 
      stopEnkiLibrary();
 

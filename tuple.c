@@ -70,6 +70,51 @@ extern bool tuple_GetItem(Tuple tuple, unsigned index, Target value) {
     return true;
 }
 
+extern bool tuple_Make(Tuple *target, const unsigned size, ...) {
+    if (0 > size) {
+        fatal("\nerror: tuple_Make applied with invalid size");
+        return false;
+    }
+
+    va_list ap;
+    va_start(ap, size);
+
+    GC_Begin(6);
+
+    Tuple result;
+    Node  value;
+
+    GC_Protect(result);
+    GC_Protect(value);
+
+    if (!tuple_Create(size, &result)) goto error;
+
+    unsigned index = 0;
+
+    for (;; ++index) {
+        value = va_arg(ap, Node);
+
+        if (isNil(value)) break;
+
+        if (index >= size) {
+            fatal("\nerror: tuple_Make applied to too may values");
+            goto error;
+        }
+
+        result->item[index] = value;
+    }
+
+    ASSIGN(target, result);
+    GC_End();
+    va_end(ap);
+    return true;
+
+  error:
+    GC_End();
+    va_end(ap);
+    return false;
+}
+
 extern bool tuple_Fill(Tuple tuple, Pair list) {
     if (!tuple) return false;
 
@@ -219,13 +264,13 @@ extern bool tuple_Filter(Tuple tuple, Selector func, const Node env, Target targ
 
     if (!tuple_Create(count, &result)) goto error;
 
-    int      at  = bits_walk(&array, -1);
+    int      at  = bits_ascend(&array, -1);
     unsigned jnx = 0;
 
     for (;; ++jnx) {
         if (0 > at) break;
         result->item[jnx] = tuple->item[at];
-        at = bits_walk(&array, at);
+        at = bits_ascend(&array, at);
     }
 
     ASSIGN(target, result);
@@ -516,13 +561,13 @@ extern bool tuple_Select(Tuple tuple, unsigned count, BitArray *array, Target ta
 
     if (!tuple_Create(count, &result)) goto error;
 
-    int      at  = bits_walk(array, -1);
+    int      at  = bits_ascend(array, -1);
     unsigned jnx = 0;
 
     for (; jnx < count ; ++jnx) {
         if (0 > at) break;
         result->item[jnx] = tuple->item[at];
-        at = bits_walk(array, at);
+        at = bits_ascend(array, at);
     }
 
     ASSIGN(target, result);
@@ -567,7 +612,7 @@ extern bool tuple_Update(Tuple tuple, Operator func, const Node env, BitArray *a
             tuple->item[inx] = output;
         }
     } else {
-        int at = bits_walk(array, -1);
+        int at = bits_ascend(array, -1);
 
         for(; at < max ;) {
             if (0 > at) break;
@@ -578,7 +623,7 @@ extern bool tuple_Update(Tuple tuple, Operator func, const Node env, BitArray *a
 
             tuple->item[at] = output;
 
-            at = bits_walk(array, at);
+            at = bits_ascend(array, at);
         }
     }
 
