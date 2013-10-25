@@ -8,14 +8,25 @@
  **/
 #include "reference.h"
 
-extern void expand(const Node expr, const Node env, Target result);
-extern void encode(const Node expr, const Node env, Target result);
-extern void eval(const Node expr, const Node env, Target result);
-extern void eval_begin(Node body, Node env, Target last);
+#define GCC_VERSION (__GNUC__ * 10000                 \
+                     + __GNUC_MINOR__ * 100           \
+                     + __GNUC_PATCHLEVEL__)
 
-extern void eval_block(Symbol escape, Node body, Node env, Target last);
-extern void eval_escape(Node node, Node result);
-extern void apply(Node fun, Node args, const Node env, Target result);
+#if GCC_VERSION > 40800
+#define HOT __attribute__ ((hot))
+#else
+#define HOT
+#endif
+
+extern void expand(const Node expr, const Node env, Target result) HOT;
+extern void encode(const Node expr, const Node env, Target result) HOT;
+extern void eval(const Node expr, const Node env, Target result) HOT;
+extern void eval_begin(Node body, Node env, Target last) HOT;
+
+extern void eval_block(Symbol escape, Node body, Node env, Target last) HOT;
+extern void eval_escape(Node node, Node result) __attribute__ ((noreturn));
+
+extern void apply(Node fun, Node args, const Node env, Target result) HOT;
 
 extern void dump_enki_stack();
 extern void pushTrace(const Node context);
