@@ -3705,6 +3705,11 @@ void startEnkiLibrary() {
 #define _do(NAME, OP) definePrimitive(#OP, opr_ ## NAME);
 
     _do_binary();
+
+#undef _do
+
+#define _do(NAME, OP) definePrimitive(#OP, opr_ ## NAME);
+
     _do_relation();
 
 #undef _do

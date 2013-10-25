@@ -25,10 +25,11 @@
               | (syntax <name> <name> <core>* <core>) -- name1 is input, name2 is output
               | <quote>
 
-<control> = (if <core> <core> <core>*)
-          | (unless <core> <core> <core>*)
-          | (case <core> <case-pattern>*  <else-pattern>)
-          | (select <action-pattern>* <else-pattern>)
+<control> = (if <core> <core> <core>*)                        ## choose by predicate
+          | (unless <core> <core> <core>*)                    ## choose by predicate
+          | (select <action-pattern>* <else-pattern>)         ## choose by event
+          | (case <core> <case-pattern>*  <else-pattern>)     ## choose by constructor
+          | (switch <core> <switch-pattern>*  <else-pattern>) ## choose by type
           | (depart <core> <core>+)   -- if arg1 is a  one-shot-continuation call it with arg2..argn
 
 <context> = (constrain <locals> <core>+)
@@ -79,24 +80,26 @@
 
 <action-pattern> = <fiber-pattern> | <timer-pattern> | <conduit-pattern>
 <case-pattern>   = <ctor-pattern>  | <tuple-pattern> | <record-pattern>
+<switch-pattern> = <type-pattern>
+<else-pattern>   = (. <core>)
 
 <timer-pattern>   = (alarm <core> <core>*)
 <fiber-pattern>   = (done <core> <core>*)
 <conduit-pattern> = (recieve <name> <core> <core>*)
                   | (send <name> <core> <core>*)
+<ctor-pattern>    = (<name> <slots> <core>)
+                  | (<name> <fields> <core>)
+                  | (<name> <name> <core>)
+<tuple-pattern>   = (<slots> <core>)
+<record-pattern>  = (<fields> <core>)
+<type-pattern>    = (<core> <name> <core>)
 
-<ctor-pattern>   = (<name> <slots> <core>)
-                 | (<name> <fields> <core>)
-                 | (<name> <name> <core>)
-<tuple-pattern>  = (<slots> <core>)
-<record-pattern> = (<fields> <core>)
-<else-pattern>   = (. <core>)
-<slots>          = [ <variable>+ ]
-<fields>         = { <field>+ }
-<field>          = <name> <core>    # name declared (type must be labeled type)
-                 | _      <core>    # slot declared (type must be labeled type)
-<variable>       = <name> <core>    # name declared (type must be indexed type)
-                 | _      <core>    # slot declared (type must be indexed type)
+<slots>    = [ <variable>+ ]
+<fields>   = { <field>+ }
+<field>    = <name> <core>    # name declared (type must be labeled type)
+           | _      <core>    # slot declared (type must be labeled type)
+<variable> = <name> <core>    # name declared (type must be indexed type)
+           | _      <core>    # slot declared (type must be indexed type)
 
 
 
