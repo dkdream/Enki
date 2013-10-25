@@ -369,6 +369,11 @@ extern inline bool isQuote(const Node value) {
     return fromCtor(value, s_quote);
 }
 
+extern inline bool isVariable(const Node value) __attribute__((always_inline));
+extern inline bool isVariable(const Node value) {
+    return fromCtor(value, s_variable);
+}
+
 /***************************
  ** end of file
  **************************/

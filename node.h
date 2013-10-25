@@ -9,9 +9,6 @@
 #include "reference.h"
 #include "hashcode.h"
 
-extern Node true_v;
-extern Node void_v;
-
 extern HashCode node_HashCode(Node node);
 extern bool     node_Match(Node left, Node right);
 extern bool     node_Iso(long depth, Node left, Node right);

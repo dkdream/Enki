@@ -80,6 +80,7 @@ Symbol s_unquote_splicing = 0;
 Symbol s_unsigned;
 Symbol s_with = 0;
 Symbol s_word = 0;
+Symbol s_variable = 0;
 
 static Header empty_symbol = 0;
 
@@ -184,6 +185,7 @@ extern void init_global_symboltable() {
     MK_SYM(unsigned);
     MK_SYM(with);
     MK_SYM(word);
+    MK_SYM(variable);
 }
 
 // used by init_global_typetable only

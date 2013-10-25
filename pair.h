@@ -9,10 +9,17 @@
 #include "reference.h"
 #include "primitive.h"
 #include "bit_array.h"
+#include "symbol.h"
 
 struct pair {
     Node car;
     Node cdr;
+};
+
+struct variable {
+    Symbol   label;
+    Node     value;
+    Constant type;
 };
 
 extern bool pair_Create(const Node car, const Node cdr, Pair* target);
@@ -44,17 +51,11 @@ extern bool list_GetTail(Pair pair, unsigned index, Target value);
 extern bool list_SetEnd(Pair pair, const Node value);
 extern bool list_GetEnd(Pair pair, Target value);
 
-// find the entry=(label,value) for label
-extern bool alist_Entry(Pair pair, const Node label, Pair* entry);
+// find the entry=(label,value,type) for label
+extern bool alist_Entry(Pair pair, const Symbol label, Variable* entry);
 
-// find the value for label
-extern bool alist_Get(Pair pair, const Node label, Target entry);
-
-// set the value for label
-extern bool alist_Set(Pair pair, const Node label, const Node value);
-
-// prepend the entry(label,value) to list
-extern bool alist_Add(Pair pair, const Node label, const Node value, Pair* target);
+// prepend the entry(label,value,type) to list
+extern bool alist_Add(Pair pair, const Symbol label, const Node value, const Constant type, Pair* target);
 
 //  create a new list then map input to output by func
 extern bool list_Map(Pair pair, const Operator func, const Node env, Pair* target);
@@ -91,9 +92,45 @@ extern bool list_SplitFirst(Pair pair, const Predicate func, const Node env, Pai
 // split the list in two at the last tail with a head that is selected by predicate
 extern bool list_SplitLast(Pair pair, const Predicate func, const Node env, Pair* target);
 
+// forwarded from treadmill.h
+extern bool darken_Node(const Node node);
+
 /******************
   inline functions
  ******************/
+
+// find the value for label
+extern inline bool alist_Get(Pair pair, const Symbol label, Target value)  __attribute__((always_inline nonnull));
+extern inline bool alist_Get(Pair pair, const Symbol label, Target value) {
+    Variable variable;
+
+    if (!alist_Entry(pair, label, &variable)) return false;
+
+    ASSIGN(value, variable->value);
+
+    return true;
+}
+
+// set the value for label
+extern inline bool alist_Set(Pair pair, const Symbol label, const Node value) __attribute__((always_inline nonnull));
+extern inline bool alist_Set(Pair pair, const Symbol label, const Node value) {
+    Variable variable;
+
+    if (!alist_Entry(pair, label, &variable)) return false;
+
+    darken_Node(value);
+
+    variable->value = value;
+
+    return true;
+}
+
+// prepend the entry(label,void,type) to list
+extern inline bool alist_Declare(Pair pair, const Symbol label, const Node type, Pair* target) __attribute__((always_inline nonnull));
+extern inline bool alist_Declare(Pair pair, const Symbol label, const Constant type, Pair* target) {
+    return alist_Add(pair, label, void_v, type, target);
+}
+
 
 /***************************
  ** end of file

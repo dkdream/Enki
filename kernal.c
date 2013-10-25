@@ -62,14 +62,16 @@ Primitive   p_apply_form = 0;
 extern SUBR(elet);
 extern SUBR(encode_let);
 
-extern void defineValue(Node symbol, const Node value) {
+extern void defineValue(const Symbol symbol, const Node value) {
     GC_Begin(2);
     Node globals;
 
     GC_Protect(globals);
 
     pair_GetCdr(enki_globals.pair, &globals);
-    alist_Add(globals.pair, symbol, value, &globals.pair);
+    if (!alist_Add(globals.pair, symbol, value, getType(value).constant, &globals.pair)) {
+        fatal("ASSERT unable to add variable: %s", symbol_Text(symbol));
+    }
     pair_SetCdr(enki_globals.pair, globals);
 
     GC_End();
@@ -352,9 +354,9 @@ extern SUBR(bind)
         fatal(0);
     }
 
-    Pair entry;
+    Variable entry;
 
-    if (!alist_Entry(env.pair, symbol, &entry)) {
+    if (!alist_Entry(env.pair, symbol.symbol, &entry)) {
         fprintf(stderr, "\nerror: cannot set undefined variable: ");
         dump(stderr, symbol);
         fprintf(stderr, "\n");
@@ -362,9 +364,7 @@ extern SUBR(bind)
         fatal(0);
     }
 
-    pair_GetCdr(entry, &temp);
-
-    if (!isIdentical(temp, void_v)) {
+    if (!isIdentical(entry->value, void_v)) {
         fprintf(stderr, "\nerror: cannot bind a bound local value: ");
         dump(stderr, symbol);
         fprintf(stderr, "\n");
@@ -372,11 +372,9 @@ extern SUBR(bind)
         fatal(0);
     }
 
-    eval(expr, env, &value);
+    eval(expr, env, &(entry->value));
 
-    pair_SetCdr(entry, value);
-
-    ASSIGN(result,value);
+    ASSIGN(result, entry->value);
 }
 
 extern SUBR(set)
@@ -396,9 +394,9 @@ extern SUBR(set)
         fatal(0);
     }
 
-    Pair entry;
+    Variable entry;
 
-    if (!alist_Entry(env.pair, symbol, &entry)) {
+    if (!alist_Entry(env.pair, symbol.symbol, &entry)) {
         fprintf(stderr, "\nerror: cannot set undefined variable: ");
         dump(stderr, symbol);
         fprintf(stderr, "\n");
@@ -406,9 +404,7 @@ extern SUBR(set)
         fatal(0);
     }
 
-    pair_GetCdr(entry, &temp);
-
-    if (isIdentical(temp, void_v)) {
+    if (isIdentical(entry->value, void_v)) {
         fprintf(stderr, "\nerror: cannot set an unbound local value: ");
         dump(stderr, symbol);
         fprintf(stderr, "\n");
@@ -416,11 +412,9 @@ extern SUBR(set)
         fatal(0);
     }
 
-    eval(expr, env, &value);
+    eval(expr, env, &(entry->value));
 
-    pair_SetCdr(entry, value);
-
-    ASSIGN(result,value);
+    ASSIGN(result,entry->value);
 }
 
 extern SUBR(encode_args)
@@ -470,7 +464,7 @@ extern SUBR(define)
 
     VM_DEBUG(1, "defining %s", symbol_Text(symbol.symbol));
 
-    defineValue(symbol, value);
+    defineValue(symbol.symbol, value);
 
     ASSIGN(result, value);
 }
@@ -543,7 +537,8 @@ extern SUBR(type)
     Node value;
 
     if (isSymbol(args)) {
-        Pair entry;
+        Variable entry;
+
         // lookup symbol in the current enviroment
         if (!alist_Entry(env.pair, args.symbol, &entry)) {
             // lookup symbol in the global enviroment
@@ -551,7 +546,8 @@ extern SUBR(type)
                 fatal("undefined variable: %s", symbol_Text(args.symbol));
             }
         }
-        pair_GetCdr(entry, result);
+
+        ASSIGN(result, entry->value);
         return;
     }
 
@@ -679,7 +675,7 @@ extern SUBR(encode_let)
     }
 
     if (isSymbol(marker)) {
-        alist_Add(lenv.pair, marker, NIL, &(lenv.pair));
+        alist_Add(lenv.pair, marker, NIL, undefined_s, &(lenv.pair));
     }
 
 body:
@@ -3554,6 +3550,18 @@ static Node defineFixed(const char* neval,  Operator oeval,
     return (Node) fixed;
 }
 
+static void check_for(const char* name) {
+    Symbol label;
+
+    symbol_Convert(name, &label);
+
+    Variable entry;
+
+    if (!alist_Entry(enki_globals.pair, label, &entry)) {
+        fatal("ASSERT undefined variable: %s", symbol_Text(label));
+    }
+}
+
 #define MK_CONST(x,y) defineConstant(#x, y)
 #define MK_BTYPE(x)   defineConstant(#x, t_ ##x)
 #define MK_PRM(x)     definePrimitive(#x, opr_ ## x)
@@ -3828,6 +3836,8 @@ void startEnkiLibrary() {
     }
 
     space_Flip(_zero_space);
+
+    check_for("require");
 
     VM_DEBUG(1, "startEnkiLibrary end");
 }

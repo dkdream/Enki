@@ -40,17 +40,15 @@ typedef struct primitive     *Primitive;
 typedef struct symbol        *Symbol;
 typedef struct text          *Text;
 typedef struct tuple         *Tuple;
-
 typedef struct type_base     *Base;
 typedef struct type_constant *Constant;
 typedef struct type_index    *Index;
 typedef struct type_label    *Label;
 typedef struct type_branch   *Branch;
-
 typedef struct axiom         *Axiom;
 typedef struct rule          *Rule;
 typedef struct name          *Name;
-
+typedef struct variable      *Variable;
 /*    */
 
 union  __attribute__ ((__transparent_union__ __packed__))
@@ -76,6 +74,8 @@ node {
     Axiom     axiom;
     Rule      rule;
     Name      name;
+    /**/
+    Variable  variable;
     /**/
 };
 
@@ -105,6 +105,8 @@ node_target {
     Rule      *rule;
     Name      *name;
     /**/
+    Variable  *variable;
+    /**/
     Node      *node;
     /**/
 };
@@ -113,6 +115,11 @@ typedef union node_target Target;
 
 #define NIL  ((Node)((Reference)0))
 #define VOID ((Node)((Reference)-1))
+
+extern Node void_v;
+extern Node true_v;
+extern Node false_v;
+extern Node unit_v;
 
 #define ASSIGN(target, node) enki_assign(target, node)
 

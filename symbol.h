@@ -82,6 +82,7 @@ extern Symbol s_unquote_splicing;
 extern Symbol s_unsigned;
 extern Symbol s_with;
 extern Symbol s_word;
+extern Symbol s_variable;
 
 extern bool symbol_Create(TextBuffer value, Symbol*);
 extern bool symbol_Convert(const char* value, Symbol*);

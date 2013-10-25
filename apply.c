@@ -98,8 +98,8 @@ extern void expand(const Node expr, const Node env, Target result)
         Node value = NIL;
 
         // check if the enviroment
-        if (!alist_Get(env.pair, head, &value)) {
-            alist_Get(enki_globals.pair, head, &value);
+        if (!alist_Get(env.pair, head.symbol, &value)) {
+            alist_Get(enki_globals.pair, head.symbol, &value);
         }
 
         // check if the reference is a form
@@ -169,8 +169,8 @@ extern void encode(const Node expr, const Node env, Target result)
         goto list_begin;
     } else {
         // check if the enviroment
-        if (!alist_Get(env.pair, head, &value)) {
-            alist_Get(enki_globals.pair, head, &value);
+        if (!alist_Get(env.pair, head.symbol, &value)) {
+            alist_Get(enki_globals.pair, head.symbol, &value);
         }
 
         if (isPrimitive(value)) {
@@ -267,9 +267,9 @@ extern void eval_symbol(const Node args, const Node env, Target result)
 {
     GC_Begin(2);
 
-    Symbol symbol;
-    Node   tmp;
-    Pair   entry;
+    Symbol   symbol;
+    Node     tmp;
+    Variable entry;
 
     GC_Protect(tmp);
 
@@ -277,14 +277,14 @@ extern void eval_symbol(const Node args, const Node env, Target result)
 
     // lookup symbol in the current enviroment
     if (!alist_Entry(env.pair, symbol, &entry)) {
-        if (!alist_Entry(enki_globals.pair,  symbol, &entry)) goto error;
+        if (!alist_Entry(enki_globals.pair, symbol, &entry)) goto error;
     }
 
-    pair_GetCdr(entry, &tmp);
+    tmp = entry->value;
 
     if (fromCtor(tmp, s_forced)) {
-        tuple_GetItem(tmp.tuple, 0, &tmp);
-        pair_SetCdr(entry, tmp);
+        tuple_GetItem(tmp.tuple, 0, &(entry->value));
+        tmp = entry->value;
     }
 
     ASSIGN(result, tmp);
@@ -307,7 +307,7 @@ extern void eval_tuple(const Node args, const Node env, Target result)
 
     Node head;
     Node func;
-    Pair entry;
+    Variable entry;
 
     GC_Protect(head);
     GC_Protect(func);
@@ -321,7 +321,7 @@ extern void eval_tuple(const Node args, const Node env, Target result)
         if (!alist_Entry(enki_globals.pair,  head.symbol, &entry)) goto no_op;
     }
 
-    pair_GetCdr(entry, &head);
+    head = entry->value;
 
     if (fromCtor(head, s_box)) {
         pair_GetCar(head.pair, &head);

@@ -33,6 +33,31 @@ extern bool pair_Create(const Node car, const Node cdr, Pair* target) {
     return true;
 }
 
+static bool variable_Create(const Symbol label, const Node value, const Constant type,
+                            Variable* target)
+{
+    if (!node_Allocate(_zero_space,
+                       false,
+                       sizeof(struct variable),
+                       target))
+        return false;
+
+    Variable result = (*target);
+
+    darken_Node(label);
+    darken_Node(value);
+    darken_Node(type);
+
+    setType(result, type);
+    setConstructor(result, s_variable);
+
+    result->label = label;
+    result->value = value;
+    result->type  = type;
+
+    return true;
+}
+
 extern bool pair_SetCar(Pair pair, const Node car) {
     if (!pair) return false;
 
@@ -279,18 +304,18 @@ extern bool list_GetEnd(Pair pair, Target value) {
      return false;
 }
 
-extern bool alist_Entry(Pair pair, const Node label, Pair* value) {
-    if (!pair) return false;
+extern bool alist_Entry(Pair pair, const Symbol label, Variable* value) {
+    if (!pair)  return false;
 
     for (; isPair(pair) ;) {
-        if (!isPair(pair->car)) {
+        if (!isVariable(pair->car)) {
             pair = pair->cdr.pair;
             continue;
         }
 
-        Pair entry = pair->car.pair;
+        Variable entry = pair->car.variable;
 
-        if (!isIdentical(label, entry->car)) {
+        if (!isIdentical(label, entry->label)) {
             pair = pair->cdr.pair;
             continue;
         }
@@ -303,63 +328,21 @@ extern bool alist_Entry(Pair pair, const Node label, Pair* value) {
 
 }
 
-extern bool alist_Get(Pair pair, const Node label, Target value) {
-    if (!pair) return false;
-
-    for (; isPair(pair) ;) {
-        if (!isPair(pair->car)) {
-            pair = pair->cdr.pair;
-            continue;
-        }
-
-        Pair entry = pair->car.pair;
-
-        if (!isIdentical(label, entry->car)) {
-            pair = pair->cdr.pair;
-            continue;
-        }
-
-        ASSIGN(value, entry->cdr);
-        return true;
-    }
-
-    return false;
-}
-
-extern bool alist_Set(Pair pair, const Node label, const Node value) {
-    if (!pair) return false;
-
-    for (; isPair(pair) ;) {
-        if (!isPair(pair->car)) {
-            pair = pair->cdr.pair;
-            continue;
-        }
-
-        Pair entry = pair->car.pair;
-
-        if (!isIdentical(label, entry->car)) {
-            pair = pair->cdr.pair;
-            continue;
-        }
-
-        darken_Node(value);
-
-        entry->cdr = value;
-        return true;
-    }
-
-    return false;
-}
-
-extern bool alist_Add(Pair pair, const Node label, const Node value, Pair* target) {
+extern bool alist_Add(Pair pair, const Symbol label, const Node value, const Constant type, Pair* target) {
     GC_Begin(2);
 
-    Pair entry;
+    Variable entry;
 
     GC_Protect(entry);
 
-    if (!pair_Create(label, value, &entry)) goto error;
-    if (!pair_Create(entry, pair, target)) goto error;
+    if (!variable_Create(label, value, type, &entry)) {
+        fatal("ASSERT unable to create variable: %s", symbol_Text(label));
+        goto error;
+    }
+    if (!pair_Create(entry, pair, target)) {
+        fatal("ASSERT unable to add variable: %s", symbol_Text(label));
+        goto error;
+    }
 
     GC_End();
     return true;
