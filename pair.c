@@ -33,7 +33,8 @@ extern bool pair_Create(const Node car, const Node cdr, Pair* target) {
     return true;
 }
 
-static bool variable_Create(const Symbol label, const Node value, const Constant type,
+extern bool variable_Create(const Symbol label,
+                            const Node value, const Constant type,
                             Variable* target)
 {
     if (!node_Allocate(_zero_space,

@@ -51,6 +51,9 @@ extern bool list_GetTail(Pair pair, unsigned index, Target value);
 extern bool list_SetEnd(Pair pair, const Node value);
 extern bool list_GetEnd(Pair pair, Target value);
 
+// create a variable entry
+extern variable_Create(const Symbol label, const Node value, const Constant type, Variable* target)
+
 // find the entry=(label,value,type) for label
 extern bool alist_Entry(Pair pair, const Symbol label, Variable* entry);
 

@@ -69,9 +69,11 @@ extern void defineValue(const Symbol symbol, const Node value) {
     GC_Protect(globals);
 
     pair_GetCdr(enki_globals.pair, &globals);
+
     if (!alist_Add(globals.pair, symbol, value, getType(value).constant, &globals.pair)) {
         fatal("ASSERT unable to add variable: %s", symbol_Text(symbol));
     }
+
     pair_SetCdr(enki_globals.pair, globals);
 
     GC_End();
