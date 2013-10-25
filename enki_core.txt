@@ -90,15 +90,15 @@
                  | (<name> <name> <core>)
 <tuple-pattern>  = (<slots> <core>)
 <record-pattern> = (<fields> <core>)
+<else-pattern>   = (. <core>)
 <slots>          = [ <variable>+ ]
 <fields>         = { <field>+ }
-<field>          = <name> <core>          # name declared-type (name is field)
-                 | <name> : <name> <core> # name declared-type (name <- field type)
-                 | : <name> <core>        # field declared-type (skipped)
-<variable>       = <name> <core>    # name declared-type
-                 | _      <core>    # slot declared-type  (skipped)
+<field>          = <name> <core>    # name declared (type must be labeled type)
+                 | _      <core>    # slot declared (type must be labeled type)
+<variable>       = <name> <core>    # name declared (type must be indexed type)
+                 | _      <core>    # slot declared (type must be indexed type)
 
-<else-pattern>  = (. <core>)
+
 
 -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -
 

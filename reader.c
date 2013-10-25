@@ -743,12 +743,15 @@ extern bool readExpr(FILE *fp, Target result)
 
         case ':':
             {
+#if 0
                 if (!checkBlank(fp)) {
                     return readQuote(fp, s_type, result);
-                } else {
-                    ASSIGN(result, s_colon);
-                    return true;
-                }
+                } else
+#endif
+                    {
+                        ASSIGN(result, s_colon);
+                        return true;
+                    }
             }
 
         case '0' ... '9':
