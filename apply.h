@@ -8,16 +8,6 @@
  **/
 #include "reference.h"
 
-#define GCC_VERSION (__GNUC__ * 10000                 \
-                     + __GNUC_MINOR__ * 100           \
-                     + __GNUC_PATCHLEVEL__)
-
-#if GCC_VERSION > 40800
-#define HOT __attribute__ ((hot))
-#else
-#define HOT
-#endif
-
 extern void expand(const Node expr, const Node env, Target result) HOT;
 extern void encode(const Node expr, const Node env, Target result) HOT;
 extern void eval(const Node expr, const Node env, Target result) HOT;

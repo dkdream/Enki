@@ -29,6 +29,16 @@
 #include <stdbool.h>
 #include <error.h>
 
+#define GCC_VERSION (__GNUC__ * 10000                 \
+                     + __GNUC_MINOR__ * 100           \
+                     + __GNUC_PATCHLEVEL__)
+
+/* Test for GCC > 4.3.0 */
+#if GCC_VERSION > 40300
+#define HOT __attribute__ ((hot))
+#else
+#define HOT
+#endif
 
 typedef unsigned long      Size;
 

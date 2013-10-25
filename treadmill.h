@@ -221,9 +221,9 @@ extern inline bool bool_Value(const Node node) {
     return (node.value == BOOL_TRUE);
 }
 
-extern bool darken_Node(const Node node);
-extern void check_Node(const Node node);
-extern bool node_Allocate(const Space space, bool atom, Size size_in_char, Target);
+extern bool darken_Node(const Node node) HOT;
+extern void check_Node(const Node node) HOT;
+extern bool node_Allocate(const Space space, bool atom, Size size_in_char, Target) HOT;
 
 extern bool insert_After(const Header mark, const Header node);
 extern bool insert_Before(const Header mark, const Header node);
