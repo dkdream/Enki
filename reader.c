@@ -29,7 +29,7 @@
 #define CHAR_DIGIT16  (1<<3)
 #define CHAR_LETTER   (1<<4)
 #define CHAR_PREFIX   (1<<5)
-#define CHAR_SYMTAX   (1<<6)
+#define CHAR_SYNTAX   (1<<6)
 
 static unsigned short chartab[]= {
     /*  00 nul */   0,
@@ -165,30 +165,35 @@ static unsigned short chartab[]= {
 /* syntax: ! " # $ % & ' ( ) * + , . / : ; < = > ? [ ] \ ` { } | ^ */
 /*
 ** !  -> PREFIX
-** "  -> string
-** #  -> comment
 ** $  -> PREFIX
 ** %  -> PREFIX
 ** &  -> PREFIX
-** '  -> quote or s_ftick
-** (  -> list ')'
 ** +  -> PREFIX
-** ,  -> s_comma
 ** .  -> PREFIX
 ** /  -> PREFIX
-** :  -> type or s_colon
-** ;  -> s_semi
 ** <  -> PREFIX
 ** =  -> PREFIX
 ** >  -> PREFIX
-** ?  -> char-code or s_qmark
-** [  -> tuple ']'
-** \  -> (unquote, \@ -> unquote_splicing) or (s_bslash,  \@ -> s_bsat)
 ** ^  -> PREFIX
-** `  -> quasiquote or s_btick
-** {  -> block '}'
+** ^  -> PREFIX
 ** |  -> PREFIX
-** ^  -> PREFIX
+** ~  -> PREFIX
+**
+** ,  -> s_comma
+** :  -> s_colon
+** ;  -> s_semi
+**
+** "  -> string
+** #  -> comment
+**
+** ?  -> char-code or s_qmark
+** \  -> (unquote, \@ -> unquote_splicing) or (s_bslash,  \@ -> s_bsat)
+** '  -> quote or s_ftick
+** `  -> quasiquote or s_btick
+**
+** (  -> list ')'
+** [  -> tuple ']'
+** {  -> block '}'
 */
 
 static inline int isPrint(int c)   { return 0x20 <= c && c <= 0x7e; }
@@ -637,7 +642,7 @@ static bool readSymbol(FILE *fp, int first, Target result)
 
     return symbol_Create(buf, result.symbol);
 
-    failure:
+  failure:
     fatal(isPrint(chr) ? "illegal character: 0x%02x '%c'" : "illegal character: 0x%02x", chr, chr);
     return false;
 }
@@ -742,17 +747,8 @@ extern bool readExpr(FILE *fp, Target result)
             return true;
 
         case ':':
-            {
-#if 0
-                if (!checkBlank(fp)) {
-                    return readQuote(fp, s_type, result);
-                } else
-#endif
-                    {
-                        ASSIGN(result, s_colon);
-                        return true;
-                    }
-            }
+            ASSIGN(result, s_colon);
+            return true;
 
         case '0' ... '9':
             return readInteger(fp, chr, result);
