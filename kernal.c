@@ -79,6 +79,26 @@ extern void defineValue(const Symbol symbol, const Node value) {
     GC_End();
 }
 
+extern void bindValueDebug(Pair env, Symbol symbol, const Node value, Pair* result) {
+    fprintf(stderr, "binding name %s = ", symbol_Text(symbol));
+    dump(stderr, value);
+    fprintf(stderr, "\n");
+
+    if (!isNil(value)) {
+        alist_Add(env, symbol, value, getType(value).constant, result);
+    } else {
+        alist_Add(env, symbol, NIL, t_nil, result);
+    }
+}
+
+extern void bindValue(Pair env, Symbol symbol, const Node value, Pair* result) {
+    if (!isNil(value)) {
+        alist_Add(env, symbol, value, getType(value).constant, result);
+    } else {
+        alist_Add(env, symbol, NIL, t_nil, result);
+    }
+}
+
 extern bool opaque_Create(Node type, const Symbol ctor, long size, Reference* target) {
     if (!node_Allocate(_zero_space,
                        true,
@@ -1127,11 +1147,8 @@ extern SUBR(encode_case)
 extern void binding_Pattern(Node names, Node object, Node env, Pair* result)
 {
     /*
-    ** pattern = (ctor (<binding>...) . body)
-    **         | (ctor name . body)
-    **         | (_ (<binding>...) . body)
-    **         | (_ name . body)
-    **         | (. body)
+    ** names = <binding>...
+    **       | name
     */
     GC_Begin(10);
 
@@ -1154,9 +1171,7 @@ extern void binding_Pattern(Node names, Node object, Node env, Pair* result)
         });
 
     if (!isPair(names)) {
-        pair_Create(names, object, &bound);
-        pair_Create(bound, NIL, &first);
-        last = first;
+        bindValue(env.pair, names.symbol, object, &last);
         goto done;
     }
 
@@ -1169,7 +1184,7 @@ extern void binding_Pattern(Node names, Node object, Node env, Pair* result)
     }
 
     unsigned index = 0;
-    for (;;) {
+    for (;;) { // skip leading s_uscore
         pair_GetCar(names.pair, &name);
         if (!isIdentical(name, s_uscore)) break;
         pair_GetCdr(names.pair, &names);
@@ -1177,34 +1192,29 @@ extern void binding_Pattern(Node names, Node object, Node env, Pair* result)
     }
 
     tuple_GetItem(object.tuple, index, &value);
-    pair_Create(name, value, &bound);
-    pair_Create(bound, NIL, &first);
+    bindValue(env.pair, name.symbol, value, &first);
 
     last = first;
 
     for (;;) {
         pair_GetCdr(names.pair, &names);
+
         if (!isPair(names)) goto done;
+
         index += 1;
         pair_GetCar(names.pair, &name);
+
         if (isIdentical(name, s_uscore)) continue;
+
         tuple_GetItem(object.tuple, index, &value);
-        pair_Create(name, value, &bound);
-        pair_Create(bound, NIL, &next);
-        pair_SetCdr(last, next);
+
+        bindValue(last, name.symbol, value, &next);
+
         last = next;
     }
 
  done:
-    VM_ON_DEBUG(2, {
-            fprintf(stderr,"bound names ");
-            prettyPrint(stderr, first);
-            fprintf(stderr,"\n");
-            fflush(stderr);
-        });
-
-    pair_SetCdr(last, env);
-    ASSIGN(result, first);
+    ASSIGN(result, last);
     GC_End();
 }
 
@@ -1474,24 +1484,16 @@ extern SUBR(apply_lambda)
         pair_GetCdr(formals.pair, &formals);
         pair_GetCdr(vlist.pair,   &vlist);
 
-        if (!isNil(val)) {
-            alist_Add(cenv.pair, var.symbol, val, getType(val).constant, &cenv.pair);
-        } else {
-            alist_Add(cenv.pair, var.symbol, NIL, t_nil, &cenv.pair);
-        }
+        bindValue(cenv.pair, var.symbol, val, &cenv.pair);
     }
 
     // formals = name
-    //         | . name)
+    //         | . name
     //
     // bind (rest) parameter to remaining values
     // extending the closure enviroment
     if (isSymbol(formals)) {
-        if (!isNil(vlist)) {
-            alist_Add(cenv.pair, formals.symbol, vlist, getType(vlist).constant, &cenv.pair);
-        } else {
-            alist_Add(cenv.pair, formals.symbol, NIL, t_nil, &cenv.pair);
-        }
+        bindValue(cenv.pair, formals.symbol, vlist, &cenv.pair);
         vlist = NIL;
     }
 

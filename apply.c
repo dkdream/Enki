@@ -472,7 +472,7 @@ extern void eval_begin(Node body, Node env, Target last)
 struct raw_frame {
     Symbol escape;
     Node body;
-    Node env;
+    Pair env;
 };
 
 struct raw_label {
@@ -497,8 +497,11 @@ static void eval_closure(void *label, struct raw_frame *context, Target last)
 
     ((struct raw_label*)(escape))->label = label;
 
-    pair_Create(context->escape, escape, &entry);
-    pair_Create(entry, context->env, &env2);
+    Symbol symbol = context->escape;
+
+    if (!alist_Add(context->env, symbol, escape, getType(escape).constant, &env2)) {
+        fatal("ASSERT unable to add variable: %s", symbol_Text(symbol));
+    }
 
     eval_begin(context->body, env2, last);
 
@@ -534,7 +537,7 @@ extern void eval_block(Symbol escape, Node body, Node env, Target last)
 
     frame.escape = escape;
     frame.body   = body;
-    frame.env    = env;
+    frame.env    = env.pair;
 
     clink_Label((Operator)eval_closure, &frame, last);
 
