@@ -91,7 +91,7 @@ extern Constant opaque_s;    // the sort of opaque types
 extern Constant zero_s;      // the sort of values
 
 extern Constant boolean_s;   // the sort with true and false values
-extern Constant undefined_s; // the sort with the void value
+extern Constant undefined_s; // the sort with all possible values (including the void and nil)
 extern Constant unit_s;      // the sort with the unit value
 extern Constant void_s;      // the sort with no values
 

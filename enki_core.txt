@@ -27,7 +27,7 @@
 
 <control> = (if <core> <core> <core>*)
           | (unless <core> <core> <core>*)
-          | (case <core> <ctor-pattern>* <tuple-pattern>* <else-pattern>)
+          | (case <core> <case-pattern>*  <else-pattern>)
           | (select <action-pattern>* <else-pattern>)
           | (depart <core> <core>+)   -- if arg1 is a  one-shot-continuation call it with arg2..argn
 
@@ -77,20 +77,26 @@
 
 <return> = [as <name> <core>*] -- define name as the one-shot-continuation for this lambda
 
-<action-pattern>  = <fiber-pattern> | <timer-pattern> | <conduit-pattern>
+<action-pattern> = <fiber-pattern> | <timer-pattern> | <conduit-pattern>
+<case-pattern>   = <ctor-pattern>  | <tuple-pattern> | <record-pattern>
 
 <timer-pattern>   = (alarm <core> <core>*)
 <fiber-pattern>   = (done <core> <core>*)
 <conduit-pattern> = (recieve <name> <core> <core>*)
                   | (send <name> <core> <core>*)
 
-<ctor-pattern>  = (<name> <variables> <core>)
-<tuple-pattern> = (_ <variables> <core>)
-<variables>     = [ <variable>+ ]
-                | <name>
-<variable>      = <name> <core> # name declared-type
-                | _      <core> # slot declared-type 
-                | <name> _      # name infered-type
+<ctor-pattern>   = (<name> <slots> <core>)
+                 | (<name> <fields> <core>)
+                 | (<name> <name> <core>)
+<tuple-pattern>  = (<slots> <core>)
+<record-pattern> = (<fields> <core>)
+<slots>          = [ <variable>+ ]
+<fields>         = { <field>+ }
+<field>          = <name> <core>          # name declared-type (name is field)
+                 | <name> : <name> <core> # name declared-type (name <- field type)
+                 | : <name> <core>        # field declared-type (skipped)
+<variable>       = <name> <core>    # name declared-type
+                 | _      <core>    # slot declared-type  (skipped)
 
 <else-pattern>  = (. <core>)
 
