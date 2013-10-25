@@ -728,7 +728,7 @@ static void binding_Let(Node local, Node env, Target result)
     }
 
   done:
-    pair_Create(symbol, value, result.pair);
+    variable_Create(symbol.symbol, value, getType(value).constant,  result.variable);
 
     GC_End();
 }
@@ -1474,8 +1474,11 @@ extern SUBR(apply_lambda)
         pair_GetCdr(formals.pair, &formals);
         pair_GetCdr(vlist.pair,   &vlist);
 
-        pair_Create(var, val, &tmp.pair);
-        pair_Create(tmp, cenv, &cenv.pair);
+        if (!isNil(val)) {
+            alist_Add(cenv.pair, var.symbol, val, getType(val).constant, &cenv.pair);
+        } else {
+            alist_Add(cenv.pair, var.symbol, NIL, t_nil, &cenv.pair);
+        }
     }
 
     // formals = name
@@ -1484,8 +1487,11 @@ extern SUBR(apply_lambda)
     // bind (rest) parameter to remaining values
     // extending the closure enviroment
     if (isSymbol(formals)) {
-        pair_Create(formals, vlist, &tmp.pair);
-        pair_Create(tmp, cenv, &cenv.pair);
+        if (!isNil(vlist)) {
+            alist_Add(cenv.pair, formals.symbol, vlist, getType(vlist).constant, &cenv.pair);
+        } else {
+            alist_Add(cenv.pair, formals.symbol, NIL, t_nil, &cenv.pair);
+        }
         vlist = NIL;
     }
 
