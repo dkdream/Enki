@@ -4,22 +4,22 @@ void SUBR(eval_symbol)
 {
     GC_Begin(2);
     Node symbol, tmp;
-    Pair entry;
+    Variable entry;
 
     GC_Protect(tmp);
 
     pair_GetCar(args.pair, &symbol);
 
     // lookup symbol in the current enviroment
-    if (!alist_Entry(env.pair, symbol, &entry)) {
-        if (!alist_Entry(enki_globals.pair,  symbol, &entry)) goto error;
+    if (!alist_Entry(env.pair, symbol.symbol, &entry)) {
+        if (!alist_Entry(enki_globals.pair,  symbol.symbol, &entry)) goto error;
     }
 
-    pair_GetCdr(entry, &tmp);
+    tmp = entry->value;
 
-    if (isType(tmp, t_forced)) {
-        tuple_GetItem(tmp.tuple, 0, &tmp);
-        pair_SetCdr(entry, tmp);
+    if (isForced(tmp)) {
+        tuple_GetItem(tmp.tuple, 0, &(entry->value));
+        tmp = entry->value;
     }
 
     ASSIGN(result, tmp);
@@ -29,7 +29,7 @@ void SUBR(eval_symbol)
 
  error:
     GC_End();
-    if (!isType(symbol, s_symbol)) {
+    if (!isSymbol(symbol)) {
         fatal("undefined variable: <non-symbol>");
     } else {
         fatal("undefined variable: %s", symbol_Text(symbol.symbol));

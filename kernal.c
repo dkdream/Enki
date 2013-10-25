@@ -137,7 +137,7 @@ extern void forceArg(Node arg, Target result) {
 
     GC_Protect(tmp);
 
-    if (fromCtor(arg, s_delay)) {
+    if (isDelayed(arg)) {
         Node dexpr, denv;
         tuple_GetItem(arg.tuple, 1, &dexpr);
         tuple_GetItem(arg.tuple, 2, &denv);
@@ -148,7 +148,7 @@ extern void forceArg(Node arg, Target result) {
         goto done;
     }
 
-    if (fromCtor(arg, s_forced)) {
+    if (isForced(arg)) {
         tuple_GetItem(arg.tuple, 0, result);
         goto done;
     }
@@ -1526,6 +1526,7 @@ extern SUBR(delay)
     tuple_SetItem(tuple, 0, NIL);
     tuple_SetItem(tuple, 1, expr);
     tuple_SetItem(tuple, 2, env);
+
     setConstructor(tuple, s_delay);
 
     ASSIGN(result, tuple);
@@ -3129,7 +3130,7 @@ extern SUBR(forced_q) {
     checkArgs(args, "forced?", 1, NIL);
     pair_GetCar(args.pair, &value);
 
-    if (fromCtor(value, s_forced)) {
+    if (isForced(value)) {
         ASSIGN(result, true_v);
     } else {
         ASSIGN(result, NIL);
@@ -3252,7 +3253,7 @@ extern SUBR(fixed_q) {
     checkArgs(args, "fixed?", 1, NIL);
     pair_GetCar(args.pair, &value);
 
-    if (fromCtor(value, s_fixed)) {
+    if (isFixed(value)) {
         ASSIGN(result, true_v);
     } else {
         ASSIGN(result, NIL);
@@ -3264,7 +3265,7 @@ extern SUBR(primitive_q) {
     checkArgs(args, "primitive?", 1, NIL);
     pair_GetCar(args.pair, &value);
 
-    if (fromCtor(value, s_primitive)) {
+    if (isPrimitive(value)) {
         ASSIGN(result, true_v);
     } else {
         ASSIGN(result, NIL);
@@ -3276,7 +3277,7 @@ extern SUBR(delay_q) {
     checkArgs(args, "delay?", 1, NIL);
     pair_GetCar(args.pair, &value);
 
-    if (fromCtor(value, s_delay)) {
+    if (isDelayed(value)) {
         ASSIGN(result, true_v);
     } else {
         ASSIGN(result, NIL);
@@ -3288,7 +3289,7 @@ extern SUBR(lambda_q) {
     checkArgs(args, "lambda?", 1, NIL);
     pair_GetCar(args.pair, &value);
 
-    if (fromCtor(value, s_lambda)) {
+    if (isLambda(value)) {
         ASSIGN(result, true_v);
     } else {
         ASSIGN(result, NIL);

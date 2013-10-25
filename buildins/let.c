@@ -30,7 +30,7 @@ void SUBR(let)
     if (!isType(bindings, t_pair)) {
         eval_begin(body, env, result);
     } else {
-        list_Map(eval_binding, bindings.pair, env, &(env2.pair));
+        list_Map(bindings.pair, eval_binding, env, &(env2.pair));
 
         list_SetEnd(env2.pair, env);
 

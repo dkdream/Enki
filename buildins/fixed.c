@@ -22,7 +22,7 @@ void SUBR(fixed)
       tuple_SetItem(tuple, 0, func);
   }
 
-  setType(tuple, t_fixed);
+  setConstructor(tuple, s_fixed);
 
-  ASSIGN(result, (Node)tuple);
+  ASSIGN(result, tuple);
 }

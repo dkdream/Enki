@@ -9,7 +9,7 @@ void SUBR(form)
 
   tuple_Create(1, &tuple);
   tuple_SetItem(tuple, 0, func);
-  setType(tuple, t_form);
+  setConstructor(tuple, s_form);
 
   ASSIGN(result, (Node)tuple);
 }

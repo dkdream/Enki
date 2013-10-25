@@ -20,17 +20,17 @@ void SUBR(eval_pair)
     // first eval the head
     eval(head, env, &head);
 
-    if (isType(head, t_delay)) {
+    if (fromCtor(head, s_delay)) {
         Node dexpr, denv;
         tuple_GetItem(head.tuple, 1, &dexpr);
         tuple_GetItem(head.tuple, 2, &denv);
         eval(dexpr, denv, &tmp);
         tuple_SetItem(head.tuple, 0, tmp);
-        setType(head.tuple, t_forced);
+        setConstructor(head.tuple, s_forced);
         head = tmp;
     }
 
-    if (isType(head, t_fixed)) {
+    if (fromCtor(head, s_fixed)) {
         // apply Fixed to un-evaluated arguments
         Node func = NIL;
         tuple_GetItem(head.tuple, fxd_eval, &func);
@@ -39,7 +39,7 @@ void SUBR(eval_pair)
     }
 
     // evaluate the arguments
-    list_Map(eval, tail.pair, env, &tail.pair);
+    list_Map(tail.pair, eval, env, &tail.pair);
 
     // now apply the head to the evaluated arguments
     apply(head, tail, env, result);

@@ -39,10 +39,11 @@ TAILFLAGS += -Wformat-security
 
 RUNFLAGS := 
 
+XCFLAGS  := -mregparm=3
 INCFLAGS := -I. $(COPPER_INC)
 DBFLAGS  := -Wall -mtune=i686 -rdynamic -fPIC
 CFLAGS   := $(DBFLAGS) $(INCFLAG) $(TAILFLAGS)
-SFLAGS   := -mtune=i686 -rdynamic -fdelete-null-pointer-checks  -ggdb
+SFLAGS   := -mtune=i686 -rdynamic -fdelete-null-pointer-checks -ggdb
 ASFLAGS  := -Qy
 LIBFLAGS := $(COPPER_LIB)
 ARFLAGS  := rcu
@@ -205,7 +206,7 @@ echo_begin :: ; @echo begin atoms
 	@$(AS) $(ASFLAGS) --32 -o $@ $< 	
 
 .assembly/%_atom.s : ./buildins/%.c | .assembly
-	@$(GCC) $(SFLAGS) -S -m32 -fverbose-asm -o $@ $<
+	$(GCC) $(SFLAGS) -S -m32 -fverbose-asm -o $@ $<
 
 ## ## ## ##
 

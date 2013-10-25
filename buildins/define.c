@@ -22,7 +22,7 @@ void SUBR(define)
     VM_DEBUG(1, "defining %s", symbol_Text(symbol.symbol));
 
     pair_GetCdr(enki_globals.pair, &globals);
-    alist_Add(globals.pair, symbol, value, &globals.pair);
+    alist_Add(globals.pair, symbol.symbol, value, getType(value).constant, &globals.pair);
     pair_SetCdr(enki_globals.pair, globals);
 
     ASSIGN(result, value);

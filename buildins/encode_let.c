@@ -8,7 +8,7 @@ static void environ_Let(Node local, Node env, Target result)
 }
 
 void SUBR(encode_let) {
-    Node locals; Node lenv;
+    Node locals; Pair lenv;
 
     pair_GetCar(args.pair, &locals);
 
@@ -26,8 +26,8 @@ void SUBR(encode_let) {
     **
     ** result=(encode args lenv)
     */
-    list_Map(environ_Let, locals.pair, env, &lenv);
-    list_SetEnd(lenv.pair, env);
+    list_Map(locals.pair, environ_Let, env, &lenv);
+    list_SetEnd(lenv, env);
 
     //list_Map(encode, args.pair, lenv, result);
 

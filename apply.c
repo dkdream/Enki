@@ -211,7 +211,7 @@ extern void encode(const Node expr, const Node env, Target result)
     GC_End();
 }
 
-extern void eval_pair(const Node args, const Node env, Target result)
+static void eval_pair(const Node args, const Node env, Target result)
 {
     GC_Begin(5);
     Node obj, head, tail, tmp;
@@ -229,11 +229,11 @@ extern void eval_pair(const Node args, const Node env, Target result)
     // first eval the head
     eval(head, env, &head);
 
-    if (fromCtor(head, s_box)) {
+    if (isBoxed(head)) {
         pair_GetCar(head.pair, &head);
     }
 
-    if (fromCtor(head, s_delay)) {
+    if (isDelayed(head)) {
         Node dexpr, denv;
         tuple_GetItem(head.tuple, 1, &dexpr);
         tuple_GetItem(head.tuple, 2, &denv);
@@ -243,7 +243,7 @@ extern void eval_pair(const Node args, const Node env, Target result)
         head = tmp;
     }
 
-    if (fromCtor(head, s_fixed)) {
+    if (isFixed(head)) {
         // apply Fixed to un-evaluated arguments
         Node func = NIL;
         tuple_GetItem(head.tuple, fxd_eval, &func);
@@ -263,7 +263,7 @@ extern void eval_pair(const Node args, const Node env, Target result)
     GC_End();
 }
 
-extern void eval_symbol(const Node args, const Node env, Target result)
+static void eval_symbol(const Node args, const Node env, Target result)
 {
     GC_Begin(2);
 
@@ -282,7 +282,7 @@ extern void eval_symbol(const Node args, const Node env, Target result)
 
     tmp = entry->value;
 
-    if (fromCtor(tmp, s_forced)) {
+    if (isForced(tmp)) {
         tuple_GetItem(tmp.tuple, 0, &(entry->value));
         tmp = entry->value;
     }
@@ -301,7 +301,7 @@ extern void eval_symbol(const Node args, const Node env, Target result)
     }
 }
 
-extern void eval_tuple(const Node args, const Node env, Target result)
+static void eval_tuple(const Node args, const Node env, Target result)
 {
     GC_Begin(5);
 
@@ -323,11 +323,11 @@ extern void eval_tuple(const Node args, const Node env, Target result)
 
     head = entry->value;
 
-    if (fromCtor(head, s_box)) {
+    if (isBoxed(head)) {
         pair_GetCar(head.pair, &head);
     }
 
-    if (!fromCtor(head, s_fixed)) goto no_op;
+    if (!isFixed(head)) goto no_op;
 
     // apply Fixed to un-evaluated arguments
 
@@ -518,7 +518,7 @@ extern void eval_escape(Node node, Node result)
         fatal("eval_escape: not a continuation");
     }
 
-    if (!fromCtor(node, s_escape)) {
+    if (!isEscape(node)) {
         fatal("eval_escape: not a escape");
     }
 

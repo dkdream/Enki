@@ -10,7 +10,9 @@ void SUBR(delay)
     tuple_SetItem(tuple, 0, NIL);
     tuple_SetItem(tuple, 1, expr);
     tuple_SetItem(tuple, 2, env);
-    setType(tuple, t_delay);
+
+    setConstructor(tuple, s_delay);
+
     ASSIGN(result, tuple);
 }
 

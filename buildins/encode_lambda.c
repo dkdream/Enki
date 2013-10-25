@@ -6,7 +6,7 @@ static void environ_Lambda(Node symbol, Node env, Target result)
 }
 
 void SUBR(encode_lambda) {
-    Node formals; Node body; Node lenv;
+    Node formals; Node body; Pair lenv;
 
     pair_GetCar(args.pair, &formals);
     pair_GetCdr(args.pair, &body);
@@ -20,8 +20,10 @@ void SUBR(encode_lambda) {
     ** result=(cons formals (encode body lenv))
     */
 
-    list_Map(environ_Lambda, formals.pair, env, &lenv);
-    list_SetEnd(lenv.pair, env);
+    list_Map(formals.pair, environ_Lambda, env, &lenv);
+
+    list_SetEnd(lenv, env);
+
     encode(body, lenv, &(body.pair));
 
     pair_Create(formals, body, result.pair);

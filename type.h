@@ -344,6 +344,16 @@ extern inline bool isPrimitive(const Node value) {
     return fromCtor(value, s_primitive);
 }
 
+extern inline bool isDelayed(const Node value) __attribute__((always_inline));
+extern inline bool isDelayed(const Node value) {
+    return fromCtor(value, s_delay);
+}
+
+extern inline bool isBoxed(const Node value) __attribute__((always_inline));
+extern inline bool isBoxed(const Node value) {
+    return fromCtor(value, s_box);
+}
+
 extern inline bool isForced(const Node value) __attribute__((always_inline));
 extern inline bool isForced(const Node value) {
     return fromCtor(value, s_forced);
@@ -373,6 +383,13 @@ extern inline bool isVariable(const Node value) __attribute__((always_inline));
 extern inline bool isVariable(const Node value) {
     return fromCtor(value, s_variable);
 }
+
+extern inline bool isEscape(const Node value) __attribute__((always_inline));
+extern inline bool isEscape(const Node value) {
+    return fromCtor(value, s_escape);
+}
+
+
 
 /***************************
  ** end of file

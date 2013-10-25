@@ -3,6 +3,6 @@
 void SUBR(lambda)
 {
     pair_Create(args, env, result.pair);
-    setType(*result.reference, t_lambda);
+    setConstructor(*result.reference, s_lambda);
 }
 

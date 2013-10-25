@@ -8,7 +8,7 @@ void SUBR(set)
 
     fetchArgs(args, &symbol, &expr, 0);
 
-    if (!isType(symbol, s_symbol)) {
+    if (!isSymbol(symbol)) {
         fprintf(stderr, "\nerror: non-symbol identifier in set: ");
         dump(stderr, symbol);
         fprintf(stderr, "\n");
@@ -16,9 +16,9 @@ void SUBR(set)
         fatal(0);
     }
 
-    Pair entry;
+    Variable entry;
 
-    if (!alist_Entry(env.pair, symbol, &entry)) {
+    if (!alist_Entry(env.pair, symbol.symbol, &entry)) {
         fprintf(stderr, "\nerror: cannot set undefined variable: ");
         dump(stderr, symbol);
         fprintf(stderr, "\n");
@@ -26,9 +26,7 @@ void SUBR(set)
         fatal(0);
     }
 
-    eval(expr, env, &value);
-
-    pair_SetCdr(entry, value);
+    eval(expr, env, &(entry->value));
 
     ASSIGN(result,value);
 }

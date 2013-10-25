@@ -10,6 +10,6 @@ void SUBR(type)
         return;
     }
 
-    type_Create(symbol.symbol, zero_s, result.type);
+    type_Create(symbol.symbol, zero_s, result.constant);
 }
 
