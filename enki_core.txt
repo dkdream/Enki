@@ -12,10 +12,6 @@
 
 <constructor> = (lambda <arguments> <return>? <core>+)
               | (thunk <return>? <core>+)
-              | (<formula> <parameters> <core>+)
-              | (self <core> <core>)                  -- self type (a singleton subset type)
-              | (index <integer> <core>)              -- index type (tuple element type) 
-              | (label <symbol> <core>)               -- label type (record element type)
               | (fiber <core>* <core>)                -- this is like a block
               | (timer <core> <core>)                 -- arg1 is an interval, arg2 is start second)
               | (conduit <core>)                      -- arg1 is a type
@@ -25,6 +21,20 @@
               | (syntax <name> <name> <core>* <core>) -- name1 is input, name2 is output
               | <quote>
 
+<type-constructor> = (arrow <core> <core>)      -- arrow type (simple function type)
+                   | (index <integer> <core>)   -- index type (tuple element type) 
+                   | (label <symbol> <core>)    -- label type (record element type)
+                   | (power <core>)             -- power type (type of sets of type)
+
+<type-functors> = (self <core> <core>)             -- self type (a singleton subset type)
+                | (<formula> <parameters> <core>+)
+
+<control> = (if <core> <core> <core>*)
+          | (unless <core> <core> <core>*)
+          | (case <core> <case-pattern>*  <else-pattern>)
+          | (select <action-pattern>* <else-pattern>)
+
+
 <control> = (if <core> <core> <core>*)                        ## choose by predicate
           | (unless <core> <core> <core>*)                    ## choose by predicate
           | (select <action-pattern>* <else-pattern>)         ## choose by event
@@ -32,9 +42,9 @@
           | (switch <core> <switch-pattern>*  <else-pattern>) ## choose by type
           | (depart <core> <core>+)   -- if arg1 is a  one-shot-continuation call it with arg2..argn
 
-<context> = (constrain <locals> <core>+)
+<context> = (let <parameters> <core>+)
           | (fix <parameters> <core>+)
-          | (let <parameters> <core>+)
+          | (constrain <locals> <core>+)
 
 <binding> = (bind <name>+ <core>) -- bind a collecton of names to the output of expression
           | (set <name>+ <core>)  -- set a collecton of names to the boxed output of expression
@@ -179,6 +189,26 @@ note: define dose NOT make a boxed type, therefore
 (any    (a : A) (B a)) == { b      | b \in Union{x \in A}(B x) }
 (all    (a : A) (B a)) == { b      | b \in Intercection{x \in A}(B x) }
 (subset (a : A) (B a)) == { (a, b) | a \in A && b \subset (B a) }
+
+- - - - - - - - - - - - - - - - - - - - -
+
+(sigma  (_ : A) B) -> (and (index 0 A) (index 1 B))
+(pi     (_ : A) B) -> (arrow (index 0 A) (index 0 B)) -> (arrow A B)
+(any    (_ : A) B) -> B
+(all    (_ : A) B) -> B
+(subset (_ : A) B) -> (sigma (_ : A) (power B)) -> (and (index 0 A) (index 1 (power B)))
+
+- - - - - - - - - - - - - - - - - - - - -
+
+
+(type-of (thunk [as integer] exp))
+  -> (pi (_ : (index 0 unit)) (index 0 integer))
+  -> (pi (_ : unit) integer)
+
+- - - - - - - - - - - - - - - - - - - - -
+
+(subtype (pi (_ : (index 0 A)) (index 0 B)) (pi (_ : A) B)) -> true
+(subtype (pi (_ : A) B) (pi  (_ : (index 0 A)) (index 0 B))) -> true
 
 - - - - - - - - - - - - - - - - - - - - - 
 
