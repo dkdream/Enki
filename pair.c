@@ -10,6 +10,7 @@
 #include "debug.h"
 #include "apply.h"
 #include "type.h"
+#include "tuple.h"
 #include <stdarg.h>
 
 extern bool pair_Create(const Node car, const Node cdr, Pair* target) {
@@ -499,7 +500,7 @@ extern bool list_Filter(Pair pair, Predicate func, const Node env, Pair* target)
 
     ASSIGN(target, first);
 
-  done:
+ done:
     GC_End();
     return true;
 
@@ -637,12 +638,257 @@ extern bool list_Find(Pair pair, Predicate func, const Node env, BitArray *array
 }
 
 extern bool list_Select(Pair pair, BitArray *array, Pair* target) {
-    fatal("\nerror: list_Select coded yet");
+    if (!pair) {
+        ASSIGN(target, NIL);
+        return true;
+    }
+
+    if (!array) {
+        fatal("\nerror: list_Select applied to a null bit array");
+        return false;
+    }
+
+    if (!isPair(pair)) {
+        fatal("\nerror: list_Select applied to a non-list");
+        return false;
+    }
+
+    unsigned count = 0;
+    int at = bits_ascend(array, -1);
+
+    if (0 > at) {
+        ASSIGN(target, NIL);
+        return true;
+    }
+
+    GC_Begin(7);
+
+    Pair first;
+    Pair last;
+    Node value;
+    Pair hold;
+
+    GC_Protect(first);
+    GC_Protect(last);
+    GC_Protect(value);
+    GC_Protect(hold);
+
+    for (; isPair(pair) ; ++count) {
+        if (count < at) {
+            pair = pair->cdr.pair;
+            continue;
+        }
+
+        value = pair->car;
+
+        if (!pair_Create(value,NIL, &first)) goto error;
+
+        break;
+    }
+
+    if (!first) {
+        ASSIGN(target, NIL);
+        goto done;
+    }
+
+    last = first;
+    at   = bits_ascend(array, at);
+
+    if (0 > at) {
+        ASSIGN(target, first);
+        goto done;
+    }
+
+    for (; isPair(pair) ; ++count) {
+        if (count < at) {
+            pair = pair->cdr.pair;
+            continue;
+        }
+
+        value = pair->car;
+
+        if (!pair_Create(value,NIL, &hold)) goto error;
+        if (!pair_SetCdr(last, hold))       goto error;
+
+        at = bits_ascend(array, at);
+
+        if (0 > at) break;
+
+        pair = pair->cdr.pair;
+    }
+
+    ASSIGN(target, first);
+
+ done:
+    GC_End();
+    return true;
+
+ error:
+    GC_End();
     return false;
 }
 
 extern bool list_Update(Pair pair, Operator func, const Node env, BitArray *array) {
-    fatal("\nerror: list_Update coded yet");
+    if (!pair) return true;
+
+    if (!func) {
+        fatal("\nerror: list_Update applied to a null function");
+        return false;
+    }
+
+    if (!isPair(pair)) {
+        fatal("\nerror: list_Update applied to a non-list");
+        return false;
+    }
+
+    GC_Begin(3);
+
+    Node input;
+    Node output;
+
+    GC_Protect(input);
+    GC_Protect(output);
+
+    if (!array) {
+        for (; isPair(pair) ;) {
+            input = pair->car;
+
+            func(input, env, &output);
+
+            pair->car = output;
+
+            pair = pair->cdr.pair;
+        }
+    } else {
+        unsigned count = 0;
+        int at = bits_ascend(array, -1);
+
+        for (; isPair(pair) ; ++count) {
+            if (count < at) {
+                pair = pair->cdr.pair;
+                continue;
+            }
+
+            input = pair->car;
+            func(input, env, &output);
+            pair->car = output;
+
+            at = bits_ascend(array, at);
+
+            if (0 > at) goto done;
+
+            pair = pair->cdr.pair;
+        }
+    }
+
+ done:
+    GC_End();
+    return true;
+
+ error:
+    GC_End();
+    return false;
+}
+
+extern bool list_Curry(Tuple tuple, const Operator func, const Node env, BitArray *array, Pair* target) {
+    if (!tuple) {
+        ASSIGN(target, NIL);
+        return true;
+    }
+
+    if (!func) {
+        fatal("\nerror: list_Curry applied to a null operator");
+        return false;
+    }
+
+    if (!isTuple(tuple)) {
+        fatal("\nerror: list_Curry applied to a non-tuple");
+        return false;
+    }
+
+    Kind kind = asKind(tuple);
+
+    const unsigned max = kind->count;
+
+    if (1 > max) {
+        ASSIGN(target, NIL);
+        return true;
+    }
+
+    GC_Begin(7);
+
+    Pair first;
+    Pair last;
+    Node input;
+    Node output;
+    Pair hold;
+
+    GC_Protect(first);
+    GC_Protect(last);
+    GC_Protect(input);
+    GC_Protect(output);
+    GC_Protect(hold);
+
+    if (!array) {
+        input = tuple->item[0];
+
+        func(input, env, &output);
+
+        if (!pair_Create(output,NIL, &first)) goto error;
+
+        last = first;
+
+        unsigned inx = 1;
+        for (; inx < max ;++inx) {
+            input = tuple->item[inx];
+
+            func(input, env, &output);
+
+            if (!pair_Create(output,NIL, &hold)) goto error;
+            if (!pair_SetCdr(last, hold))        goto error;
+
+            last = hold;
+        }
+    } else {
+        int at = bits_ascend(array, -1);
+
+        if (0 > at)   goto done;
+        if (max < at) goto done;
+
+        input = tuple->item[at];
+
+        func(input, env, &output);
+
+        if (!pair_Create(output,NIL, &first)) goto error;
+
+        last = first;
+        at   = bits_ascend(array, at);
+
+        if (0 > at) goto done;
+
+        for (; at < max ;) {
+            input = tuple->item[at];
+
+            func(input, env, &output);
+
+            if (!pair_Create(output,NIL, &hold)) goto error;
+            if (!pair_SetCdr(last, hold))        goto error;
+
+            last = hold;
+            at   = bits_ascend(array, at);
+
+            if (0 > at) goto done;
+        }
+    }
+
+ done:
+    ASSIGN(target, first);
+
+    GC_End();
+    return true;
+
+ error:
+    GC_End();
     return false;
 }
 

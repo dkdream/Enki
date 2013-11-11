@@ -25,7 +25,7 @@ extern bool tuple_Make(Tuple* target, const unsigned size, ...);
 extern bool tuple_Fill(Tuple tuple, Pair list);
 
 // convert a (proper) list to a new tuple
-extern bool tuple_Convert(Pair pair, Tuple* target);
+//extern bool tuple_Convert(Pair pair, Tuple* target);
 
 // create an new tuple then map input to output by func
 extern bool tuple_Map(Tuple tuple, const Operator func, const Node env, Tuple* target);

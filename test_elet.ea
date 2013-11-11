@@ -1,0 +1,6 @@
+
+(elet [with echo Opaque print Opaque]
+      [bind echo dump]
+      [bind print dumpln]
+      (echo 1)
+      (print "done"))

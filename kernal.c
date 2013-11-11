@@ -60,7 +60,7 @@ Primitive   p_apply_form = 0;
 #define APPLY(NAME,ARGS,ENV,RESULT) opr_##NAME(ARGS,ENV,RESULT)
 
 extern SUBR(elet);
-extern SUBR(encode_let);
+extern SUBR(encode_elet);
 
 extern void defineValue(const Symbol symbol, const Node value) {
     GC_Begin(2);
@@ -640,15 +640,6 @@ extern SUBR(encode_let)
     **       binding = name
     **               | (name expr)
     **               | [name type expr]
-    ** to-do
-    **       args    = ([<declaring>...] initialize . body)
-    **               | ([as name expr.r] . body)
-    **               | ([<declaring>...] [as name expr.r] initialize . body)
-    **       declaring = name type
-    **
-    **    initialize = bound...
-    **         bound = [bind name expr.b]
-    **         bound = [set  name expr.b]
     **
     */
 
@@ -3674,7 +3665,7 @@ void startEnkiLibrary() {
     MK_FXD(fix,encode_fix);
     MK_FXD(case,encode_case);
 
-    MK_FXD(elet,encode_let);
+    MK_FXD(elet,encode_elet);
 
     MK_PRM(depart);
     MK_PRM(gensym);

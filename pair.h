@@ -81,6 +81,8 @@ extern bool list_Select(Pair pair, BitArray *array, Pair* target);
 // update select parts of the current (proper) list (update all when array==null)
 extern bool list_Update(Pair pair, const Operator func, const Node env, BitArray *array);
 
+// convert a tuple into a new (proper) list
+extern bool list_Curry(Tuple typle, const Operator func, const Node env, BitArray *array, Pair* target);
 
 // split
 // when predicate(car(cdr(pair)))

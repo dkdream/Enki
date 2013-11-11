@@ -221,10 +221,11 @@ extern SUBR(encode_elet)
 body:
     encode(body, env, &body);
 
-    tuple_Create(3, &frame);
-    //    tuple_SetItem(frame, 0, bindings);
-    //    tuple_SetItem(frame, 1, marker);
-    //    tuple_SetItem(frame, 2, body);
+    tuple_Create(4, &frame);
+    tuple_SetItem(frame, 0, vars);
+    tuple_SetItem(frame, 1, as);
+    tuple_SetItem(frame, 2, initialize);
+    tuple_SetItem(frame, 3, body);
 
     ASSIGN(result, frame);
 
@@ -277,33 +278,42 @@ extern SUBR(elet)
 
     Tuple frame;
     Node  env2;
-    Node  bindings;
-    Node  marker;
+    Node  vars;
+    Node  as;
+    Node  initialize;
     Node  body;
 
     GC_Protect(frame);
     GC_Protect(env2);
-    GC_Protect(bindings);
-    GC_Protect(marker);
+    GC_Protect(vars);
+    GC_Protect(as);
+    GC_Protect(initialize);
     GC_Protect(body);
 
     frame = args.tuple;
 
-    tuple_GetItem(frame, 0, &bindings);
-    tuple_GetItem(frame, 1, &marker);
-    tuple_GetItem(frame, 2, &body);
+    tuple_GetItem(frame, 0, &vars);
+    tuple_GetItem(frame, 1, &as);
+    tuple_GetItem(frame, 2, &initialize);
+    tuple_GetItem(frame, 3, &body);
 
-    if (!isPair(bindings)) {
+    if (!isTuple(vars)) {
         env2 = env;
     } else {
-        list_Map(bindings.pair, binding_Let, env, &(env2.pair));
+        // convert names to bindings  [with n1 t1 ...]
+        list_Curry(vars.tuple, binding_Let, env, 0, &(env2.pair));
         list_SetEnd(env2.pair, env);
     }
 
-    if (isSymbol(marker)) {
-        eval_block(marker.symbol, body, env2, result);
-    } else {
+    if (isTuple(initialize)) {
+        // convert binding list [bind n1 .. ni expr]...
+    }
+
+    if (!isTuple(as)) {
         eval_begin(body, env2, result);
+    } else {
+        // fetch name [as name t1..]
+        eval_block(as.symbol, body, env2, result);
     }
 
  exit:
