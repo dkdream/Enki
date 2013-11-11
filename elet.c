@@ -61,24 +61,34 @@ Tuple find_with(Tuple frame, const Node env) {
     Kind    kind = asKind(frame);
     unsigned max = kind->count;
     unsigned inx = 0;
+    Tuple clause = (Tuple) 0;
 
     BitArray array = BITS_INITIALISER;
     Node     symbol;
 
-    for (; inx < max ;++inx) {
+    for (; ; ++inx) {
+        if (inx >= max) return (Tuple) 0;
+
         Node value = frame->item[inx];
+
         if (!isTuple(value)) return (Tuple) 0;
+
         tuple_GetItem(value.tuple, 0, &symbol);
+
         if (isIdentical(s_with, symbol)) {
-            bits_reset(&array);
-            tuple_Find(value.tuple, with_types, 0, &array);
-            tuple_Update(value.tuple, encode, env, &array);
-            bits_free(&array);
-            return value.tuple;
+            clause = value.tuple;
+            break;
         }
     }
 
-    return (Tuple) 0;
+
+    bits_reset(&array);
+    tuple_Find(clause, with_types, 0, &array);
+    tuple_Update(clause, encode, env, &array);
+    bits_free(&array);
+
+
+    return clause;
 }
 
 
