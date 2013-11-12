@@ -774,7 +774,7 @@ extern SUBR(let)
     }
 
     if (isSymbol(marker)) {
-        eval_block(marker.symbol, body, env2, result);
+        eval_block(marker.symbol, (Constant)0, body, env2, result);
     } else {
         eval_begin(body, env2, result);
     }

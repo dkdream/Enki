@@ -117,6 +117,22 @@ extern inline void bits_normalize(BitArray *array) {
         array->marker = offset + 1;
         return;
     }
+
+    array->marker = 0;
+}
+
+extern inline bool bits_empty(BitArray *array) __attribute__((always_inline nonnull));
+extern inline bool bits_empty(BitArray *array) {
+    unsigned offset = array->marker;
+    for (; 0 < offset ;) {
+        --offset;
+        if (0 == array->buffer[offset]) continue;
+        array->marker = offset + 1;
+        return false;
+    }
+
+    array->marker = 0;
+    return true;
 }
 
 extern inline void bits_or(BitArray *target, BitArray *source) __attribute__((always_inline nonnull));

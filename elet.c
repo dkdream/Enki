@@ -30,48 +30,30 @@
 #define SUBR(NAME) void opr_##NAME(Node args, Node env, Target result)
 #define APPLY(NAME,ARGS,ENV,RESULT) opr_##NAME(ARGS,ENV,RESULT)
 
-
-static bool with_types(unsigned index, Node value, Node env) {
-    if (0 == index) return false;
-
-    unsigned test = (index % 2);
-
-    if (1 == test) return false;
-    return true;
-}
-static bool with_names(unsigned index, Node value, Node env) {
-    if (0 == index) return false;
-
-    unsigned test = (index % 2);
-
-    if (1 == test) return false;
-    return true;
-}
-
-static bool as_types(unsigned index, Node value, Node env) {
-    return (2 < index);
-}
-static bool as_name(unsigned index, Node value, Node env) {
-    return (1 == index);
-}
-
-Tuple find_with(Tuple frame, const Node env) {
-    if (!frame) return (Tuple) 0;
+/**
+ * find
+ *   [with <declare>...]
+ *   declare = name expr
+ *
+ * target <- [(name . expr)...]
+ */
+static bool find_with(Tuple frame, const Node env, Tuple* target) {
+    if (!frame) return false;
 
     Kind    kind = asKind(frame);
     unsigned max = kind->count;
     unsigned inx = 0;
     Tuple clause = (Tuple) 0;
+    Node   symbol;
 
-    BitArray array = BITS_INITIALISER;
-    Node     symbol;
+    ASSIGN(target, NIL);
 
     for (; ; ++inx) {
-        if (inx >= max) return (Tuple) 0;
+        if (inx >= max) return false;
 
         Node value = frame->item[inx];
 
-        if (!isTuple(value)) return (Tuple) 0;
+        if (!isTuple(value)) return false;
 
         tuple_GetItem(value.tuple, 0, &symbol);
 
@@ -81,52 +63,127 @@ Tuple find_with(Tuple frame, const Node env) {
         }
     }
 
+    Tuple locals;
+    Node  name;
+    Node  type;
+    Pair  var;
 
-    bits_reset(&array);
-    tuple_Find(clause, with_types, 0, &array);
-    tuple_Update(clause, encode, env, &array);
-    bits_free(&array);
+    max = getCount(clause);
 
+    if (1 >= max) return false;
 
-    return clause;
+    GC_Begin(5);
+
+    GC_Protect(locals);
+    GC_Protect(name);
+    GC_Protect(type);
+    GC_Protect(var);
+
+    unsigned jnx = 0;
+    unsigned vcount = max >> 1;
+
+    tuple_Create(vcount, &locals);
+
+    inx = 0;
+    for(;; ++jnx) {
+        if (++inx > max) break;
+
+        name = clause->item[inx];
+
+        if (++inx > max) {
+            pair_Create(name, NIL, &var);
+            tuple_SetItem(locals, jnx, var);
+            break;
+        }
+
+        encode(clause->item[inx], env, &type);
+
+        pair_Create(name, type, &var);
+
+        tuple_SetItem(locals, jnx, var);
+    }
+
+    ASSIGN(target, locals);
+    GC_End();
+    return true;
 }
 
 
-Tuple find_as(Tuple frame, const Node env) {
-    if (!frame) return (Tuple) 0;
+static bool find_as(Tuple frame, const Node env, Pair* target) {
+    if (!frame) return false;
 
     Kind    kind = asKind(frame);
     unsigned max = kind->count;
     unsigned inx = 0;
+    Tuple clause = (Tuple) 0;
+    Node   symbol;
 
-    BitArray array = BITS_INITIALISER;
-    Node     symbol;
+    for (; ; ++inx) {
+        if (inx >= max) return false;
 
-    for (; inx < max ;++inx) {
         Node value = frame->item[inx];
-        if (!isTuple(value)) return (Tuple) 0;
+
+        if (!isTuple(value)) return false;
+
         tuple_GetItem(value.tuple, 0, &symbol);
+
         if (isIdentical(s_as, symbol)) {
-            bits_reset(&array);
-            tuple_Find(value.tuple, as_types, 0, &array);
-            tuple_Update(value.tuple, encode, env, &array);
-            bits_free(&array);
-            return value.tuple;
+            clause = value.tuple;
+            break;
         }
     }
 
-    return (Tuple) 0;
+    Pair  returns;
+    Node  name;
+    Node  type;
+    Tuple results;
+
+    max = getCount(clause);
+
+    // [with] ?
+    if (1 >= max) return false;
+
+    GC_Begin(5);
+
+    GC_Protect(returns);
+    GC_Protect(name);
+    GC_Protect(type);
+    GC_Protect(results);
+
+    switch (max) {
+    case 0:
+    case 1: //[with]
+        break;
+
+    case 2: // [with name]
+        pair_Create(name, NIL, &returns);
+        break;
+
+    case 3:// [with name type]
+        encode(clause->item[2], env, &type);
+        pair_Create(name, type, &returns);
+        break;
+
+    default: // [with name type0..typen]
+        tuple_Section(clause, 2, 0, &results);
+        tuple_Update(results, encode, env, 0);
+        pair_Create(name, results, &returns);
+        break;
+    }
+
+    ASSIGN(target, returns);
+    GC_End();
+    return true;
 }
 
-Tuple find_initialize(Tuple frame, const Node env) {
+static bool find_initialize(Tuple frame, const Node env, Tuple* target) {
 
-    if (!frame) return (Tuple) 0;
+    if (!frame) return false;
 
     Kind      kind = asKind(frame);
     unsigned   max = kind->count;
     unsigned   inx = 0;
     unsigned count = 0;
-
     BitArray array;
 
     bits_init(&array);
@@ -135,13 +192,21 @@ Tuple find_initialize(Tuple frame, const Node env) {
 
     for (; inx < max ;++inx) {
         Node value = frame->item[inx];
+
         if (!isTuple(value)) break;
+
         tuple_GetItem(value.tuple, 0, &symbol);
+
+        VM_DEBUG(2, "checking %s", symbol_Text(symbol.symbol));
+
+        // [bind n1 .. ni expr]
         if (isIdentical(s_bind, symbol)) {
             ++count;
             bits_set(&array, inx, true);
             continue;
         }
+
+        // [set n1 .. ni expr]
         if (isIdentical(s_set, symbol)) {
             ++count;
             bits_set(&array, inx, true);
@@ -149,19 +214,24 @@ Tuple find_initialize(Tuple frame, const Node env) {
         }
     }
 
-    if (0 == count) return (Tuple) 0;
+    if (0 == count) return false;
 
     Tuple result;
 
     tuple_Select(frame, count, &array, &result);
 
     bits_free(&array);
-    return result;
+
+    tuple_Update(result, encode, env, 0);
+
+    ASSIGN(target, result);
+
+    return true;
 }
 
-Tuple find_body(Tuple frame) {
+static bool find_body(Tuple frame, Tuple* target) {
 
-    if (!frame) return (Tuple) 0;
+    if (!frame) return false;
 
     Kind      kind = asKind(frame);
     unsigned   max = kind->count;
@@ -184,11 +254,142 @@ Tuple find_body(Tuple frame) {
         break;
     }
 
-    Tuple result;
+    return tuple_Section(frame, inx, 0, target);
+}
 
-    tuple_Section(frame, inx, 0, &result);
+static bool var_declare(unsigned index, Node declare, Node context, Node env, Target result) {
+    Symbol   name;
+    Constant type;
 
-    return result;
+    VM_ON_DEBUG(2, {
+            fprintf(stderr, "declare var %u ", index);
+            prettyPrint(stderr, declare);
+            fprintf(stderr,"\n context ");
+            prettyPrint(stderr, context);
+            fprintf(stderr,"\n");
+            fflush(stderr);
+        });
+
+    if (!isPair(declare)) {
+        ASSIGN(result, context);
+        return true;
+    }
+
+    name = declare.pair->car.symbol;
+    type = declare.pair->cdr.constant;
+
+    return alist_Declare(context.pair, name, type, result.pair);
+}
+
+static bool encode_body(Tuple with, Pair as, Node env, Tuple body)
+{
+    GC_Begin(3);
+
+    Node context;
+
+    GC_Protect(context);
+
+    tuple_FoldRight(with, env, var_declare, NIL, &context);
+
+    if (as) {
+        alist_Declare(context.pair, as->car.symbol, as->cdr.constant, &(context.pair));
+    }
+
+    tuple_Update(body, encode, context, 0);
+
+    GC_End();
+    return true;
+}
+
+static bool bind_vars(unsigned index, Node binding, Node context, Node env, Target result) {
+    ASSIGN(result, context);
+
+    VM_ON_DEBUG(2, {
+         fprintf(stderr, "binding var %u ", index);
+         prettyPrint(stderr, binding);
+         fprintf(stderr,"\n context ");
+         prettyPrint(stderr, context);
+         fprintf(stderr,"\n");
+         fflush(stderr);
+        });
+
+    if (!isTuple(binding)) return true;
+
+    unsigned max = getCount(binding);
+
+    if (1 >= max) return true;
+
+    Tuple  entry = binding.tuple;
+
+    if (2 == max) {
+        alist_Set(context.pair, entry->item[1].symbol, NIL);
+        return true;
+    }
+
+    Node expr = entry->item[max-1];
+    Node  value;
+
+    GC_Begin(3);
+
+    GC_Protect(value);
+
+    eval(expr, env, &value);
+
+    switch (max) {
+    case 0: //[]
+    case 1: //[bind],     [set]
+    case 2: //[bind name],[set name]
+        break;
+
+    case 3: //[bind name expr],[set name expr]
+        VM_ON_DEBUG(2, {
+                Symbol symbol = entry->item[1].symbol;
+                fprintf(stderr, "binding %s ", symbol_Text(symbol));
+                prettyPrint(stderr, value);
+                fprintf(stderr,"\n");
+                fflush(stderr);
+            });
+
+        alist_Set(context.pair, entry->item[1].symbol, value);
+        break;
+
+    default: //[bind n1..ni expr],[set n1..ni expr]
+        if (!isTuple(value)) {
+            VM_ON_DEBUG(2, {
+                    Symbol symbol = entry->item[1].symbol;
+                    fprintf(stderr, "binding %s ", symbol_Text(symbol));
+                    prettyPrint(stderr, value);
+                    fprintf(stderr,"\n");
+                    fflush(stderr);
+                });
+            alist_Set(context.pair, entry->item[1].symbol, value);
+        } else {
+            Tuple group = value.tuple;
+            --max;
+            unsigned count = getCount(value);
+            unsigned inx   = 1;
+            unsigned jnx   = 0;
+            for(;;) {
+                if (inx >= max) break;
+                if (jnx >= count) break;
+                VM_ON_DEBUG(2, {
+                        Symbol symbol = entry->item[inx].symbol;
+                        Node   value  = group->item[jnx];
+                        fprintf(stderr, "binding %s ", symbol_Text(symbol));
+                        prettyPrint(stderr, value);
+                        fprintf(stderr,"\n");
+                        fflush(stderr);
+                    });
+
+                alist_Set(context.pair,
+                          entry->item[inx].symbol,
+                          group->item[jnx]);
+            }
+        }
+    }
+
+    GC_End();
+    return true;
 }
 
 extern SUBR(encode_elet)
@@ -204,35 +405,52 @@ extern SUBR(encode_elet)
 
     Tuple frame;
     Tuple with;
-    Tuple vars;
-    Tuple as;
+    Pair  as;
     Tuple initialize;
-    Tuple body;
+    Tuple block;
+    Pair  body;
+    Node  context;
 
     GC_Protect(frame);
     GC_Protect(with);
-    GC_Protect(vars);
     GC_Protect(as);
     GC_Protect(initialize);
+    GC_Protect(block);
     GC_Protect(body);
+    GC_Protect(context);
 
     tuple_Convert(args.pair, &frame);
 
-    with = find_with(frame, env);
+    find_with(frame, env, &with);
+    find_as(frame, env, &as);
+    find_initialize(frame, env, &initialize);
+    find_body(frame, &block);
+
+    VM_ON_DEBUG(2, {
+            fprintf(stderr,"encode elet <begin>\n with ");
+            prettyPrint(stderr, with);
+            fprintf(stderr,"\n as ");
+            prettyPrint(stderr, as);
+            fprintf(stderr,"\n initialize ");
+            prettyPrint(stderr, initialize);
+            fprintf(stderr,"\n body");
+            prettyPrint(stderr, block);
+            fprintf(stderr,"\n");
+            fprintf(stderr,"<end>\n");
+            fflush(stderr);
+        });
 
     if (with) {
-        tuple_Filter(with, with_names, 0, &vars);
+        tuple_FoldRight(with, env, var_declare, NIL, &context);
     }
-
-    as         = find_as(frame, env);
-    initialize = find_initialize(frame, env);
-    body       = find_body(frame);
-
-body:
-    encode(body, env, &body);
+    if (as) {
+        alist_Declare(context.pair, as->car.symbol, as->cdr.constant, &(context.pair));
+    }
+    tuple_Update(block, encode, context, 0);
+    list_Convert(block, &body);
 
     tuple_Create(4, &frame);
-    tuple_SetItem(frame, 0, vars);
+    tuple_SetItem(frame, 0, with);
     tuple_SetItem(frame, 1, as);
     tuple_SetItem(frame, 2, initialize);
     tuple_SetItem(frame, 3, body);
@@ -242,88 +460,63 @@ body:
     GC_End();
 }
 
-static void binding_Let(Node local, Node env, Target result)
-{
-    /*
-    ** local = name
-    **       | (name expr)
-    */
-    GC_Begin(4);
-
-    Node symbol;
-    Node expr;
-    Node value;
-
-    GC_Protect(expr);
-    GC_Protect(value);
-
-    if (isSymbol(local)) { // name
-        symbol = local;
-        value  = void_v;
-        goto done;
-    }
-
-    if (isPair(local)) { // name expr
-        list_GetItem(local.pair, 0, &symbol);
-        list_GetItem(local.pair, 1, &expr);
-        goto do_eval;
-    }
-
-  do_eval:
-    if (!isNil(expr)) {
-        eval(expr, env, &value);
-    } else {
-        value = NIL;
-    }
-
-  done:
-    pair_Create(symbol, value, result.pair);
-
-    GC_End();
-}
-
 extern SUBR(elet)
 {
     GC_Begin(7);
 
     Tuple frame;
-    Node  env2;
-    Node  vars;
+    Node  context;
+    Node  with;
     Node  as;
     Node  initialize;
     Node  body;
+    Node  tmp;
 
     GC_Protect(frame);
-    GC_Protect(env2);
-    GC_Protect(vars);
+    GC_Protect(context);
+    GC_Protect(with);
     GC_Protect(as);
     GC_Protect(initialize);
     GC_Protect(body);
 
     frame = args.tuple;
 
-    tuple_GetItem(frame, 0, &vars);
+    tuple_GetItem(frame, 0, &with);
     tuple_GetItem(frame, 1, &as);
     tuple_GetItem(frame, 2, &initialize);
     tuple_GetItem(frame, 3, &body);
 
-    if (!isTuple(vars)) {
-        env2 = env;
+    VM_ON_DEBUG(2, {
+            fprintf(stderr,"eval elet <begin>\n with ");
+            prettyPrint(stderr, with);
+            fprintf(stderr,"\n as ");
+            prettyPrint(stderr, as);
+            fprintf(stderr,"\n initialize ");
+            prettyPrint(stderr, initialize);
+            fprintf(stderr,"\n body");
+            prettyPrint(stderr, body);
+            fprintf(stderr,"\n");
+            fprintf(stderr,"<end>\n");
+            fflush(stderr);
+        });
+
+    if (!isTuple(with)) {
+        context = env;
     } else {
-        // convert names to bindings  [with n1 t1 ...]
-        list_Curry(vars.tuple, binding_Let, env, 0, &(env2.pair));
-        list_SetEnd(env2.pair, env);
+        tuple_FoldRight(with.tuple, env, var_declare, env, &context);
     }
 
     if (isTuple(initialize)) {
-        // convert binding list [bind n1 .. ni expr]...
+        tuple_FoldRight(initialize.tuple, context, bind_vars, env, &context);
     }
 
-    if (!isTuple(as)) {
-        eval_begin(body, env2, result);
+    if (!isPair(as)) {
+        eval_begin(body, context, result);
     } else {
         // fetch name [as name t1..]
-        eval_block(as.symbol, body, env2, result);
+        eval_block(as.pair->car.symbol,
+                   as.pair->cdr.constant,
+                   body, context, result);
     }
 
  exit:

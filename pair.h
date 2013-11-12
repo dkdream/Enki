@@ -51,6 +51,9 @@ extern bool list_GetTail(Pair pair, unsigned index, Target value);
 extern bool list_SetEnd(Pair pair, const Node value);
 extern bool list_GetEnd(Pair pair, Target value);
 
+// convert a tuple into a (proper) list
+extern bool list_Convert(Tuple tuple, Pair* target);
+
 // create a variable entry
 extern bool variable_Create(const Symbol label, const Node value, const Constant type, Variable* target);
 

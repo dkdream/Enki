@@ -306,6 +306,64 @@ extern bool list_GetEnd(Pair pair, Target value) {
      return false;
 }
 
+extern bool list_Convert(Tuple tuple, Pair* target) {
+    if (!tuple) {
+        ASSIGN(target, NIL);
+        return true;
+    }
+
+    if (!isTuple(tuple)) {
+        fatal("\nerror: list_Convert applied to a non-tuple");
+        return false;
+    }
+
+    Kind kind = asKind(tuple);
+
+    const unsigned max = kind->count;
+
+    if (1 > max) {
+        ASSIGN(target, NIL);
+        return true;
+    }
+
+    GC_Begin(7);
+
+    Pair first;
+    Pair last;
+    Node value;
+    Pair hold;
+
+    GC_Protect(first);
+    GC_Protect(last);
+    GC_Protect(value);
+    GC_Protect(hold);
+
+    if (!pair_Create(tuple->item[0],NIL, &first)) goto error;
+
+    last = first;
+
+    unsigned inx = 1;
+    for (; inx < max ;++inx) {
+
+        if (!pair_Create(tuple->item[inx],NIL, &hold)) goto error;
+        if (!pair_SetCdr(last, hold)) goto error;
+
+        last = hold;
+    }
+
+  done:
+    ASSIGN(target, first);
+
+    GC_End();
+    return true;
+
+ error:
+    GC_End();
+    return false;
+
+
+}
+
 extern bool alist_Entry(Pair pair, const Symbol label, Variable* value) {
     if (!pair)  return false;
 

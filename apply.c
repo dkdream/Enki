@@ -529,7 +529,7 @@ extern void eval_escape(Node node, Node result)
     clink_Goto(label, result);
 }
 
-extern void eval_block(Symbol escape, Node body, Node env, Target last)
+extern void eval_block(const Symbol escape, const Constant type, Node body, Node env, Target last)
 {
     GC_Begin(2);
 
