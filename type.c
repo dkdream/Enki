@@ -62,6 +62,7 @@ Constant t_pair = 0;
 Constant t_symbol = 0;
 Constant t_text = 0;
 Constant t_tuple = 0;
+Constant t_arrow = 0;
 
 Constant t_buffer = 0;
 Constant t_closed = 0;
@@ -122,6 +123,7 @@ extern void init_global_typetable() {
     MK_BTYPE(symbol);
     MK_BTYPE(text);
     MK_BTYPE(tuple);
+    MK_BTYPE(arrow);
 
     MK_OTYPE(buffer);
     MK_OTYPE(infile);

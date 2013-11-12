@@ -3632,6 +3632,7 @@ void startEnkiLibrary() {
     MK_CONST(symbol,t_symbol);
     MK_CONST(text,t_text);
     MK_CONST(tuple,t_tuple);
+    MK_CONST(arrow,t_arrow);
 
     MK_CONST(Zero,zero_s);
     MK_CONST(Opaque,opaque_s);

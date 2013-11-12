@@ -1,5 +1,5 @@
 
-(elet [with echo Opaque print Opaque]
+(elet [with echo arrow print arrow]
       [bind echo print [dump dumpln]]
       (echo 1)
       (print "done"))

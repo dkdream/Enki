@@ -104,6 +104,7 @@ extern Constant t_pair;    // the union of all pairs types
 extern Constant t_symbol;  // the union of all symbol types
 extern Constant t_text;    // the union of all text types
 extern Constant t_tuple;   // the union of all tuple types
+extern Constant t_arrow;   // the union of all arrow types
 
 extern Constant t_buffer;       // the type of a c-text-buffer
 extern Constant t_closed;       // the type of a closed object
