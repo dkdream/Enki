@@ -369,7 +369,7 @@ static bool bind_vars(unsigned index, Node binding, Node context, Node env, Targ
             unsigned count = getCount(value);
             unsigned inx   = 1;
             unsigned jnx   = 0;
-            for(;;) {
+            for(;; ++inx,++jnx) {
                 if (inx >= max) break;
                 if (jnx >= count) break;
                 VM_ON_DEBUG(2, {

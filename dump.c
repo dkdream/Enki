@@ -234,6 +234,15 @@ extern bool buffer_print(TextBuffer *output, Node node) {
         return true;
     }
 
+    if (isIdentical(ctor, s_variable)) {
+        echo_format(output, "var(%p (%p, %p, %p))",
+                    node.reference,
+                    node.variable->label,
+                    node.variable->value.reference,
+                    node.variable->type);
+        return true;
+    }
+
     if (isIdentical(ctor, s_pair)) {
         echo_format(output, "pair(%p (%p, %p))",
                     node.reference,
@@ -339,6 +348,15 @@ extern bool buffer_dump(TextBuffer *output, Node node) {
 
     if (isATypeObj(node)) {
         echo_type(output, node);
+        return true;
+    }
+
+    if (isIdentical(ctor, s_variable)) {
+        echo_format(output, "var(%p (%p, %p, %p))",
+                    node.reference,
+                    node.variable->label,
+                    node.variable->value.reference,
+                    node.variable->type);
         return true;
     }
 
@@ -526,6 +544,18 @@ extern void buffer_prettyPrint(TextBuffer *output, Node node) {
                 prettyPrint_intern(node.tuple->item[inx], level+1);
             }
             buffer_add(output, "]");
+            return;
+        }
+
+        if (isIdentical(ctor, s_variable)) {
+            const unsigned max = asKind(node)->count;
+            unsigned inx = 0;
+            buffer_add(output, "{|");
+            for (; inx < max ;++inx) {
+                if (0 < inx) buffer_add(output, " ");
+                prettyPrint_intern(node.tuple->item[inx], level+1);
+            }
+            buffer_add(output, "|}");
             return;
         }
 
