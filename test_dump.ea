@@ -83,19 +83,19 @@ dump
          (set count (+ 1 count))
          count)))
 
-(dumpln 'y (next))
+(dumpln 'y1 (next))
 (println (barness "testing"))
 
-(dumpln 'y (next))
+(dumpln 'y2 (next))
 (let ((xxx 1)(yyy 2))
   (dumpln (environment 'current)))
 
-(dumpln 'y (next))
+(dumpln 'y3 (next))
 (define one   (Label 'one integer))
 (define two   (Label 'two text))
 (define three (Label 'three symbol))
 
-(dumpln 'y (next))
+(dumpln 'y4 (next))
 (println one)
 (dumpln (type-of one))
 
@@ -109,12 +109,12 @@ dump
 (define r2 (Record two three))
 (define r3 (Record one r2))
 
-(dumpln 'y (next))
+(dumpln 'y5 (next))
 (dumpln (Unfold r1))
 (dumpln (Unfold r2))
 (dumpln (Unfold r3))
 
-(dumpln 'y (next))
+(dumpln 'y6 (next))
 (dumpln (type-of r1))
 (dumpln (type-of r2))
 (dumpln (type-of r3))
