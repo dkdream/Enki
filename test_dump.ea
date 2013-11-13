@@ -91,9 +91,9 @@ dump
   (dumpln (environment 'current)))
 
 (dumpln 'y (next))
-(define one   (Field 'one integer))
-(define two   (Field 'two text))
-(define three (Field 'three symbol))
+(define one   (Label 'one integer))
+(define two   (Label 'two text))
+(define three (Label 'three symbol))
 
 (dumpln 'y (next))
 (println one)
