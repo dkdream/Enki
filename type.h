@@ -163,6 +163,12 @@ extern bool type_Record(const Base left, const Base right, Base*);
 extern bool type_All(const Base left, const Base right, Base*);
 
 /*
+ * self(a,b)
+ */
+extern bool type_Self(const Base left, const Node right, Base*);
+
+
+/*
  * walk a type tree and call func for each node
  */
 extern bool type_Map(Operator func, const Node type, const Node env, Target target);

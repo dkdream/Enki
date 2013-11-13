@@ -3365,6 +3365,7 @@ extern SUBR(true_q) {
     }
 }
 
+// (any left right) == { x | x \in left || x \in right }
 extern SUBR(Any) {
     Node left;
     Node right;
@@ -3378,7 +3379,8 @@ extern SUBR(Any) {
     type_Any(left.type, right.type, result.type);
 }
 
-extern SUBR(Field) {
+// (label symbol type) == { x | x \in Label(symbol,type) }
+extern SUBR(Label) {
     Node label;
     Node type;
 
@@ -3391,6 +3393,7 @@ extern SUBR(Field) {
     type_Label(label.symbol, type.type, result.type);
 }
 
+// (index offset type) == { x | x \in Index(offset,type) }
 extern SUBR(Index) {
     Node offset;
     Node type;
@@ -3407,6 +3410,7 @@ extern SUBR(Index) {
     type_Index(offset.integer->value, type.type, result.type);
 }
 
+// (tuple left right) == { x | x \in left && x \in right && x \in Tuple }
 extern SUBR(Tuple) {
     Node left;
     Node right;
@@ -3420,6 +3424,7 @@ extern SUBR(Tuple) {
     type_Tuple(left.type, right.type, result.type);
 }
 
+// (tuple left right) == { x | x \in left && x \in right && x \in Record }
 extern SUBR(Record) {
     Node left;
     Node right;
@@ -3433,6 +3438,7 @@ extern SUBR(Record) {
     type_Record(left.type, right.type, result.type);
 }
 
+// (all left right) == { x | x \in left && x \in right }
 extern SUBR(All) {
     Node left;
     Node right;
@@ -3444,6 +3450,20 @@ extern SUBR(All) {
     if (!isAType(right)) fatal("All: right is not a type");
 
     type_All(left.type, right.type, result.type);
+}
+
+// (self type value) == { x | x \in type && (iso x value) }
+extern SUBR(Self) {
+    Node left;
+    Node right;
+
+    checkArgs(args, "Self", 2, NIL, NIL);
+    fetchArgs(args, &left, &right, 0);
+
+    if (!isAType(left))      fatal("Self: left is not a type");
+    if (!inType(right,left)) fatal("Self: right is not in left");
+
+    type_Self(left.type, right, result.type);
 }
 
 static void mirror(Node local, Node env, Target result) {
@@ -3789,11 +3809,12 @@ void startEnkiLibrary() {
     MK_OPR(forced-value,forced_value);
 
     MK_PRM(Any);
-    MK_PRM(Field);
+    MK_PRM(Label);
     MK_PRM(Index);
     MK_PRM(Tuple);
     MK_PRM(Record);
     MK_PRM(All);
+    MK_PRM(Self);
     MK_PRM(Unfold);
 
     MK_PRM(cast);

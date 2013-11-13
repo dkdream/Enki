@@ -21,13 +21,16 @@
               | (syntax <name> <name> <core>* <core>) -- name1 is input, name2 is output
               | <quote>
 
-<type-constructor> = (arrow <core> <core>)      -- arrow type (simple function type)
-                   | (index <integer> <core>)   -- index type (tuple element type) 
-                   | (label <symbol> <core>)    -- label type (record element type)
-                   | (power <core>)             -- power type (type of sets of type)
+<type-constructor> = (arrow <core> <core>)    -- arrow type (simple function type)
+                   | (index <integer> <core>) -- index type (tuple element type) 
+                   | (label <symbol> <core>)  -- label type (record element type)
+                   | (any <core> <core>)      -- or type (simple or type)
+                   | (all <core> <core>)      -- and type (simple and type)
+                   | (power <core>)           -- power type (type of sets of type)
+                   | (mu <core> <core>)       -- fixpoint type
 
-<type-functors> = (self <core> <core>)             -- self type (a singleton subset type)
-                | (<formula> <parameters> <core>+)
+<type-functors> = (self <core> <core>)         -- self type (a singleton subset type)
+                | (<formula> <locals> <core>+)
 
 <control> = (if <core> <core> <core>*)
           | (unless <core> <core> <core>*)
@@ -70,7 +73,7 @@
 
 -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -
 
-<formula> = pi | sigma | any | all | subset | mu | exists
+<formula> = sigma | pi | exists | forall | refine
 
 <quote>      = '<core>
 
@@ -110,8 +113,6 @@
            | _      <core>    # slot declared (type must be labeled type)
 <variable> = <name> <core>    # name declared (type must be indexed type)
            | _      <core>    # slot declared (type must be indexed type)
-
-
 
 -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -
 
@@ -184,19 +185,38 @@ note: define dose NOT make a boxed type, therefore
 
 - - - - - - - - - - - - - - - - - - - - - 
 
-(sigma  (a : A) (B a)) == { (a, b) | a \in A && b \in (B a) }
-(pi     (a : A) (B a)) == { f      | f \subset (sigma (a [A]) (B a)) && f \in Function }
-(any    (a : A) (B a)) == { b      | b \in Union{x \in A}(B x) }
-(all    (a : A) (B a)) == { b      | b \in Intercection{x \in A}(B x) }
-(subset (a : A) (B a)) == { (a, b) | a \in A && b \subset (B a) }
+(power A)   == { x | x \in Power(A) }
+(any   A B) == { x | x \in A || x \in B) }
+(all   A B) == { x | x \in A && x \in B) }
+(index a B) == { x | x \in Index(a,B) }
+(label a B) == { x | x \in Label(a,B) }
+(arrow A B) == { x | x \in Arror(A,B) }
+(self  A a) == { x | x \in A && (iso x a) }
+(mu    A a) == { x | x \in A && (iso x (a x)) }
+
+- - - - - - - - - - - - - - - - - - - - - 
+- - - - - - - - - - - - - - - - - - - - - 
+
+(sigma  [with a A] (B a)) == { y | y \in Tuple{x \in A}((self A x), (B x)) }
+(pi     [with a A] (B a)) == { y | y \in Arrow{x \in A}((self A x), (B x)) }
+(exists [with a A] (B a)) == { y | y \in Union{x \in A}(B x) }
+(forall [with a A] (B a)) == { y | y \in Intercection{x \in A}(B x) }
+(refine [with a A] (B a)) == { y | y \in A && (B a) }
 
 - - - - - - - - - - - - - - - - - - - - -
 
-(sigma  (_ : A) B) -> (and (index 0 A) (index 1 B))
-(pi     (_ : A) B) -> (arrow (index 0 A) (index 0 B)) -> (arrow A B)
-(any    (_ : A) B) -> B
-(all    (_ : A) B) -> B
-(subset (_ : A) B) -> (sigma (_ : A) (power B)) -> (and (index 0 A) (index 1 (power B)))
+(sigma  [with _ A] B) -> (all (index 0 A) (index 1 B))
+(pi     [with _ A] B) -> (arrow A B)
+(exists [with _ A] B) -> B
+(forall [with _ A] B) -> B
+
+- - - - - - - - - - - - - - - - - - - - -
+
+mu : T:(A -> B) -> F:(T -> T) -> x:A -> (refine y:B | (iso y (mu T F x)))
+
+mu : T:* -> F:(T -> T) -> (refine x:T (iso x (mu T F)))
+
+mu : (pi [with T * F (arrow T T)] (refine [with x T] (iso x (mu T F))))
 
 - - - - - - - - - - - - - - - - - - - - -
 

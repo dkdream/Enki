@@ -1440,6 +1440,11 @@ extern bool type_All(const Base left, const Base right, Base* result) {
     return false;
 }
 
+extern bool type_Self(const Base left, const Node right, Base* target) {
+    fatal("\nerror: type_Self not done yet");
+    return false;
+}
+
 static bool axiom_Map(Operator func, const Axiom node, const Node env, Target target) {
    GC_Begin(4);
 
@@ -1656,18 +1661,22 @@ extern bool type_Map(Operator func, const Node node, const Node env, Target targ
 
 
 extern bool type_Pi(Base* target, ...) {
+    fatal("\nerror: type_Pi not done yet");
     return false;
 }
 
 extern bool type_Sigma(Base* target, ...) {
+    fatal("\nerror: type_Sigma not done yet");
     return false;
 }
 
 extern bool type_Mu(Base* target, ...) {
+    fatal("\nerror: type_Mu not done yet");
     return false;
 }
 
 extern bool type_Delta(Base* target, ...) {
+    fatal("\nerror: type_Delta not done yet");
     return false;
 }
 
