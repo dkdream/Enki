@@ -48,18 +48,21 @@ ASFLAGS  := -Qy
 LIBFLAGS := $(COPPER_LIB)
 ARFLAGS  := rcu
 
-MAINS     := enki_main.c $(notdir $(wildcard link_*.c))
-FOOS      := $(notdir $(wildcard foo_*.c))
-C_SOURCES := $(filter-out $(MAINS) $(FOOS) $(CTESTS),$(notdir $(wildcard *.c)))
-H_SOURCES := $(filter-out enki.h, $(notdir $(wildcard *.h)))
-BUILDINS  := $(wildcard ./buildins/*.c)
+MAINS      := enki_main.c $(notdir $(wildcard link_*.c))
+FOOS       := $(notdir $(wildcard foo_*.c))
+C_SOURCES  := $(filter-out $(MAINS) $(FOOS) $(CTESTS),$(notdir $(wildcard *.c)))
+H_SOURCES  := $(filter-out enki.h, $(notdir $(wildcard *.h)))
+ATOMS      := $(wildcard ./atoms/*.c)
+C_BUILDINS := $(notdir $(wildcard ./buildins/*.c))
 
 OBJS := $(C_SOURCES:%.c=.objects/%_32.o)
+OBJS += $(C_BUILDINS:%.c=.objects/%_buildin_32.o)
 TSTS := $(notdir $(wildcard test_*.ea))
 RUNS := $(TSTS:test_%.ea=.run/test_%.log)
 
 DEPENDS := $(C_SOURCES:%.c=.depends/%.d)
 DEPENDS += $(MAINS:%.c=.depends/%.d)
+DEPENDS += $(C_BUILDINS:%.c=.depends/%_buildin.d)
 
 UNIT_TESTS := $(notdir $(wildcard test_*.gcc))
 
@@ -71,7 +74,7 @@ asm   :: $(FOOS:%.c=.dumps/%_32.s)
 units :: $(UNIT_TESTS:%.gcc=%.x)
 	@ls -l $(UNIT_TESTS:%.gcc=%.x)
 
-atoms :: $(BUILDINS:./buildins/%.c=.dumps/%_atom.s)
+atoms :: $(ATOMS:./atoms/%.c=.dumps/%_atom.s)
 	@echo finished atoms
 
 install : install.bin install.inc install.lib
@@ -190,7 +193,8 @@ echo_begin :: ; @echo begin atoms
 .assembly/%_32.s : %.c | .assembly
 	$(GCC) $(SFLAGS) -S -m32 -fverbose-asm -o $@ $<
 
-## ## ## ##
+.assembly/%_buildin_32.s : ./buildins/%.c | .assembly
+	$(GCC) $(SFLAGS) -I. -S -m32 -fverbose-asm -o $@ $<
 
 .objects/%_32.o : %_32.s | .objects
 	$(AS) $(ASFLAGS) --32 -o $@ $< 
@@ -205,7 +209,7 @@ echo_begin :: ; @echo begin atoms
 .objects/%_atom.o : .assembly/%_atom.s | .objects
 	@$(AS) $(ASFLAGS) --32 -o $@ $< 	
 
-.assembly/%_atom.s : ./buildins/%.c | .assembly
+.assembly/%_atom.s : ./atoms/%.c | .assembly
 	$(GCC) $(SFLAGS) -S -m32 -fverbose-asm -o $@ $<
 
 ## ## ## ##
@@ -219,6 +223,9 @@ test_%.x : .objects/test_%_gcc.o
 ## ## ## ##
 
 .depends/%.d : %.c | .depends
+	@$(GCC) $(CFLAGS) -MM -MP -MG -MF $@ $<
+
+.depends/%_buildin.d : ./buildins/%.c | .depends
 	@$(GCC) $(CFLAGS) -MM -MP -MG -MF $@ $<
 
 -include $(DEPENDS)
