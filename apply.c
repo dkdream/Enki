@@ -202,8 +202,6 @@ extern void encode(const Node expr, const Node env, Target result)
 
     function(tail, env, &(tail.pair));
 
-    //    apply(encode_action, tail, env, &(tail.pair));
-
     pair_Create(value, tail, result.pair);
     goto done;
 
@@ -378,16 +376,6 @@ static void eval_pair(const Pair args, const Node env, Target result)
         head = tmp;
     }
 
-#if 0
-    if (isFixed(head)) {
-        // apply Fixed to un-evaluated arguments
-        Node func = NIL;
-        tuple_GetItem(head.tuple, fxd_eval, &func);
-        apply(func, tail, env, result);
-        goto done;
-    }
-#endif
-
     if (isComposite(head)) {
         apply(head, tail, env, result);
         goto done;
@@ -409,6 +397,7 @@ static void eval_tuple(const Tuple args, const Node env, Target result)
 {
     GC_Begin(5);
 
+#if 0
     Node head;
     Node func;
     Variable entry;
@@ -417,7 +406,9 @@ static void eval_tuple(const Tuple args, const Node env, Target result)
     GC_Protect(func);
     GC_Protect(entry);
 
+
     tuple_GetItem(args, 0, &head);
+
 
     if (!isSymbol(head)) goto no_op;
 
@@ -430,21 +421,7 @@ static void eval_tuple(const Tuple args, const Node env, Target result)
     if (isBoxed(head)) {
         pair_GetCar(head.pair, &head);
     }
-
-#if 0
-    if (isFixed(head)) {
-        // apply Fixed to un-evaluated arguments
-        tuple_GetItem(head.tuple, fxd_eval, &func);
-        apply(func, args, env, result);
-        goto done;
-    }
 #endif
-
-    if (isComposite(head)) {
-        Operator function = head.composite->encoder;
-        function(args, env, result);
-        goto done;
-    }
 
   no_op:
     tuple_Map(args, eval, env, result.tuple);
