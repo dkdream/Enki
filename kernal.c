@@ -12,6 +12,7 @@
 #include "debug.h"
 #include "text_buffer.h"
 #include "id_set.h"
+#include "buildins.h"
 
 /* */
 #include <error.h>
@@ -39,7 +40,6 @@ struct gc_header    enki_false;
 struct gc_header    enki_unit;
 struct gc_header    enki_void;
 
-
 Space     _zero_space;
 unsigned __alloc_cycle;
 unsigned __scan_cycle;
@@ -54,13 +54,6 @@ Node          fixed_set  = NIL;
 Primitive  p_encode_args = 0;
 Primitive p_apply_lambda = 0;
 Primitive   p_apply_form = 0;
-
-
-#define SUBR(NAME) void opr_##NAME(Node args, Node env, Target result)
-#define APPLY(NAME,ARGS,ENV,RESULT) opr_##NAME(ARGS,ENV,RESULT)
-
-extern SUBR(elet);
-extern SUBR(encode_elet);
 
 extern void defineValue(const Symbol symbol, const Node value) {
     GC_Begin(2);

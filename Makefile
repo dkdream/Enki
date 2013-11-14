@@ -92,7 +92,7 @@ $(RUNS) : | enki.vm
 clean ::
 	rm -fr .depends .objects .assembly .run .dumps
 	rm -f enki.vm libEnki.a libEnki_32.a libEnki_64.a
-	rm -f *~ ./#* *.x *.s *.o
+	rm -f *~ ./#* *.x *.s *.o buildins/SUBR.lst
 	rm -f test.*.out test.out
 
 scrub :: 
@@ -227,6 +227,15 @@ test_%.x : .objects/test_%_gcc.o
 
 .depends/%_buildin.d : ./buildins/%.c | .depends
 	@$(GCC) $(CFLAGS) -MM -MP -MG -MF $@ $<
+
+## ## ## ##
+
+.assembly/kernal_32.s : buildins/SUBR.lst
+
+buildins/SUBR.lst : $(C_BUILDINS:%.c=./buildins/%.c)
+	@./mk_subr.sh
+
+## ## ## ##
 
 -include $(DEPENDS)
 
