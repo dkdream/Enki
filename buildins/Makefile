@@ -1,22 +1,23 @@
 
-TARGETS := all
-TARGETS += enki
-TARGETS += lib   
-TARGETS += test  
+TARGETS :=
 TARGETS += asm   
-TARGETS += units 
 TARGETS += atoms 
+TARGETS += checkpoint
+TARGETS += clean 
+TARGETS += depends 
+TARGETS += enki
 TARGETS += install
 TARGETS += install.bin
 TARGETS += install.inc
 TARGETS += install.lib 
-TARGETS += checkpoint 
-TARGETS += depends 
-TARGETS += clean 
-TARGETS += scrub 
-TARGETS += test 
+TARGETS += lib   
 TARGETS += obj 
-TARGETS += checkpoint
+TARGETS += scrub 
+TARGETS += test  
+TARGETS += units 
+
+all :
+	@make -C .. $@
 
 $(TARGETS) :
 	@make -C .. $@
