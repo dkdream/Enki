@@ -238,12 +238,6 @@ extern int fetchArgs(Node args, ...)
     return count;
 }
 
-extern SUBR(system_check)
-{
-    check_SymbolTable__(__FILE__, __LINE__);
-    ASSIGN(result, NIL);
-}
-
 extern SUBR(begin)
 { //Fixed
     eval_begin(args, env, result);
@@ -2504,8 +2498,6 @@ void startEnkiLibrary() {
     MK_CONST(Boolean,boolean_s);
     MK_CONST(Unit,unit_s);
     MK_CONST(Undefined,undefined_s);
-
-    MK_PRM(system_check);
 
     MK_FXD(define,encode_define);
     MK_FXD(lambda,encode_lambda);
