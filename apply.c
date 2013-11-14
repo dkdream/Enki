@@ -71,7 +71,7 @@ extern void expand(const Node expr, const Node env, Target result)
     list = expr;
 
     VM_ON_DEBUG(9, {
-            fprintf(stderr, "expand: ");
+            fprintf(stderr, "expand <= ");
             prettyPrint(stderr, list);
             fprintf(stderr, "\n");
         });
@@ -148,7 +148,7 @@ extern void encode(const Node expr, const Node env, Target result)
     list = expr;
 
     VM_ON_DEBUG(9, {
-            fprintf(stderr,"encode: ");
+            fprintf(stderr,"encode <= ");
             prettyPrint(stderr, list);
             fprintf(stderr, "\n");
         });
@@ -228,7 +228,7 @@ extern void analysis(const Node expr, const Node env, Target result)
     list = expr;
 
     VM_ON_DEBUG(9, {
-            fprintf(stderr,"analysis: ");
+            fprintf(stderr,"analysis <= ");
             prettyPrint(stderr, list);
             fprintf(stderr, "\n");
         });
@@ -296,7 +296,7 @@ extern void analysis(const Node expr, const Node env, Target result)
     GC_End();
 }
 
-static void eval_pair(const Node args, const Node env, Target result)
+static void eval_pair(const Pair args, const Node env, Target result)
 {
     GC_Begin(5);
     Node obj, head, tail, tmp;
@@ -306,8 +306,8 @@ static void eval_pair(const Node args, const Node env, Target result)
     GC_Protect(tail);
     GC_Protect(tmp);
 
-    pair_GetCar(args.pair, &head);
-    pair_GetCdr(args.pair, &tail);
+    pair_GetCar(args, &head);
+    pair_GetCdr(args, &tail);
 
     pushTrace(args);
 
@@ -339,8 +339,7 @@ static void eval_pair(const Node args, const Node env, Target result)
 #endif
 
     if (isComposite(head)) {
-        Operator function = head.composite->encoder;
-        function(tail, env, result);
+        apply(head, tail, env, result);
         goto done;
     }
 
@@ -356,17 +355,14 @@ static void eval_pair(const Node args, const Node env, Target result)
     GC_End();
 }
 
-static void eval_symbol(const Node args, const Node env, Target result)
+static void eval_symbol(const Symbol symbol, const Node env, Target result)
 {
     GC_Begin(2);
 
-    Symbol   symbol;
     Node     tmp;
     Variable entry;
 
     GC_Protect(tmp);
-
-    symbol = args.symbol;
 
     // lookup symbol in the current enviroment
     if (!alist_Entry(env.pair, symbol, &entry)) {
@@ -387,6 +383,7 @@ static void eval_symbol(const Node args, const Node env, Target result)
 
  error:
     GC_End();
+
     if (!isSymbol(symbol)) {
         fatal("undefined variable: <non-symbol>");
     } else {
@@ -394,7 +391,7 @@ static void eval_symbol(const Node args, const Node env, Target result)
     }
 }
 
-static void eval_tuple(const Node args, const Node env, Target result)
+static void eval_tuple(const Tuple args, const Node env, Target result)
 {
     GC_Begin(5);
 
@@ -406,7 +403,7 @@ static void eval_tuple(const Node args, const Node env, Target result)
     GC_Protect(func);
     GC_Protect(entry);
 
-    tuple_GetItem(args.tuple, 0, &head);
+    tuple_GetItem(args, 0, &head);
 
     if (!isSymbol(head)) goto no_op;
 
@@ -436,7 +433,7 @@ static void eval_tuple(const Node args, const Node env, Target result)
     }
 
   no_op:
-    tuple_Map(args.tuple, eval, env, result.tuple);
+    tuple_Map(args, eval, env, result.tuple);
 
   done:
     popTrace();
@@ -450,7 +447,7 @@ extern void eval(const Node expr, const Node env, Target result)
     pushTrace(expr);
 
     VM_ON_DEBUG(2, {
-            fprintf(stderr, "eval: ");
+            fprintf(stderr, "eval <= ");
             prettyPrint(stderr, expr);
             fprintf(stderr, "\n");
         });
@@ -461,22 +458,22 @@ extern void eval(const Node expr, const Node env, Target result)
     }
 
     if (isSymbol(expr)) {
-        eval_symbol(expr, env, result);
+        eval_symbol(expr.symbol, env, result);
         goto done;
     }
 
     if (isQuote(expr)) {
-        eval_pair(expr, env, result);
+        eval_pair(expr.pair, env, result);
         goto done;
     }
 
     if (isPair(expr)) {
-        eval_pair(expr, env, result);
+        eval_pair(expr.pair, env, result);
         goto done;
     }
 
     if (isTuple(expr)) {
-        eval_tuple(expr, env, result);
+        eval_tuple(expr.tuple, env, result);
         goto done;
     }
 
@@ -500,7 +497,7 @@ extern void apply(Node fun, Node args, const Node env, Target result)
     GC_Add(args);
 
     VM_ON_DEBUG(9, {
-            fprintf(stderr, "apply: ");
+            fprintf(stderr, "apply <= ");
             prettyPrint(stderr, fun);
             fprintf(stderr, " to: ");
             prettyPrint(stderr, args);

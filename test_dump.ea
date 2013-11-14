@@ -44,7 +44,7 @@ dump
 (assert (iso 10 'primitive  (ctor-of println)))
 
 (dumpln 'x5)
-(assert (iso 10 'fixed      (ctor-of let)))
+(assert (iso 10 'composite  (ctor-of let)))
 
 (dumpln 'x6)
 (assert (iso 10 'tuple      (ctor-of ttest)))
