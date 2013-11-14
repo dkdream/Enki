@@ -347,6 +347,7 @@ static void eval_symbol(const Symbol symbol, const Node env, Target result)
 static void eval_pair(const Pair args, const Node env, Target result)
 {
     GC_Begin(5);
+
     Node obj, head, tail, tmp;
 
     GC_Protect(obj);
@@ -356,8 +357,6 @@ static void eval_pair(const Pair args, const Node env, Target result)
 
     pair_GetCar(args, &head);
     pair_GetCdr(args, &tail);
-
-    pushTrace(args);
 
     // first eval the head
     eval(head, env, &head);
@@ -388,50 +387,13 @@ static void eval_pair(const Pair args, const Node env, Target result)
     apply(head, tail, env, result);
 
  done:
-    popTrace();
-
     GC_End();
 }
 
 static void eval_tuple(const Tuple args, const Node env, Target result)
 {
-    GC_Begin(5);
-
-#if 0
-    Node head;
-    Node func;
-    Variable entry;
-
-    GC_Protect(head);
-    GC_Protect(func);
-    GC_Protect(entry);
-
-
-    tuple_GetItem(args, 0, &head);
-
-
-    if (!isSymbol(head)) goto no_op;
-
-    if (!alist_Entry(env.pair, head.symbol, &entry)) {
-        if (!alist_Entry(enki_globals.pair,  head.symbol, &entry)) goto no_op;
-    }
-
-    head = entry->value;
-
-    if (isBoxed(head)) {
-        pair_GetCar(head.pair, &head);
-    }
-#endif
-
-  no_op:
     tuple_Map(args, eval, env, result.tuple);
-
-  done:
-    popTrace();
-
-    GC_End();
 }
-
 
 extern void eval(const Node expr, const Node env, Target result)
 {
