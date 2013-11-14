@@ -60,6 +60,7 @@ extern void popTrace() {
 /**
  * Expand expression
  */
+static unsigned expand_level = 0;
 extern void expand(const Node expr, const Node env, Target result)
 {
     GC_Begin(8);
@@ -73,7 +74,7 @@ extern void expand(const Node expr, const Node env, Target result)
     list = expr;
 
     VM_ON_DEBUG(9, {
-            fprintf(stderr, "expand <= ");
+            fprintf(stderr, "expand(%u) <= ", expand_level++);
             prettyPrint(stderr, list);
             fprintf(stderr, "\n");
         });
@@ -108,7 +109,7 @@ extern void expand(const Node expr, const Node env, Target result)
         if (!isForm(value)) goto list_begin;
 
         VM_ON_DEBUG(9, {
-                fprintf(stderr, "expand ");
+                fprintf(stderr, "expand(%u) ", expand_level);
                 prettyPrint(stderr, head);
                 fprintf(stderr, " as ");
                 prettyPrint(stderr, value);
@@ -128,7 +129,7 @@ extern void expand(const Node expr, const Node env, Target result)
 
  done:
     VM_ON_DEBUG(9, {
-            fprintf(stderr, "expand => ");
+            fprintf(stderr, "expand(%d) => ", --expand_level);
             prettyPrint(stderr, *result.reference);
             fprintf(stderr, "\n");
         });
@@ -145,8 +146,14 @@ extern void expand(const Node expr, const Node env, Target result)
  * * composite function
  *   then call encoder with arguments
  */
+static unsigned enode_level = 0;
 extern void encode(const Node expr, const Node env, Target result)
 {
+    if (!isPair(expr)) {
+        ASSIGN(result, expr);
+        return;
+    }
+
     GC_Begin(8);
 
     Node list; Node head; Node tail;
@@ -157,16 +164,11 @@ extern void encode(const Node expr, const Node env, Target result)
 
     list = expr;
 
-    VM_ON_DEBUG(9, {
-            fprintf(stderr,"encode <= ");
+    VM_ON_DEBUG(3, {
+            fprintf(stderr,"encode(%u) <= ", enode_level++);
             prettyPrint(stderr, list);
             fprintf(stderr, "\n");
         });
-
-    if (!isPair(list) && !isQuote(list)) {
-        ASSIGN(result, list);
-        goto done;
-    }
 
     head = list.pair->car;
     tail = list.pair->cdr;
@@ -210,8 +212,8 @@ extern void encode(const Node expr, const Node env, Target result)
     pair_Create(head, tail, result.pair);
 
  done:
-    VM_ON_DEBUG(9, {
-            fprintf(stderr, "encode => ");
+    VM_ON_DEBUG(3, {
+            fprintf(stderr, "encode(%u) => ", --enode_level);
             prettyPrint(stderr, *result.reference);
             fprintf(stderr, "\n");
         });
@@ -222,10 +224,16 @@ extern void encode(const Node expr, const Node env, Target result)
 /**
  * Analysis encoded expression
  */
+static unsigned analysis_level = 0;
 extern void analysis(const Node expr, const Node env, Target result)
 {
     ASSIGN(result, expr);
     return;
+
+    if (!isPair(expr)) {
+        ASSIGN(result, expr);
+        return;
+    }
 
     GC_Begin(8);
 
@@ -237,21 +245,11 @@ extern void analysis(const Node expr, const Node env, Target result)
 
     list = expr;
 
-    VM_ON_DEBUG(9, {
-            fprintf(stderr,"analysis <= ");
+    VM_ON_DEBUG(4, {
+            fprintf(stderr,"analysis(%u) <= ", analysis_level++);
             prettyPrint(stderr, list);
             fprintf(stderr, "\n");
         });
-
-    if (!isPair(list)) {
-        ASSIGN(result, list);
-        goto done;
-    }
-
-    if (!isQuote(list)) {
-        ASSIGN(result, list);
-        goto done;
-    }
 
     head = list.pair->car;
     tail = list.pair->cdr;
@@ -297,8 +295,8 @@ extern void analysis(const Node expr, const Node env, Target result)
     pair_Create(head, tail, result.pair);
 
  done:
-    VM_ON_DEBUG(9, {
-            fprintf(stderr, "analysis => ");
+    VM_ON_DEBUG(4, {
+            fprintf(stderr, "analysis(%u) => ", --analysis_level);
             prettyPrint(stderr, *result.reference);
             fprintf(stderr, "\n");
         });
@@ -395,46 +393,54 @@ static void eval_tuple(const Tuple args, const Node env, Target result)
     tuple_Map(args, eval, env, result.tuple);
 }
 
+static unsigned eval_level = 0;
 extern void eval(const Node expr, const Node env, Target result)
 {
-    pushTrace(expr);
-
-    VM_ON_DEBUG(2, {
-            fprintf(stderr, "eval <= ");
-            prettyPrint(stderr, expr);
-            fprintf(stderr, "\n");
-        });
-
     if (isForced(expr)) {
         tuple_GetItem(expr.tuple, 0, result);
-        goto done;
+        return;
     }
 
     if (isSymbol(expr)) {
         eval_symbol(expr.symbol, env, result);
-        goto done;
+        return;
     }
 
-    if (isQuote(expr)) {
+    unsigned action = 0;
+
+    if (isQuote(expr)) action = 1;
+    if (isPair(expr))  action = 2;
+    if (isTuple(expr)) action = 3;
+
+    if (0 == action) {
+        ASSIGN(result, expr);
+        return;
+    }
+
+    pushTrace(expr);
+
+    VM_ON_DEBUG(5, {
+            fprintf(stderr, "eval(%u) <= ", eval_level++);
+            prettyPrint(stderr, expr);
+            fprintf(stderr, "\n");
+        });
+
+    switch (action) {
+    case 1:
         eval_pair(expr.pair, env, result);
-        goto done;
-    }
-
-    if (isPair(expr)) {
+        break;
+    case 2:
         eval_pair(expr.pair, env, result);
-        goto done;
-    }
-
-    if (isTuple(expr)) {
+        break;
+    case 3:
         eval_tuple(expr.tuple, env, result);
-        goto done;
+        break;
+    default:
+        fatal("coding error %u", action);
     }
 
-    ASSIGN(result, expr);
-
- done:
-    VM_ON_DEBUG(9, {
-            fprintf(stderr, "eval => ");
+    VM_ON_DEBUG(5, {
+            fprintf(stderr, "eval(%u) => ", --eval_level);
             prettyPrint(stderr, *result.reference);
             fprintf(stderr, "\n");
         });
@@ -445,6 +451,7 @@ extern void eval(const Node expr, const Node env, Target result)
 /**
  * Apply
  */
+static unsigned apply_level = 0;
 extern void apply(Node fun, Node args, const Node env, Target result)
 {
     GC_Begin(3);
@@ -453,7 +460,7 @@ extern void apply(Node fun, Node args, const Node env, Target result)
     GC_Add(args);
 
     VM_ON_DEBUG(9, {
-            fprintf(stderr, "apply <= ");
+            fprintf(stderr, "apply(%u) <= ", apply_level++);
             prettyPrint(stderr, fun);
             fprintf(stderr, " to: ");
             prettyPrint(stderr, args);
@@ -499,7 +506,7 @@ extern void apply(Node fun, Node args, const Node env, Target result)
 
  done:
     VM_ON_DEBUG(9, {
-            fprintf(stderr, "apply => ");
+            fprintf(stderr, "apply(%d) => ", --apply_level);
             prettyPrint(stderr, *result.reference);
             fprintf(stderr, "\n");
         });

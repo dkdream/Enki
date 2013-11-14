@@ -8,15 +8,6 @@
  **/
 #include "reference.h"
 
-#if 0
-typedef enum fixed_slots {
-    fxd_name,
-    fxd_eval,
-    fxd_encode,
-    fxd_analysis,
-} FXD_Slots;
-#endif
-
 typedef void (*Operator)(Node args, Node env, Target result);
 typedef bool (*Analyser)(Node args, Node env, Target result);
 
