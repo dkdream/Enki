@@ -67,7 +67,8 @@ static void environ_Let(Node local, Node env, Target result)
         tuple_SetItem(local.tuple, 1, nexpr);
     }
 
-    pair_Create(symbol, NIL, result.pair);
+
+    variable_Create(symbol.symbol, NIL, 0, result.variable);
 }
 
 extern SUBR(encode_let)

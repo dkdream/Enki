@@ -66,7 +66,7 @@ static void frame_Fix(Node local, Node env, Target result)
         list_GetItem(local.pair, 0, &symbol);
     }
 
-    pair_Create(symbol, NIL, result.pair);
+    variable_Create(symbol.symbol, NIL, 0, result.variable);
 }
 
 static void initialize_Fix(Node local, Node env, Target result)
