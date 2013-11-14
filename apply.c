@@ -57,7 +57,9 @@ extern void popTrace() {
     pair_GetCdr(traceStack, &traceStack);
 }
 
-// expand all forms
+/**
+ * Expand expression
+ */
 extern void expand(const Node expr, const Node env, Target result)
 {
     GC_Begin(8);
@@ -134,7 +136,15 @@ extern void expand(const Node expr, const Node env, Target result)
     GC_End();
 }
 
-// translate symbol in head position to known primitive/fixed functions
+/**
+ * Encode expanded expression
+ *
+ * translate symbol in head position to known
+ * * primitive function
+ *   then encode arguments
+ * * composite function
+ *   then call encoder with arguments
+ */
 extern void encode(const Node expr, const Node env, Target result)
 {
     GC_Begin(8);
@@ -211,7 +221,9 @@ extern void encode(const Node expr, const Node env, Target result)
     GC_End();
 }
 
-//
+/**
+ * Analysis encoded expression
+ */
 extern void analysis(const Node expr, const Node env, Target result)
 {
     ASSIGN(result, expr);
@@ -295,6 +307,44 @@ extern void analysis(const Node expr, const Node env, Target result)
 
     GC_End();
 }
+/**
+ * Evaluate analysised expression
+ */
+static void eval_symbol(const Symbol symbol, const Node env, Target result)
+{
+    GC_Begin(2);
+
+    Node     tmp;
+    Variable entry;
+
+    GC_Protect(tmp);
+
+    // lookup symbol in the current enviroment
+    if (!alist_Entry(env.pair, symbol, &entry)) {
+        if (!alist_Entry(enki_globals.pair, symbol, &entry)) goto error;
+    }
+
+    tmp = entry->value;
+
+    if (isForced(tmp)) {
+        tuple_GetItem(tmp.tuple, 0, &(entry->value));
+        tmp = entry->value;
+    }
+
+    ASSIGN(result, tmp);
+
+    GC_End();
+    return;
+
+ error:
+    GC_End();
+
+    if (!isSymbol(symbol)) {
+        fatal("undefined variable: <non-symbol>");
+    } else {
+        fatal("undefined variable: %s", symbol_Text(symbol));
+    }
+}
 
 static void eval_pair(const Pair args, const Node env, Target result)
 {
@@ -353,42 +403,6 @@ static void eval_pair(const Pair args, const Node env, Target result)
     popTrace();
 
     GC_End();
-}
-
-static void eval_symbol(const Symbol symbol, const Node env, Target result)
-{
-    GC_Begin(2);
-
-    Node     tmp;
-    Variable entry;
-
-    GC_Protect(tmp);
-
-    // lookup symbol in the current enviroment
-    if (!alist_Entry(env.pair, symbol, &entry)) {
-        if (!alist_Entry(enki_globals.pair, symbol, &entry)) goto error;
-    }
-
-    tmp = entry->value;
-
-    if (isForced(tmp)) {
-        tuple_GetItem(tmp.tuple, 0, &(entry->value));
-        tmp = entry->value;
-    }
-
-    ASSIGN(result, tmp);
-
-    GC_End();
-    return;
-
- error:
-    GC_End();
-
-    if (!isSymbol(symbol)) {
-        fatal("undefined variable: <non-symbol>");
-    } else {
-        fatal("undefined variable: %s", symbol_Text(symbol));
-    }
 }
 
 static void eval_tuple(const Tuple args, const Node env, Target result)
@@ -489,6 +503,9 @@ extern void eval(const Node expr, const Node env, Target result)
     popTrace();
 }
 
+/**
+ * Apply
+ */
 extern void apply(Node fun, Node args, const Node env, Target result)
 {
     GC_Begin(3);
