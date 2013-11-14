@@ -396,6 +396,11 @@ extern inline bool isEscape(const Node value) {
     return fromCtor(value, s_escape);
 }
 
+extern inline bool isComposite(const Node value) __attribute__((always_inline));
+extern inline bool isComposite(const Node value) {
+    return fromCtor(value, s_composite);
+}
+
 
 
 /***************************

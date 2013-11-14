@@ -706,33 +706,6 @@ extern SUBR(form)
   ASSIGN(result, (Node)tuple);
 }
 
-extern SUBR(fixed)
-{
-  Tuple tuple;
-  Node  name = NIL;
-  Node  func = NIL;
-  Node  enc = NIL;
-
-  int count = checkArgs(args, "fixed", 1, NIL);
-
-  ASSIGN(result,NIL);
-
-  if (2 < count) {
-      forceArgs(args, &name, &func, &enc, 0);
-      tuple_Create(3, &tuple);
-      tuple_SetItem(tuple, fxd_name, name);
-      tuple_SetItem(tuple, fxd_eval, func);
-      tuple_SetItem(tuple, fxd_encode, enc);
-  } else {
-      ASSIGN(result, NIL);
-      return;
-  }
-
-  setConstructor(tuple, s_fixed);
-
-  ASSIGN(result, (Node)tuple);
-}
-
 extern SUBR(ctor_of)
 {
     Node value;
@@ -2096,28 +2069,6 @@ extern SUBR(length) {
     }
 }
 
-extern SUBR(fixed_encoder) {
-    Tuple fixed;
-
-    checkArgs(args, "fixed-encoder", 1, s_fixed);
-    fetchArgs(args, &fixed, 0);
-
-    if (!tuple_GetItem(fixed, fxd_encode, result)) {
-        ASSIGN(result, NIL);
-    }
-}
-
-extern SUBR(fixed_evaluator) {
-    Tuple fixed;
-
-    checkArgs(args, "fixed-evaluator", 1, s_fixed);
-    fetchArgs(args, &fixed, 0);
-
-    if (!tuple_GetItem(fixed, fxd_eval, result)) {
-        ASSIGN(result, NIL);
-    }
-}
-
 extern SUBR(form_action) {
     Tuple form;
 
@@ -2431,7 +2382,9 @@ static Primitive definePrimitive(const char* name, Operator func) {
     GC_Protect(prim);
 
     symbol_Convert(name, &label);
-    primitive_Create(label, func, &prim);
+    if (!primitive_Create(label, func, 0, &prim)) {
+        fatal("ASSERT unable to create primitive: %s", name);
+    }
 
     defineValue(label, prim);
 
@@ -2440,31 +2393,22 @@ static Primitive definePrimitive(const char* name, Operator func) {
     return prim;
 }
 
-static Node defineFixed(const char* neval,  Operator oeval,
-                        const char* nencode, Operator oencode)
+static Node defineFixed(const char* name,
+                        Operator oeval,
+                        Operator oencode)
 {
     GC_Begin(8);
 
-    Tuple fixed; Symbol label; Primitive prim;
+    Composite fixed;
+    Symbol    label;
 
     GC_Protect(fixed);
     GC_Protect(label);
-    GC_Protect(prim);
 
-    tuple_Create(3, &fixed);
-    setConstructor(fixed, s_fixed);
-
-    if (nencode) {
-        symbol_Convert(nencode, &label);
-        primitive_Create(label, oencode, &prim);
-        tuple_SetItem(fixed, fxd_encode, prim);
+    symbol_Convert(name, &label);
+    if (!composite_Create(label, oeval, 0, oencode, &fixed)) {
+        fatal("ASSERT unable to create composite: %s", name);
     }
-
-    symbol_Convert(neval, &label);
-    tuple_SetItem(fixed, fxd_name, label);
-
-    primitive_Create(label, oeval, &prim);
-    tuple_SetItem(fixed, fxd_eval, prim);
 
     defineValue(label, fixed);
 
@@ -2488,7 +2432,7 @@ static void check_for(const char* name) {
 #define MK_CONST(x,y) defineConstant(#x, y)
 #define MK_BTYPE(x)   defineConstant(#x, t_ ##x)
 #define MK_PRM(x)     definePrimitive(#x, opr_ ## x)
-#define MK_FXD(x,y)   defineFixed(#x, opr_ ## x, #y, opr_ ## y)
+#define MK_FXD(x,y)   defineFixed(#x, opr_ ## x, opr_ ## y)
 #define MK_OPR(x,y)   definePrimitive(#x, opr_ ## y)
 
 
@@ -2601,7 +2545,6 @@ void startEnkiLibrary() {
     MK_PRM(reduce);
     MK_PRM(apply);
     MK_PRM(form);
-    MK_PRM(fixed);
 
     MK_OPR(ctor-of, ctor_of);
     MK_OPR(type-of, type_of);
@@ -2705,8 +2648,6 @@ void startEnkiLibrary() {
     MK_OPR(true?,true_q);
 
     MK_OPR(form-action,form_action);
-    MK_OPR(fixed-encoder,fixed_encoder);
-    MK_OPR(fixed-evaluator,fixed_evaluator);
     MK_OPR(forced-value,forced_value);
 
     MK_PRM(Any);

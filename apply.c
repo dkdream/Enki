@@ -178,21 +178,21 @@ extern void encode(const Node expr, const Node env, Target result)
             goto list_begin;
         }
 
-        if (!isFixed(value)) goto list_begin;
+        if (!isComposite(value)) goto list_begin;
     }
 
-    Node encode_action = NIL;
+    Operator function = value.composite->encoder;
 
-    tuple_GetItem(value.tuple, fxd_encode, &encode_action);
-
-    if (isNil(encode_action)) {
-        fprintf(stderr, "no encode for fixed: ");
+    if (!function) {
+        fprintf(stderr, "no encode for composite: ");
         prettyPrint(stderr, head);
         fprintf(stderr, "\n");
         fatal(0);
     }
 
-    apply(encode_action, tail, env, &(tail.pair));
+    function(tail, env, &(tail.pair));
+
+    //    apply(encode_action, tail, env, &(tail.pair));
 
     pair_Create(value, tail, result.pair);
     goto done;
@@ -204,6 +204,91 @@ extern void encode(const Node expr, const Node env, Target result)
  done:
     VM_ON_DEBUG(9, {
             fprintf(stderr, "encode => ");
+            prettyPrint(stderr, *result.reference);
+            fprintf(stderr, "\n");
+        });
+
+    GC_End();
+}
+
+//
+extern void analysis(const Node expr, const Node env, Target result)
+{
+    ASSIGN(result, expr);
+    return;
+
+    GC_Begin(8);
+
+    Node list; Node head; Node tail;
+
+    GC_Protect(list);
+    GC_Protect(head);
+    GC_Protect(tail);
+
+    list = expr;
+
+    VM_ON_DEBUG(9, {
+            fprintf(stderr,"analysis: ");
+            prettyPrint(stderr, list);
+            fprintf(stderr, "\n");
+        });
+
+    if (!isPair(list)) {
+        ASSIGN(result, list);
+        goto done;
+    }
+
+    if (!isQuote(list)) {
+        ASSIGN(result, list);
+        goto done;
+    }
+
+    head = list.pair->car;
+    tail = list.pair->cdr;
+
+    analysis(head, env, &head);
+
+    Node     value = NIL;
+    Analyser function = 0;
+
+    if (!isSymbol(head)) {
+        goto list_begin;
+    } else {
+        // check if the enviroment
+        if (!alist_Get(env.pair, head.symbol, &value)) {
+            alist_Get(enki_globals.pair, head.symbol, &value);
+        }
+
+        if (isPrimitive(value)) {
+            head     = value;
+            function = value.primitive->analyser;
+        }
+
+        if (isComposite(value)) {
+            head     = value;
+            function = value.composite->analyser;
+        }
+    }
+
+    if (!function) {
+        fprintf(stderr, "no analysis for: ");
+        prettyPrint(stderr, head);
+        fprintf(stderr, "\n");
+        fatal(0);
+    }
+
+    function(tail, env, &(tail.pair));
+
+    pair_Create(value, tail, result.pair);
+    goto done;
+
+ list_begin:
+    list_Map(tail.pair, analysis, env, &(tail.pair));
+    pair_Create(head, tail, result.pair);
+
+ done:
+    VM_ON_DEBUG(9, {
+            fprintf(stderr, "analysis => ");
             prettyPrint(stderr, *result.reference);
             fprintf(stderr, "\n");
         });
@@ -243,11 +328,19 @@ static void eval_pair(const Node args, const Node env, Target result)
         head = tmp;
     }
 
+#if 0
     if (isFixed(head)) {
         // apply Fixed to un-evaluated arguments
         Node func = NIL;
         tuple_GetItem(head.tuple, fxd_eval, &func);
         apply(func, tail, env, result);
+        goto done;
+    }
+#endif
+
+    if (isComposite(head)) {
+        Operator function = head.composite->encoder;
+        function(tail, env, result);
         goto done;
     }
 
@@ -327,14 +420,20 @@ static void eval_tuple(const Node args, const Node env, Target result)
         pair_GetCar(head.pair, &head);
     }
 
-    if (!isFixed(head)) goto no_op;
+#if 0
+    if (isFixed(head)) {
+        // apply Fixed to un-evaluated arguments
+        tuple_GetItem(head.tuple, fxd_eval, &func);
+        apply(func, args, env, result);
+        goto done;
+    }
+#endif
 
-    // apply Fixed to un-evaluated arguments
-
-    tuple_GetItem(head.tuple, fxd_eval, &func);
-
-    apply(func, args, env, result);
-    goto done;
+    if (isComposite(head)) {
+        Operator function = head.composite->encoder;
+        function(args, env, result);
+        goto done;
+    }
 
   no_op:
     tuple_Map(args.tuple, eval, env, result.tuple);
@@ -410,7 +509,14 @@ extern void apply(Node fun, Node args, const Node env, Target result)
 
     // primitive -> Operator
     if (isPrimitive(fun)) {
-      Operator function = fun.primitive->function;
+      Operator function = fun.primitive->evaluator;
+      function(args, env, result);
+      goto done;
+    }
+
+    // composite -> Operator
+    if (isComposite(fun)) {
+      Operator function = fun.composite->evaluator;
       function(args, env, result);
       goto done;
     }
@@ -418,7 +524,7 @@ extern void apply(Node fun, Node args, const Node env, Target result)
     // lambda -> p_apply_lambda
     if (isLambda(fun)) {
       if (!pair_Create(fun, args, &(args.pair))) goto error;
-      Operator function = p_apply_lambda->function;
+      Operator function = p_apply_lambda->evaluator;
       function(args, env, result);
       goto done;
     }
@@ -426,7 +532,7 @@ extern void apply(Node fun, Node args, const Node env, Target result)
     // Form -> p_apply_form
     if (isForm(fun)) {
       if (!pair_Create(fun, args, &(args.pair))) goto error;
-      Operator function = p_apply_form->function;
+      Operator function = p_apply_form->evaluator;
       function(args, env, result);
       goto done;
     }
@@ -448,6 +554,16 @@ extern void apply(Node fun, Node args, const Node env, Target result)
     GC_End();
 
     return;
+}
+
+// infer type of expr (if possible)
+extern bool analysis_infer(const Node expr, const Node env, Constant *type) {
+    return false;
+}
+
+// check type of expr (if possible)
+extern bool analysis_check(const Node expr, const Node env, const Constant type) {
+    return false;
 }
 
 extern void eval_begin(Node body, Node env, Target last)

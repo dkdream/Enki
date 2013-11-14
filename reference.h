@@ -44,20 +44,22 @@ typedef unsigned long      Size;
 
 typedef void *Reference;
 /*    */
+typedef struct atomic        *Atomic; /* operator */
+typedef struct axiom         *Axiom;
+typedef struct composite     *Composite; /* operator */
 typedef struct integer       *Integer;
+typedef struct name          *Name;
 typedef struct pair          *Pair;
-typedef struct primitive     *Primitive;
+typedef struct primitive     *Primitive; /* operator */
+typedef struct rule          *Rule;
 typedef struct symbol        *Symbol;
 typedef struct text          *Text;
 typedef struct tuple         *Tuple;
 typedef struct type_base     *Base;
+typedef struct type_branch   *Branch;
 typedef struct type_constant *Constant;
 typedef struct type_index    *Index;
 typedef struct type_label    *Label;
-typedef struct type_branch   *Branch;
-typedef struct axiom         *Axiom;
-typedef struct rule          *Rule;
-typedef struct name          *Name;
 typedef struct variable      *Variable;
 /*    */
 
@@ -67,9 +69,12 @@ node {
     /**/
     Reference reference;
     /**/
+    Atomic    atomic;
+    Composite composite;
+    Primitive primitive;
+    /**/
     Integer   integer;
     Pair      pair;
-    Primitive primitive;
     Symbol    symbol;
     Text      text;
     Tuple     tuple;
@@ -97,9 +102,12 @@ node_target {
     /**/
     Reference *reference;
     /**/
+    Atomic    *atomic;
+    Composite *composite;
+    Primitive *primitive;
+    /**/
     Integer   *integer;
     Pair      *pair;
-    Primitive *primitive;
     Symbol    *symbol;
     Text      *text;
     Tuple     *tuple;

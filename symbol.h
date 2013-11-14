@@ -42,6 +42,7 @@ extern Symbol s_block;
 extern Symbol s_box;
 extern Symbol s_branch;
 extern Symbol s_clink;
+extern Symbol s_composite; // operator
 extern Symbol s_current;
 extern Symbol s_delay;
 extern Symbol s_escape; // escape continuation
@@ -63,7 +64,7 @@ extern Symbol s_opaque;
 extern Symbol s_pair;
 extern Symbol s_path;
 extern Symbol s_pointer;
-extern Symbol s_primitive;
+extern Symbol s_primitive; // operator
 extern Symbol s_quasiquote;
 extern Symbol s_quote;
 extern Symbol s_rule;
@@ -80,9 +81,9 @@ extern Symbol s_union;
 extern Symbol s_unquote;
 extern Symbol s_unquote_splicing;
 extern Symbol s_unsigned;
+extern Symbol s_variable;
 extern Symbol s_with;
 extern Symbol s_word;
-extern Symbol s_variable;
 
 extern bool symbol_Create(TextBuffer value, Symbol*);
 extern bool symbol_Convert(const char* value, Symbol*);

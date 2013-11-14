@@ -63,6 +63,7 @@ Symbol s_pair = 0;
 Symbol s_path = 0;
 Symbol s_pointer = 0;
 Symbol s_primitive = 0;
+Symbol s_composite = 0;
 Symbol s_quasiquote = 0;
 Symbol s_quote = 0;
 Symbol s_rule = 0;
@@ -145,6 +146,7 @@ extern void init_global_symboltable() {
     MK_SYM(box);
     MK_SYM(branch);
     MK_SYM(clink);
+    MK_SYM(composite);
     MK_SYM(current);
     MK_SYM(delay);
     MK_SYM(escape);
@@ -183,9 +185,9 @@ extern void init_global_symboltable() {
     MK_SYM(union);
     MK_SYM(unquote);
     MK_SYM(unsigned);
+    MK_SYM(variable);
     MK_SYM(with);
     MK_SYM(word);
-    MK_SYM(variable);
 }
 
 // used by init_global_typetable only
