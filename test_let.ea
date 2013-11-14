@@ -1,4 +1,6 @@
-(let ((let dumpln) (lambda println))
-  (lambda let)
-  (let lambda))
+(println "before")
+(dumpln (let ((let dumpln) (lambda println))
+           (lambda let)
+           (let lambda)))
+(println "after")
 

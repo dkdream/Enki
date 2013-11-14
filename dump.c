@@ -223,8 +223,20 @@ extern bool buffer_print(TextBuffer *output, Node node) {
         return true;
     }
 
-    if (isIdentical(ctor, s_primitive)) {
+    if (isIdentical(ctor, s_atomic)) {
         buffer_add(output,"@");
+        buffer_add(output, (const char *) node.primitive->label->value);
+        return true;
+    }
+
+    if (isIdentical(ctor, s_primitive)) {
+        buffer_add(output,"@:");
+        buffer_add(output, (const char *) node.primitive->label->value);
+        return true;
+    }
+
+    if (isIdentical(ctor, s_composite)) {
+        buffer_add(output,"@!");
         buffer_add(output, (const char *) node.primitive->label->value);
         return true;
     }
@@ -504,9 +516,23 @@ extern void buffer_prettyPrint(TextBuffer *output, Node node) {
             return;
         }
 
-        if (isIdentical(ctor, s_primitive)) {
+        if (isIdentical(ctor, s_atomic)) {
             offset += 20;
             buffer_add(output, "@");
+            buffer_add(output, (const char*)(node.primitive->label->value));
+            return;
+        }
+
+        if (isIdentical(ctor, s_primitive)) {
+            offset += 20;
+            buffer_add(output, "@:");
+            buffer_add(output, (const char*)(node.primitive->label->value));
+            return;
+        }
+
+        if (isIdentical(ctor, s_composite)) {
+            offset += 20;
+            buffer_add(output, "@!");
             buffer_add(output, (const char*)(node.primitive->label->value));
             return;
         }

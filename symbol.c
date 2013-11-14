@@ -31,6 +31,7 @@ Symbol s_bsat = 0;
 Symbol s_uscore = 0;
 
 Symbol s_as = 0;
+Symbol s_atomic = 0;
 Symbol s_axiom = 0;
 Symbol s_base = 0;
 Symbol s_bind = 0;
@@ -139,6 +140,7 @@ extern void init_global_symboltable() {
     symbol_Convert("unquote-splicing", &s_unquote_splicing);
 
     MK_SYM(as);
+    MK_SYM(atomic);
     MK_SYM(axiom);
     MK_SYM(base);
     MK_SYM(bind);

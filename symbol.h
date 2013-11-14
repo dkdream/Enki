@@ -35,6 +35,7 @@ extern Symbol s_bsat;
 extern Symbol s_uscore;
 
 extern Symbol s_as;
+extern Symbol s_atomic; // operator
 extern Symbol s_axiom;
 extern Symbol s_base;
 extern Symbol s_bind;
