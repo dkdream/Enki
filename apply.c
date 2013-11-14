@@ -448,9 +448,6 @@ extern void eval(const Node expr, const Node env, Target result)
     popTrace();
 }
 
-/**
- * Apply
- */
 static unsigned apply_level = 0;
 extern void apply(Node fun, Node args, const Node env, Target result)
 {

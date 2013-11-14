@@ -573,104 +573,6 @@ extern SUBR(find)
     GC_End();
 }
 
-extern SUBR(apply_form)
-{
-    Node form, cargs, func;
-
-    pair_GetCar(args.pair, &form);
-    pair_GetCdr(args.pair, &cargs);
-
-    pair_GetCar(form.pair, &func);
-
-    apply(func, cargs, env, result);
-}
-
-extern SUBR(expand)
-{
-    GC_Begin(3);
-
-    Node expr, cenv;
-
-    GC_Protect(expr);
-    GC_Protect(cenv);
-
-    // (expand expr env)
-    // (expand expr)
-    list_GetItem(args.pair, 0, &expr);
-    list_GetItem(args.pair, 1, &cenv);
-
-    if (isNil(cenv)) cenv = env;
-
-    expand(expr, cenv, result);
-
-    GC_End();
-}
-
-extern SUBR(encode)
-{
-    GC_Begin(3);
-
-    Node expr, cenv;
-
-    GC_Protect(expr);
-    GC_Protect(cenv);
-
-    // (encode expr env)
-    // (encode expr)
-    list_GetItem(args.pair, 0, &expr);
-    list_GetItem(args.pair, 1, &cenv);
-
-    if (isNil(cenv)) cenv = env;
-
-    encode(expr, cenv, result);
-
-    GC_End();
-}
-
-extern SUBR(eval)
-{
-    GC_Begin(3);
-
-    Node expr, cenv;
-
-    GC_Protect(expr);
-    GC_Protect(cenv);
-
-    // (eval expr env)
-    // (eval expr)
-    list_GetItem(args.pair, 0, &expr);
-    list_GetItem(args.pair, 1, &cenv);
-
-    if (isNil(cenv)) cenv = env;
-
-    eval(expr, cenv, result);
-
-    GC_End();
-}
-
-extern SUBR(reduce)
-{
-    GC_Begin(3);
-
-    Node expr, cenv;
-
-    GC_Protect(expr);
-    GC_Protect(cenv);
-
-    // (reduce expr env)
-    // (reduce expr)
-    list_GetItem(args.pair, 0, &expr);
-    list_GetItem(args.pair, 1, &cenv);
-
-    if (isNil(cenv)) cenv = env;
-
-    expand(expr, cenv, &expr);
-    encode(expr, cenv, &expr);
-    eval(expr, cenv, result);
-
-    GC_End();
-}
-
 extern SUBR(apply)
 {
     Node func  = NIL;
@@ -684,20 +586,6 @@ extern SUBR(apply)
     if (isNil(cenv)) cenv = env;
 
     apply(func, cargs, cenv, result);
-}
-
-extern SUBR(form)
-{
-  Tuple tuple; Node func = NIL;
-
-  checkArgs(args, "form", 1, NIL);
-  forceArgs(args, &func, 0);
-
-  tuple_Create(1, &tuple);
-  tuple_SetItem(tuple, 0, func);
-  setConstructor(tuple, s_form);
-
-  ASSIGN(result, (Node)tuple);
 }
 
 extern SUBR(ctor_of)
@@ -2503,8 +2391,10 @@ void startEnkiLibrary() {
     MK_FXD(lambda,encode_lambda);
     MK_FXD(quote,list);
 
-    p_apply_lambda = MK_OPR(%apply-lambda,apply_lambda);
-    p_apply_form   = MK_OPR(%apply-form,apply_form);
+    MK_PRM(form);
+
+    p_apply_lambda = MK_OPR(%apply-lambda,apply_lambda); // see buildins/lambda.c
+    p_apply_form   = MK_OPR(%apply-form,apply_form); // see buildins/form.c
 
     MK_FXD(type,encode_type);
 
@@ -2531,12 +2421,7 @@ void startEnkiLibrary() {
     MK_PRM(find);
     MK_PRM(map);
 
-    MK_PRM(expand);
-    MK_PRM(encode);
-    MK_PRM(eval);
-    MK_PRM(reduce);
     MK_PRM(apply);
-    MK_PRM(form);
 
     MK_OPR(ctor-of, ctor_of);
     MK_OPR(type-of, type_of);
