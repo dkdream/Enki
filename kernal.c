@@ -2273,7 +2273,7 @@ static Primitive definePrimitive(const char* name, Operator func) {
     GC_Protect(prim);
 
     symbol_Convert(name, &label);
-    if (!primitive_Create(label, func, 0, &prim)) {
+    if (!primitive_Create(0, label, func, 0, &prim)) {
         fatal("ASSERT unable to create primitive: %s", name);
     }
 
@@ -2297,7 +2297,7 @@ static Node defineFixed(const char* name,
     GC_Protect(label);
 
     symbol_Convert(name, &label);
-    if (!composite_Create(label, oeval, 0, oencode, &fixed)) {
+    if (!composite_Create(0, label, oeval, 0, oencode, &fixed)) {
         fatal("ASSERT unable to create composite: %s", name);
     }
 
@@ -2325,7 +2325,6 @@ static void check_for(const char* name) {
 #define MK_PRM(x)     definePrimitive(#x, opr_ ## x)
 #define MK_FXD(x,y)   defineFixed(#x, opr_ ## x, opr_ ## y)
 #define MK_OPR(x,y)   definePrimitive(#x, opr_ ## y)
-
 
 void startEnkiLibrary() {
     if (__initialized) return;

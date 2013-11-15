@@ -20,17 +20,20 @@ typedef bool (*Flexor)(unsigned index, Node left, Node right, Node env, Target r
 typedef bool (*Selector)(unsigned index, Node value, Node env);
 
 struct atomic {
+    const char* signature;
     Symbol   label;
     Operator evaluator;
 };
 
 struct primitive {
+    const char* signature;
     Symbol   label;
     Operator evaluator;
     Analyser analyser;
 };
 
 struct composite {
+    const char* signature;
     Symbol   label;
     Operator evaluator;
     Analyser analyser;
@@ -43,9 +46,17 @@ extern Primitive p_eval_tuple;
 extern Primitive p_apply_lambda;
 extern Primitive p_apply_form;
 
-extern bool atomic_Create(Symbol label, Operator evaluator, Atomic*);
-extern bool primitive_Create(Symbol label, Operator evaluator, Analyser analyser, Primitive*);
-extern bool composite_Create(Symbol label, Operator evaluator, Analyser analyser, Operator encoder, Composite*);
+extern bool atomic_Create(const char* signature, Symbol label,
+                          Operator evaluator,
+                          Atomic*);
+
+extern bool primitive_Create(const char* signature, Symbol label,
+                             Operator evaluator, Analyser analyser,
+                             Primitive*);
+
+extern bool composite_Create(const char* signature, Symbol label,
+                             Operator evaluator, Analyser analyser, Operator encoder,
+                             Composite*);
 
 /* macros */
 

@@ -10,7 +10,8 @@
 #include "type.h"
 
 #if 0
-extern bool atomic_Create(Symbol label,
+extern bool atomic_Create(const char* signature,
+                          Symbol label,
                           Operator evaluator,
                           Atomic *target)
 {
@@ -27,14 +28,16 @@ extern bool atomic_Create(Symbol label,
 
     setConstructor(result, s_atomic);
 
-    result->label    = label;
+    result->signature = signature;
+    result->label     = label;
     result->evaluator = evaluator;
 
     return true;
 }
 #endif
 
-extern bool primitive_Create(Symbol label,
+extern bool primitive_Create(const char* signature,
+                             Symbol label,
                              Operator evaluator,
                              Analyser analyser,
                              Primitive *target)
@@ -52,14 +55,16 @@ extern bool primitive_Create(Symbol label,
 
     setConstructor(result, s_primitive);
 
-    result->label    = label;
+    result->signature = signature;
+    result->label     = label;
     result->evaluator = evaluator;
-    result->analyser = analyser;
+    result->analyser  = analyser;
 
     return true;
 }
 
-extern bool composite_Create(Symbol label,
+extern bool composite_Create(const char* signature,
+                             Symbol label,
                              Operator evaluator,
                              Analyser analyser,
                              Operator encoder,
@@ -79,6 +84,7 @@ extern bool composite_Create(Symbol label,
 
     setConstructor(result, s_composite);
 
+    result->signature = signature;
     result->label     = label;
     result->evaluator = evaluator;
     result->analyser  = analyser;
