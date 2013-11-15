@@ -204,6 +204,9 @@ static inline int isLetter(int c)  { return 0 <= c && c <= 127 && (CHAR_LETTER  
 static inline int isPrefix(int c)  { return 0 <= c && c <= 127 && (CHAR_PREFIX   & chartab[c]); }
 static inline int isBlank(int c)   { return 0 <= c && c <= 127 && (CHAR_BLANK    & chartab[c]); }
 
+#define PullChar(input)      input->pull(input)
+#define PushChar(chr, input) input->push(input, chr)
+
 static inline int digitValue(int c)
 {
     switch (c) {
@@ -231,34 +234,34 @@ static inline int isOctal(int c)
     return '0' <= c && c <= '7';
 }
 
-static inline bool checkChar(FILE *fp, int match)
+static inline bool checkChar(InputBuffer fp, int match)
 {
-    int chr = getc(fp);
-    ungetc(chr, fp);
+    int chr = PullChar(fp);
+    PushChar(chr, fp);
     return (match == chr);
 }
 
-static inline bool matchChar(FILE *fp, int match)
+static inline bool matchChar(InputBuffer fp, int match)
 {
-    int chr = getc(fp);
+    int chr = PullChar(fp);
     if (match == chr) return true;
-    ungetc(chr, fp);
+    PushChar(chr, fp);
     return false;
 }
 
-static inline bool checkBlank(FILE *fp)
+static inline bool checkBlank(InputBuffer fp)
 {
-    int chr = getc(fp);
-    ungetc(chr, fp);
+    int chr = PullChar(fp);
+    PushChar(chr, fp);
     return isBlank(chr);
 }
 
 // use by both readCode and readString
-static int readChar(int chr, FILE *fp)
+static int readChar(int chr, InputBuffer fp)
 {
     if ('\\' != chr) return chr;
 
-    chr = getc(fp);
+    chr = PullChar(fp);
 
     switch (chr) {
     case 'a':   return '\a';
@@ -275,10 +278,10 @@ static int readChar(int chr, FILE *fp)
     case '\\':  return '\\';
 
     case 'u': {
-        int ahr = getc(fp),
-            bhr = getc(fp),
-            chr = getc(fp),
-            dhr = getc(fp);
+        int ahr = PullChar(fp),
+            bhr = PullChar(fp),
+            chr = PullChar(fp),
+            dhr = PullChar(fp);
         return (digitValue(ahr) << 24)
             + (digitValue(bhr) << 16)
             + (digitValue(chr) << 8)
@@ -286,15 +289,15 @@ static int readChar(int chr, FILE *fp)
     }
 
     case 'x': {
-        if (!isHexadecimal(chr = getc(fp))) {
-            ungetc(chr, fp);
+        if (!isHexadecimal(chr = PullChar(fp))) {
+            PushChar(chr, fp);
             return 0;
         }
 
         int value = digitValue(chr);
 
-        if (!isHexadecimal(chr = getc(fp))) {
-            ungetc(chr, fp);
+        if (!isHexadecimal(chr = PullChar(fp))) {
+            PushChar(chr, fp);
             return value;
         }
 
@@ -303,15 +306,15 @@ static int readChar(int chr, FILE *fp)
 
     case '0' ... '7': {
         int value = digitValue(chr);
-        if (!isOctal(chr = getc(fp))) {
-            ungetc(chr, fp);
+        if (!isOctal(chr = PullChar(fp))) {
+            PushChar(chr, fp);
             return value;
         }
 
         value = value * 8 + digitValue(chr);
 
-        if (!isOctal(chr = getc(fp))) {
-            ungetc(chr, fp);
+        if (!isOctal(chr = PullChar(fp))) {
+            PushChar(chr, fp);
             return value;
         }
         return value * 8 + digitValue(chr);
@@ -324,19 +327,19 @@ static int readChar(int chr, FILE *fp)
     }
 }
 
-extern bool readExpr(FILE *fp, Target result);
-static bool readSegment(FILE *fp, int delim, Target result);
-static bool readList(FILE *fp, int delim, Target result);
-static bool readCode(FILE *fp, Target result);
-static bool readInteger(FILE *fp, int first, Target result);
-static bool readString(FILE *fp, int end, Target result);
-static bool readQuote(FILE *fp, Node symbol, Target result);
-static bool readSymbol(FILE *fp, int first, Target result);
-static bool skipBlock(FILE *fp, const int delim);
-static bool skipComment(FILE *fp);
+extern bool readExpr(InputBuffer fp, Target result);
+static bool readSegment(InputBuffer fp, int delim, Target result);
+static bool readList(InputBuffer fp, int delim, Target result);
+static bool readCode(InputBuffer fp, Target result);
+static bool readInteger(InputBuffer fp, int first, Target result);
+static bool readString(InputBuffer fp, int end, Target result);
+static bool readQuote(InputBuffer fp, Node symbol, Target result);
+static bool readSymbol(InputBuffer fp, int first, Target result);
+static bool skipBlock(InputBuffer fp, const int delim);
+static bool skipComment(InputBuffer fp);
 //
 //
-static bool readSegment(FILE *fp, int delim, Target result)
+static bool readSegment(InputBuffer fp, int delim, Target result)
 {
     GC_Begin(7);
 
@@ -388,7 +391,7 @@ static bool readSegment(FILE *fp, int delim, Target result)
 }
 
 // (...)
-static bool readList(FILE *fp, int delim, Target result)
+static bool readList(InputBuffer fp, int delim, Target result)
 {
     GC_Begin(7);
 
@@ -459,7 +462,7 @@ static bool matchItem(Node value, Node env) {
 
 // [...] - tuple
 // {...} - block
-static bool readTuple(FILE *fp, Symbol ctor, int delim, Target result)
+static bool readTuple(InputBuffer fp, Symbol ctor, int delim, Target result)
 {
     GC_Begin(7);
 
@@ -525,9 +528,9 @@ static bool readTuple(FILE *fp, Symbol ctor, int delim, Target result)
 }
 
 // ?xxx
-static bool readCode(FILE *fp, Target result)
+static bool readCode(InputBuffer fp, Target result)
 {
-    int chr = getc(fp);
+    int chr = PullChar(fp);
 
     if (EOF == chr) return false;
 
@@ -537,13 +540,13 @@ static bool readCode(FILE *fp, Target result)
 }
 
 // "..."
-static bool readString(FILE *fp, int end, Target result)
+static bool readString(InputBuffer fp, int end, Target result)
 {
     static TextBuffer buf = BUFFER_INITIALISER;
     buffer_reset(&buf);
 
     for (;;) {
-        int chr = getc(fp);
+        int chr = PullChar(fp);
 
         if (end == chr) break;
         if (EOF == chr) goto failure;
@@ -563,7 +566,7 @@ static bool readString(FILE *fp, int end, Target result)
 // -?[0-9]+
 // +?[0-9]+
 // 0x[0-9a-fA-F]+
-static bool readInteger(FILE *fp, int first, Target result)
+static bool readInteger(InputBuffer fp, int first, Target result)
 {
     int  chr = first;
 
@@ -572,24 +575,24 @@ static bool readInteger(FILE *fp, int first, Target result)
 
     do {
         buffer_append(&buf, chr);
-        chr = getc(fp);
+        chr = PullChar(fp);
     } while (isDigit10(chr));
 
     if (('x' == chr) && (1 == buf.position)) {
         do {
             buffer_append(&buf, chr);
-            chr = getc(fp);
+            chr = PullChar(fp);
         } while (isDigit16(chr));
     }
 
-    ungetc(chr, fp);
+    PushChar(chr, fp);
 
     long value = strtoul(buffer_contents(&buf), 0, 0);
 
     return integer_Create(value, result.integer);
 }
 
-static bool readQuote(FILE *fp, Node symbol, Target result)
+static bool readQuote(InputBuffer fp, Node symbol, Target result)
 {
     Node hold;
 
@@ -604,7 +607,7 @@ static bool readQuote(FILE *fp, Node symbol, Target result)
     return false;
 }
 
-static bool readSymbol(FILE *fp, int first, Target result)
+static bool readSymbol(InputBuffer fp, int first, Target result)
 {
     int chr = first;
 
@@ -615,14 +618,14 @@ static bool readSymbol(FILE *fp, int first, Target result)
         if (!isPrefix(chr)) goto failure;
         for (;;) {
             buffer_append(&buf, chr);
-            chr = getc(fp);
+            chr = PullChar(fp);
             if (!isPrefix(chr)) break;
         }
     }
 
     while (isLetter(chr) || isDigit10(chr)) {
         buffer_append(&buf, chr);
-        chr = getc(fp);
+        chr = PullChar(fp);
     }
 
     if (isPrefix(chr)) {
@@ -638,7 +641,7 @@ static bool readSymbol(FILE *fp, int first, Target result)
         return rtn;
     }
 
-    ungetc(chr, fp);
+    PushChar(chr, fp);
 
     return symbol_Create(buf, result.symbol);
 
@@ -647,23 +650,23 @@ static bool readSymbol(FILE *fp, int first, Target result)
     return false;
 }
 
-static bool skipBlock(FILE *fp, const int delim)
+static bool skipBlock(InputBuffer fp, const int delim)
 {
     for (;;) {
-        int chr = getc(fp);
+        int chr = PullChar(fp);
 
         if (EOF == chr) return false;
 
         if (delim == chr) {
-            chr = getc(fp);
+            chr = PullChar(fp);
             if ('#' == chr) return true;
         }
     }
 }
 
-static bool skipComment(FILE *fp)
+static bool skipComment(InputBuffer fp)
 {
-    int chr = getc(fp);
+    int chr = PullChar(fp);
 
     switch (chr) {
     case '(':
@@ -678,16 +681,16 @@ static bool skipComment(FILE *fp)
 
     for (;;) {
         if ('\n' == chr || '\r' == chr || EOF == chr) break;
-        chr = getc(fp);
+        chr = PullChar(fp);
     }
 
     return true;
 }
 
-extern bool readExpr(FILE *fp, Target result)
+extern bool readExpr(InputBuffer fp, Target result)
 {
     for (;;) {
-        int chr = getc(fp);
+        int chr = PullChar(fp);
         switch (chr) {
         case EOF:  return false;
         case '#':
@@ -774,14 +777,14 @@ extern bool readExpr(FILE *fp, Target result)
         case ']':
         case ')':
             {
-                ungetc(chr, fp);
+                PushChar(chr, fp);
                 return false;
             }
 
         case '-':
         case '+':
             {
-              int dhr = getc(fp); ungetc(dhr, fp);
+              int dhr = PullChar(fp); PushChar(dhr, fp);
               if (isDigit10(dhr)) return readInteger(fp, chr, result);
             }
 
@@ -807,7 +810,7 @@ static void enki_sigint(int signo)
     fatal("\nInterrupt(%d)",signo);
 }
 
-extern void readFile(FILE *stream)
+extern void readFile(InputBuffer stream)
 {
     GC_Begin(2);
 
@@ -818,7 +821,7 @@ extern void readFile(FILE *stream)
     signal(SIGINT, enki_sigint);
 
     for (;;) {
-        if (stream == stdin) {
+        if (stream->interactive) {
             printf("-] ");
             fflush(stdout);
         }
@@ -865,7 +868,7 @@ extern void readFile(FILE *stream)
                 fflush(stderr);
             });
 
-        if (stream == stdin) {
+        if (stream->interactive) {
             printf(" => ");
             fflush(stdout);
             prettyPrint(stdout, obj);
@@ -874,15 +877,88 @@ extern void readFile(FILE *stream)
         }
     }
 
-    if (stream == stdin) {
+    if (stream->interactive) {
         GC_End();
         return;
     }
 
-    int c = getc(stream);
+    int c = PullChar(stream);
 
     if (EOF != c)
         fatal("expected 0x%02x received 0x%02x '%c'\n", EOF, c, c);
 
     GC_End();
 }
+
+static int file_PullChar(InputBuffer input) {
+    FILE* file = (FILE*) input->data;
+    input->offset += 1;
+    return getc(file);
+}
+
+static bool file_PushChar(InputBuffer input, int chr) {
+    FILE* file = (FILE*) input->data;
+    input->offset -= 1;
+    return (chr == ungetc(chr, file));
+}
+
+static int string_PullChar(InputBuffer input) {
+    const char *text = (const char *) input->data;
+    const char value = text[input->offset];
+
+    if (!value) return EOF;
+
+    input->offset += 1;
+
+    return (int) value;
+}
+
+static bool string_PushChar(InputBuffer input, int chr) {
+    if (0 < input->offset) {
+        input->offset -= 1;
+        return true;
+    }
+    return false;
+}
+
+extern bool input_FileInit(InputBuffer buffer, FILE *stream) {
+    buffer->data        = stream;
+    buffer->interactive = (stream == stdin);
+    buffer->offset      = 0;
+    buffer->pull        = file_PullChar;
+    buffer->push        = file_PushChar;
+    return true;
+}
+
+extern bool input_StringInit(InputBuffer buffer, const char *stream) {
+    buffer->data        = (void*) stream;
+    buffer->interactive = false;
+    buffer->offset      = 0;
+    buffer->pull        = string_PullChar;
+    buffer->push        = string_PushChar;
+    return true;
+}
+
+extern bool input_Finit(InputBuffer buffer) {
+    return true;
+}
+
+extern bool convertToAst(const char* text, Target result) {
+    if (!text) return false;
+
+    struct input_buffer buffer;
+
+    Node value;
+
+    input_StringInit(&buffer, text);
+
+    if (readExpr(&buffer, &value)) {
+        ASSIGN(result, value);
+        return true;
+    }
+
+    input_Finit(&buffer);
+
+    return false;
+}
+

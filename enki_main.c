@@ -70,22 +70,30 @@ int main(int argc, char **argv)
     argc -= optind;
     argv += optind;
 
+    struct input_buffer buffer;
+
     if (!argc) {
-        readFile(stdin);
+        input_FileInit(&buffer, stdin);
+        readFile(&buffer);
+        input_Finit(&buffer);
     } else {
         for (; argc; --argc, ++argv) {
             const char* arg = *argv;
             if (!strcmp(arg, "-")) {
-                readFile(stdin);
+                input_FileInit(&buffer, stdin);
+                readFile(&buffer);
+                input_Finit(&buffer);
             } else {
                 FILE* input = 0;
                 if (!(input = fopen(arg, "r"))) {
                     fprintf(stderr, "unable to open %s for reading\n", arg);
                     exit(1);
                 } else {
+                    input_FileInit(&buffer, input);
                     fprintf(stderr, "reading %s\n", arg);
                     fflush(stderr);
-                    readFile(input);
+                    readFile(&buffer);
+                    input_Finit(&buffer);
                     fclose(input);
                     input = 0;
                 }

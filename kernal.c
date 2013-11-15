@@ -1316,6 +1316,7 @@ extern SUBR(require) {
 
     long long id = stbuf.st_ino;
 
+    struct input_buffer buffer;
 
     switch (set_add(&loaded_inodes, id)) {
     case -1:
@@ -1323,7 +1324,9 @@ extern SUBR(require) {
         break;
 
     case 1: // added
-        readFile(file);
+        input_FileInit(&buffer, file);
+        readFile(&buffer);
+        input_Finit(&buffer);
         fclose(file);
 
     default: // found
@@ -1533,7 +1536,13 @@ extern SUBR(read_sexpr) {
         return;
     }
 
-    readExpr(in, result);
+    struct input_buffer buffer;
+
+    input_FileInit(&buffer, in);
+
+    readExpr(&buffer, result);
+
+    input_Finit(&buffer);
 }
 
 extern SUBR(inode) {
