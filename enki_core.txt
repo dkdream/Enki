@@ -28,6 +28,7 @@
                    | (all <core> <core>)      -- and type (simple and type)
                    | (power <core>)           -- power type (type of sets of type)
                    | (mu <core> <core>)       -- fixpoint type
+                   | (refine <core> <core>)   -- refinement type
 
 <type-functors> = (self <core> <core>)         -- self type (a singleton subset type)
                 | (<formula> <locals> <core>+)
@@ -73,7 +74,7 @@
 
 -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -
 
-<formula> = sigma | pi | exists | forall | refine
+<formula> = sigma | pi | exists | forall
 
 <quote>      = '<core>
 
