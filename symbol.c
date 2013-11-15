@@ -101,7 +101,7 @@ static struct _internal_SymbolTable *_global_symboltable = 0;
 
 #define MK_SYM(x) symbol_Convert(#x, &s_ ##x)
 
-extern void init_global_symboltable() {
+extern void init_global_symboltable(Clink *roots) {
     if (_global_symboltable) return;
 
     const unsigned int rows = 1000;

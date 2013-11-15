@@ -20,10 +20,12 @@
 
 typedef enum {
     tc_undefined,
-    tc_index,
-    tc_label,
-    tc_constant,
-    tc_sort,
+    tc_index,    //
+    tc_label,    //
+    tc_constant, //
+    tc_sort,     //
+    tc_self,     // singleton type
+    tc_refine,   //
     tc_tuple,    // type_branch (indexed collection of types )
     tc_record,   // type_branch (labeled collection of types )
     tc_any,      // type_branch (union of types )
@@ -33,12 +35,6 @@ typedef enum {
 struct type_base {
     HashCode hashcode; type_code code;
 };
-
-// s_sort is a sort (sort constant)
-//struct sort {
-//    HashCode hashcode; type_code code;
-//    Symbol   name;
-//};
 
 // s_axiom is a axiom pair (c:s)
 struct axiom {
@@ -59,6 +55,27 @@ struct rule {
 struct type_constant {
     HashCode hashcode; type_code code;
     Symbol name;
+};
+
+// s_self
+enum self_kind {
+    sk_undefined,
+    sk_integer,
+    sk_symbol,
+    sk_text,
+};
+
+struct type_self {
+    HashCode hashcode; type_code code;
+    Base base;
+    enum self_kind kind;
+    long long buffer[1]; //hold aleast an integer
+};
+
+struct type_refine {
+    HashCode hashcode; type_code code;
+    Base slot;
+    Node predicate; // must be in the external_references
 };
 
 // s_index is an indexed type
@@ -181,7 +198,7 @@ extern bool type_Delta(Base*, ...);          /* Delta(var:type,predicate) subtyp
 
 extern bool type_Contains(const Base type, const Node value); /* */
 
-extern void init_global_typetable();
+extern void init_global_typetable(Clink *roots);
 extern void final_global_typetable();
 extern void check_TypeTable__(const char* filename, unsigned line);
 

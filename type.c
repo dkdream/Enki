@@ -42,6 +42,8 @@ struct _internal_Table {
     struct _internal_Row row[1];
 };
 
+static Node external_references;
+
 static struct _internal_Table *_global_typetable = 0;
 
 Constant void_s = 0;
@@ -89,8 +91,12 @@ static void make_basetype(const char* value, Constant sort, Constant* target) {
 #define MK_BTYPE(x) make_basetype(#x, zero_s, &t_ ##x)
 #define MK_OTYPE(x) make_basetype(#x, opaque_s, &t_ ##x)
 
-extern void init_global_typetable() {
+extern void init_global_typetable(Clink *roots) {
     if (_global_typetable) return;
+
+    clink_Manage(roots, &external_references, true);
+
+    pair_Create(NIL,NIL, &external_references.pair);
 
     const unsigned int rows = 1000;
     const unsigned int fullsize

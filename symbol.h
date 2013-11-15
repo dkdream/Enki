@@ -15,6 +15,7 @@
 #include "reference.h"
 #include "hashcode.h"
 #include "text_buffer.h"
+#include "treadmill.h"
 
 struct symbol {
     HashCode      hashcode;
@@ -89,7 +90,7 @@ extern Symbol s_word;
 extern bool symbol_Create(TextBuffer value, Symbol*);
 extern bool symbol_Convert(const char* value, Symbol*);
 extern void check_SymbolTable__(const char*, unsigned);
-extern void init_global_symboltable();
+extern void init_global_symboltable(Clink *roots);
 
 /******************
   inline functions

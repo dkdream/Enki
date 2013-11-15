@@ -2351,16 +2351,18 @@ void startEnkiLibrary() {
 
     space_Init(_zero_space);
 
+    Clink *roots = &(enki_zero_space.start_clinks);
+
     VM_DEBUG(1, "startEnkiLibrary enki_globals %p", &enki_globals);
 
-    clink_Manage(&(enki_zero_space.start_clinks), &enki_globals, true);
+    clink_Manage(roots, &enki_globals, true);
 
     VM_DEBUG(1, "startEnkiLibrary init symbol table");
 
-    init_global_symboltable();
+    init_global_symboltable(roots);
 
     VM_DEBUG(1, "startEnkiLibrary init type table");
-    init_global_typetable();
+    init_global_typetable(roots);
 
     true_v  = (Node)init_atom(&enki_true, 0);
     false_v = (Node)init_atom(&enki_false, 0);
