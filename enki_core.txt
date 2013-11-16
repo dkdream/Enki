@@ -22,16 +22,14 @@
               | <quote>
 
 <type-constructor> = (arrow <core> <core>)    -- arrow type (simple function type)
+                   | (refine <core> <core>)   -- refinement type
                    | (index <integer> <core>) -- index type (tuple element type) 
                    | (label <symbol> <core>)  -- label type (record element type)
                    | (any <core> <core>)      -- or type (simple or type)
                    | (all <core> <core>)      -- and type (simple and type)
-                   | (power <core>)           -- power type (type of sets of type)
-                   | (mu <core> <core>)       -- fixpoint type
-                   | (refine <core> <core>)   -- refinement type
 
 <type-functors> = (self <core> <core>)         -- self type (a singleton subset type)
-                | (<formula> <locals> <core>+)
+                | (<formula> <arguments> <core>+)
 
 <control> = (if <core> <core> <core>*)
           | (unless <core> <core> <core>*)
@@ -74,7 +72,7 @@
 
 -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -
 
-<formula> = sigma | pi | exists | forall
+<formula> = pi | exists | forall | mu
 
 <quote>      = '<core>
 
@@ -221,6 +219,73 @@ mu : (pi [with T * F (arrow T T)] (refine [with x T] (iso x (mu T F))))
 
 - - - - - - - - - - - - - - - - - - - - -
 
+(see Sage:eval.ml)
+
+((fix U e) e')     -> ((e (fix U e)) e')
+(cast (fix U e) T) -> (cast (e (fix U e)) T)
+
+--
+
+type info = FI of string * int * int | UNKNOWN
+let dummyinfo = UNKNOWN
+let create_info filename lineno column = FI (filename, lineno, column)
+
+type label = string
+type variable = string
+
+type var_list = variable list
+type sanity_check = var_list
+
+type ty = term
+type value = term
+
+type placeholder = PlaceHolder of string
+
+type delayed_substitution = term list
+
+type term =
+  | TmVar of info * int * sanity_check         (* fileinfo index var_list *)
+  | TmFun of info * variable * term * term     (* fileinfo name type expr *)
+  | TmLet of info * variable * term * term     (* fileinfo name type expr *)
+  | TmArrow of info * variable * term * term   (* fileinfo name type type *)
+  | TmApp of info * term * term                (* fileinfo name func expr *)
+  | TmPrimitive of info * string * label list  (* fileinfo name 
+  | TmPlaceHolder of info * placeholder * delayed_substitution
+
+type binding =
+  | VarBind of ty * (value option)
+
+type context = (variable * binding) list
+
+- - - - - - - - - - - - - - - - - - - - -
+
+let tmmap onvar onplaceholder c t =
+  let rec walk c t = match t with
+    | TmPrimitive _            -> t
+    | TmVar(fi, x, n)          -> onvar fi c x n
+    | TmFun(fi, x, tyT1, t2)   -> TmFun(fi, x, walk c tyT1, walk (c + 1) t2)
+    | TmLet(fi, x, t1, t2)     -> TmLet(fi, x, walk c t1, walk (c + 1) t2)
+    | TmArrow(fi, x, tyS, tyT) -> TmArrow(fi, x, walk c tyS, walk (c + 1) tyT)
+    | TmApp(fi, t1, t2)        -> TmApp(fi, walk c t1, walk c t2)
+    | TmPlaceHolder(fi,p,s)    -> onplaceholder fi c p s
+  in walk c t
+
+let rec term_shift_above (d:int) (c:int) (t:term):term =
+  tmmap 
+    (fun fi c x n   -> if x >= c then TmVar(fi, x + d, shift_check n d) else TmVar(fi, x, shift_check n d))
+    (fun fi c p sub -> TmPlaceHolder (fi, p, List.map (term_shift_above d c) sub))
+    c t
+
+let term_shift d t = term_shift_above d 0 t
+
+let rec subst_tm_in_tm j s t =
+  tmmap
+    (fun fi j x n   -> if x = j then (term_shift j s) else TmVar(fi, x, n))
+    (fun fi j p sub -> TmPlaceHolder (fi, p, List.map (subst_tm_in_tm j s) sub))
+    j t
+
+
+- - - - - - - - - - - - - - - - - - - - -
 
 (type-of (thunk [as integer] exp))
   -> (pi (_ : (index 0 unit)) (index 0 integer))

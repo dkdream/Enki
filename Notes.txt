@@ -1,110 +1,72 @@
 --- Design Choices -------------------------------------------
-  o. use the UrScheme pointer model
-;; Pointers are tagged in the low bits in more or less the usual way:
-;; - low bits binary 00: an actual pointer, to an object with an
-;;   embedded magic number; examine the magic number to see what it
-;;   is.
-;; - low bits binary 01: a signed integer, stored in the upper 30 bits.
-;; - low bits binary 10: one of a small number of unique objects.  The
-;;   first 256 are the chars; following these we have the empty list,
-;;   #t, #f, and the EOF object, in that order.  This means that eq?
-;;   works to compare chars in this implementation, but that isn't
-;;   guaranteed by R5RS, so we can't depend on that property inside
-;;   the compiler, since we want to be able to run it on other R5RS
-;;   Schemes.
-;; - low bits binary 11: unused.
-;; So, type-testing consists of testing the type-tag, then possibly
-;; testing the magic number.  In the usual case, we'll jump to an
-;; error routine if the type test fails, which will exit the program.
-;; I'll add more graceful exits later.
-
-  o. use c-coded treadmill for allocation/memory-management
-
-
 --- Type/Sorts -----------------------------------------------
+Types are collections of values
+Sorts are collections of types 
+ 
+  o. 'arrow' the type of simple lambda
+      signature: [type_group type_group] -> type
+      (arrow Integer String)        -- collection of all functions from Integers        to Strings
+      (arrow [Integer String] Unit) -- collection of all functions from Integers,String to Unit
+      (arrow Unit [Integer String]) -- collection of all thunks that returns Integer,String
 
-  o. 'void' the type of a value that can not be used
+  o. 'refine' the type of a refined value
+      signature [type predicte] -> type
+      (refine Integer (lambda val (>= val 0))) -- positive integers
 
-  o. 'nil' the type of the nil value
+  o. 'index' the type of a tuple slot
+     signature [Integer type] -> type
+     (index 5 Integer) -- (refine Tuple (lambda val ((>= val.size 5) && (iso val.type[5] Integer))))
+     (index 1 String)  -- (refine Tuple (lambda val ((>= val.size 1) && (iso val.type[5] String))))
 
-  o. 'symbol' the type of symbol values
+  o. 'label' the type of a record slot
+     signature [Integer type] -> type
+     (label 'foo Integer) -- (refine Record (lambda val ((val.has 'foo) && (iso val.type['foo] Integer))))
+     (label 'bar String)  -- (refine Record (lambda val ((val.has 'var) && (iso val.type['bar] String))))
 
-  o. 'integer' the type of a integer value (in sort Zero)
+  o. 'any' the union of the two types
+     signature [type type] -> type
+     (any Integer String) -- collection of all (Integers or  Strings) (union)
 
-  o. 'text' the type of a text string value (in sort Zero)
+  o. 'all' the intersection of the two types
+     signature [type type] -> type
+     (all Integer String) -- collection of all (Integers and Strings) (intersection)
+     (all (label 'foo Integer) (label 'bar String))
 
-  o. 'true' the type of the true value (in sort Zero)
+  o. 'power'
 
-  o. 'infile' the type of an input stream value (in sort Zero)
+--- Type Predicates ------------------------------------------
 
-  o. 'outfile' the type of an output stream value (in sort Zero)
+--------------------------------------------------------------
 
-  o. 'opaque' the type of an os resource value that is un-useable (in sort Zero)
+- Sort is the collection of all sorts
+- Type is the collection of all types in all sorts
 
-  o. 'base' the type of any base object (or (any Zero) nil symbol)
-     base is the default type 
+(define Pair (lambda [x Type y Type] (all (label 'car x) (label 'cdr y))))
 
-  o. 'any' the any type operator
-    (any s1) allow any type that is a member sort s1
+(define List (lambda [x Type] (mu [tail Type] (or (Pair x tail) Unit))))
 
-  o. 'or' the union type operator
-    (or t1 .. tN) allow any type in the set t1..tn
+(define length (lambda [x (exists [y Type] (List y))] [as Integer]
+                  (if (type? x Unit) 
+                    0
+                    (+ 1 (length x.cdr)))))
 
-  o. 'cons' the pair type operator
-     (cons t1 t2) allow only a cons with t1 in car and t2 in cdr
+--------------------------------------------------------------
 
-  o. 'list-of' the uniform list type operator
-     (list-of ti) allow list of value of type ti (of any length) including nil
+(List Integer)
+ -> ((lambda [x Type] (mu [tail Type] (any (Pair x tail) Unit))) Integer)
+ -> (mu [tail Type] (any (Pair Integer tail) Unit))
+ -> (any (Pair Integer (mu [tail Type] (any (Pair Integer tail) Unit))) Unit)
 
-  o. 'list' the non-uniform list type operator
-     (list t1 .. tn) allow list with a value of type t1 in the first slot,
-                     t2 in the second, ..., tn in the nth slot
-
-  o. 'tuple-of' the uniform tuple type operator
-     (tuple-of ti) allow tuples of values of type ti (of any length) including nil
-
-  o. 'tuple' the non-uniform tuple type operator
-     (tuple t1 .. tn)
-
-  o. 'lambda' the lambda type operator
-     (lambda input)        a procedure type that takes input and dose not return
-     (lambda input output) a procedure type that takes input and return output
-     input  = void | ti | ( . tr) | (t1 .. tn) | | (t1 .. tn . tr)
-     output = void | ti | ( . tr) | (t1 .. tn) | | (t1 .. tn . tr)
-
-
-  o. 'sigma' the sigma type operator
-     (sigma (v1..vn) predicate1..predicatem (tuple ...))
-     (sigma (v1..vn) predicate1..predicatem (list  ...))
-
-  o. 'pi' the pi type operator
-     (pi (v1..vn)  predicate1..predicatem (lambda ...))
-
-  o. 'mu' the mu type operator
-     (mu var tx)
-
-  o. 'forall' the forall type operator
-     (forall var predicate1..predicatem)
+(type? length) 
+  -> (arrow (exists [y Type] (List y)) Integer)
 
 
---- Type Predicates -----------------------------------------------
-  
-  o. 'is' type predicate
-    (is var val) the type variable var has the type value val
+(exists [y Type] (List y))
+ -> (exists [y Type] ((lambda [x Type] (mu [tail Type] (any (Pair x tail) Unit))) y))
+ -> (exists [y Type] (mu [tail Type] (any (Pair y tail) Unit)))
+ -> (exists [y Type] (any (Pair y (mu [tail Type] (any (Pair y tail) Unit))) Unit)
 
-  o. 'in' type predicate
-    (in var val) the type variable var has a type value in the sort val
+Q == (mu [tail Type] (any Unit (Pair y tail)))
 
--------------
-(type (pi (e s c)
-          (in e Zero)
-          (is s (or (tuple-of e) (list-of e)))  
-          (is c (lambda (e e) (any Zero)))
-          (lambda (s c) s)))
-
-(type (forall x
-         (is x integer)
-         (assert (< 0 x))
-         (assert (< x 100))))
-
-(type (mu x (or nil (tuple integer integer x))))
+ -> (exists [y Type] (any Unit (Pair y Q)))
+ -> (exists [y Type] (any Unit (all (label 'car y) (label 'cdr Q))))
