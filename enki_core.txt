@@ -22,20 +22,22 @@
               | <quote>
 
 <type-constructor> = (arrow <core> <core>)    -- arrow type (simple function type)
-                   | (refine <core> <core>)   -- refinement type
+                   | (subset <core> <core>)   -- refinement type
                    | (index <integer> <core>) -- index type (tuple element type) 
                    | (label <symbol> <core>)  -- label type (record element type)
                    | (any <core> <core>)      -- or type (simple or type)
                    | (all <core> <core>)      -- and type (simple and type)
+                   | (self <core> <core>)     -- self type (a singleton subset type)
 
-<type-functors> = (self <core> <core>)         -- self type (a singleton subset type)
-                | (<formula> <arguments> <core>+)
+<type-functors> = (pi <arguments> <core>+)
+                | (exists <arguments> <core>+)
+                | (mu <arguments> <core>+)
+                | (forall <arguments> <core>+)
 
 <control> = (if <core> <core> <core>*)
           | (unless <core> <core> <core>*)
           | (case <core> <case-pattern>*  <else-pattern>)
           | (select <action-pattern>* <else-pattern>)
-
 
 <control> = (if <core> <core> <core>*)                        ## choose by predicate
           | (unless <core> <core> <core>*)                    ## choose by predicate
@@ -71,8 +73,6 @@
             | (eq? <core> <core>)         -- arg1 is object.1, arg2 is object.2
 
 -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -
-
-<formula> = pi | exists | forall | mu
 
 <quote>      = '<core>
 
@@ -121,9 +121,7 @@
 -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -    -
 
 lambda    := construct a function/procedure value  (lambda/Pi[?:?]/?sort)
-:         := ':' type expression
 pi        := construct a dependent function type   (pi/?sort/?sort)
-sigma     := construct a dependent tuple type      (sigma/?sort/?sort)
 any       := construct a dependent union           (any/?sort/?sort)
 all       := construct a dependent intersection    (all/?sort/?sort)
 subset    := construct a dependent subtype         (subset/?sort/?sort)
@@ -211,7 +209,7 @@ note: define dose NOT make a boxed type, therefore
 
 - - - - - - - - - - - - - - - - - - - - -
 
-mu : T:(A -> B) -> F:(T -> T) -> x:A -> (refine y:B | (iso y (mu T F x)))
+mu : T:(A -> B) -> F:(T -> T) -> x:A -> (refine B (lambda [y B] (iso y (mu T F x))))
 
 mu : T:* -> F:(T -> T) -> (refine x:T (iso x (mu T F)))
 
@@ -298,7 +296,7 @@ let rec subst_tm_in_tm j s t =
 
 - - - - - - - - - - - - - - - - - - - - - 
 
-(cast : A x) == runtime type check
+(cast A x) == runtime type check
 
 - - - - - - - - - - - - - - - - - - - - - 
 
@@ -380,8 +378,8 @@ Composible Types
 
 -- construct a member of an indexed type
 -
-(subset [a A] (pred a))  -- subset type                (forall x in A where (pred a))
-(self A expr)            -- self type (singleton type) (forall x in A where (eq? x expr))
+(subset A pred) -- subset type                (forall x in A where (eq? true (pred a)))
+(self   A expr) -- self type (singleton type) (forall x in A where (eq? x expr))
  
 -- combined and indexed type
 -
