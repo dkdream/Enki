@@ -8,6 +8,17 @@
  **/
 #include "reference.h"
 
+/*
+  Process Stages
+  1. read sexpr
+  2. expand macros
+  3. encode
+     composites (define, lambda, quote, if, unless, and, or, delay, begin, while, bind, set, let, fix, case, elet)
+     primitives
+  4. analysis
+  5. evaluate
+ */
+
 extern void expand(const Node expr, const Node env, Target result) HOT;
 extern void encode(const Node expr, const Node env, Target result) HOT;
 extern void analysis(const Node expr, const Node env, Target result) HOT; // add type annotation

@@ -58,7 +58,7 @@ extern void popTrace() {
 }
 
 /**
- * Expand expression
+ * Expand macro expression
  */
 static unsigned expand_level = 0;
 extern void expand(const Node expr, const Node env, Target result)
