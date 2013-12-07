@@ -1,0 +1,38 @@
+
+(define Expr Zero)
+
+(define (var sym)       (ctor 'Var Expr sym))
+(define (app expr expr) (ctor 'App Expr expr expr))
+(define (lam sym  expr) (ctor 'Lam Expr expr expr))
+
+##
+## ((lambda (x) (lambda (y) x)) (lambda (z) z)) 
+## 
+## --translated to ast--> (app (lam 'x (lam 'y (var 'x))) (lam 'z (var 'z)))
+##
+
+##
+## Weak Head Normal Form 
+##
+(define (whnf ee)
+   (elet [with spine]
+         [bind spine (lambda (term ctx)
+                        (case term
+                           (App (f a) (spine f (cons a ctx)))
+                           (Lam (s e) (spine (subst s (car ctx) e) (cdr ctx)))
+                           (.         (foldl App term ctx))))] ## this looks wrong
+         (spine ee nil)))
+
+##
+## Free Vars
+##
+(define (freeVars term)
+   (case term
+      (Var (sym)   (cons sym nil))
+      (App (f a)   (append (freeVars f) (freeVars a)))
+      (Lam (sym e) (strip sym (freeVar e)))))
+
+##
+## Substitution
+##
+                           
