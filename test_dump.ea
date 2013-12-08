@@ -35,7 +35,7 @@ dump
 (assert (iso 10 symbol (type-of 'val)))
 
 (dumpln 'x3 (type-of nil))
-(assert (iso 10 (type {nil Zero}) (type-of nil)) "nil is not type nil")
+(assert (iso 10 (type 'nil Zero) (type-of nil)) "nil is not type nil")
 
 (dumpln 'x3a)
 (assert (iso 10 'nil        (ctor-of nil)) "nil is not constructed by nil")
@@ -49,7 +49,7 @@ dump
 (dumpln 'x6)
 (assert (iso 10 'tuple      (ctor-of ttest)))
 
-(define ctest (ctor 'fooness (type {iseq Zero}) 1 2 3 4))
+(define ctest (ctor 'fooness (type 'iseq Zero) 1 2 3 4))
 
 (dumpln 'x7 ctest (ctor-of ctest))
 (assert (iso 10 'fooness (ctor-of ctest)))
@@ -58,17 +58,17 @@ dump
 (assert (iso 10 Zero (sort-of ctest)))
 
 (dumpln 'x9 ctest (type-of ttest))
-(assert (iso 10 (type {iseq Zero}) (type-of ctest)))
+(assert (iso 10 (type 'iseq Zero) (type-of ctest)))
 
 (define fooness 'fooness)
 
 (dumpln 'x10 symbol (type-of fooness))
 (assert (iso 10 symbol (type-of fooness)))
 
-(define barness (type {barness Zero}))
+(define barness (type 'barness Zero))
 
-(dumpln 'x11 (type {Zero}) (type-of barness))
-(assert (iso 10 (type {Zero}) (type-of barness)))
+(dumpln 'x11 Zero (type-of barness))
+(assert (iso 10 Zero (type-of barness)))
 
 (define barness (lambda (ok)
                   (dumpln ok)

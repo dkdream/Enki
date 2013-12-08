@@ -380,6 +380,7 @@ extern SUBR(quote)
     pair_GetCar(args.pair, result);
 }
 
+#if 0
 extern SUBR(encode_type) {
     Node value;
 
@@ -477,6 +478,42 @@ extern SUBR(type)
     ASSIGN(result, args);
     return;
 }
+#endif
+
+extern SUBR(type)
+{
+    Symbol   tag;
+    Constant sort;
+
+    list_GetItem(args.pair, 0, &tag);
+    list_GetItem(args.pair, 1, &sort);
+
+    if (!isSymbol(tag)) {
+        fatal("tag required for new type");
+    }
+
+    if (!isASort(sort)) {
+        fatal("sort required for new types");
+    }
+
+    type_Create(tag, sort, result.constant);
+    return;
+}
+
+extern SUBR(sort)
+{
+    Symbol tag;
+
+    list_GetItem(args.pair, 0, &tag);
+
+    if (!isSymbol(tag)) {
+        fatal("tag required for new sort");
+    }
+
+    sort_Create(tag, result.constant);
+    return;
+}
+
 
 extern SUBR(delay)
 {
@@ -2406,7 +2443,7 @@ void startEnkiLibrary() {
     p_apply_lambda = MK_OPR(%apply-lambda,apply_lambda); // see buildins/lambda.c
     p_apply_form   = MK_OPR(%apply-form,apply_form); // see buildins/form.c
 
-    MK_FXD(type,encode_type);
+    //    MK_FXD(type,encode_type);
 
     MK_FXD(if,encode_args);
     MK_FXD(unless,encode_args);
@@ -2425,6 +2462,7 @@ void startEnkiLibrary() {
 
     MK_FXD(elet,encode_elet);
 
+    MK_PRM(type);
     MK_PRM(depart);
     MK_PRM(gensym);
     MK_PRM(member);
