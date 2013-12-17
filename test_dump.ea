@@ -90,6 +90,7 @@ dump
 (let ((xxx 1)(yyy 2))
   (dumpln (environment 'current)))
 
+#[
 (dumpln 'y3 (next))
 (define one   (Label 'one integer))
 (define two   (Label 'two text))
@@ -126,6 +127,7 @@ dump
 (if (symbol? (next))
       (println "symbol")
    (println "not symbol"))
+]
 
 
 

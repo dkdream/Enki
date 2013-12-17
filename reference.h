@@ -55,11 +55,7 @@ typedef struct rule          *Rule;
 typedef struct symbol        *Symbol;
 typedef struct text          *Text;
 typedef struct tuple         *Tuple;
-typedef struct type_base     *Base;
-typedef struct type_branch   *Branch;
-typedef struct type_constant *Constant;
-typedef struct type_index    *Index;
-typedef struct type_label    *Label;
+typedef struct constant      *Constant;
 typedef struct variable      *Variable;
 /*    */
 
@@ -79,16 +75,10 @@ node {
     Text      text;
     Tuple     tuple;
     /**/
-    Base      type;
-    /**/
     Constant  constant;
-    Index     index;
-    Label     label;
-    Branch    branch;
     /**/
     Axiom     axiom;
     Rule      rule;
-    Name      name;
     /**/
     Variable  variable;
     /**/
@@ -112,12 +102,7 @@ node_target {
     Text      *text;
     Tuple     *tuple;
     /**/
-    Base      *type;
-    /**/
     Constant  *constant;
-    Index     *index;
-    Label     *label;
-    Branch    *branch;
     /**/
     Axiom     *axiom;
     Rule      *rule;

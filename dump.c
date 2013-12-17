@@ -113,58 +113,14 @@ static inline unsigned echo_type(TextBuffer *output, Node node) {
 
     if (fromCtor(node, s_base)) {
         echo_format(output, "<%s %p>",
-                    type_ConstantName(node.type),
-                    node.type);
+                    type_ConstantName(node.constant),
+                    node.constant);
         goto done;
-    }
-
-    if (fromCtor(node, s_index)) {
-        echo_format(output, "<index %p %u = ", node.type, type_IndexOffset(node.type));
-        echo_type(output, type_IndexSlot(node.type));
-        echo_format(output, ">");
-        goto done;
-    }
-
-    if (fromCtor(node, s_label)) {
-        echo_format(output, "<label %p ", node.type);
-        echo_string(output, type_LabelName(node.type));
-        echo_format(output, " = ");
-        echo_type(output, type_LabelSlot(node.type));
-        echo_format(output, ">");
-        goto done;
-    }
-
-    if (fromCtor(node, s_branch)) {
-        Branch branch = node.branch;
-        switch (branch->code) {
-        default:
-            echo_format(output, "<branch %p unknown(%u) %u>",
-                        branch,
-                        (unsigned) branch->code,
-                        branch->count);
-            goto done;
-
-        case tc_tuple:
-            echo_format(output, "<branch %p tuple %u>", branch, branch->count);
-            goto done;
-
-        case tc_record:
-            echo_format(output, "<branch %p record %u>", branch, branch->count);
-            goto done;
-
-        case tc_any:
-            echo_format(output, "<branch %p any %u>", branch, branch->count);
-            goto done;
-
-        case tc_all:
-            echo_format(output, "<branch %p all %u>", branch, branch->count);
-            goto done;
-        }
     }
 
     echo_format(output, "<type %p %s>",
                 node.reference,
-                type_ConstantName(node.type));
+                type_ConstantName(node.constant));
 
  done: {
         const unsigned stop = buffer_marker(output);
