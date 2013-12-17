@@ -2145,6 +2145,7 @@ extern SUBR(true_q) {
     }
 }
 
+#if 0
 // (any left right) == { x | x \in left || x \in right }
 extern SUBR(Any) {
     Node left;
@@ -2258,6 +2259,7 @@ extern SUBR(Unfold) {
 
     type_Map(mirror, type, env, result);
 }
+#endif
 
 extern SUBR(cast) {
     Node type;
@@ -2575,6 +2577,7 @@ void startEnkiLibrary() {
     MK_OPR(form-action,form_action);
     MK_OPR(forced-value,forced_value);
 
+#if 0
     MK_PRM(Any);
     MK_PRM(Label);
     MK_PRM(Index);
@@ -2583,6 +2586,7 @@ void startEnkiLibrary() {
     MK_PRM(All);
     MK_PRM(Self);
     MK_PRM(Unfold);
+#endif
 
     MK_PRM(cast);
 
