@@ -19,18 +19,6 @@
 
 extern void retype_global_symboltable();
 
-typedef enum {
-    ic_found,
-    ic_added,
-    ic_error,
-} insert_code;
-
-typedef enum {
-    cc_lesser  = -1,
-    cc_equal   = 0,
-    cc_greater = 1,
-} compare_code;
-
 struct _internal_Row {
     unsigned lock;
     Header   first;
