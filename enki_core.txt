@@ -378,7 +378,7 @@ Composible Types
 
 -- construct a member of an indexed type
 -
-(subset A pred) -- subset type                (forall x in A where (eq? true (pred a)))
+(subset A pred) -- subset type                (forall x in A where (eq? true (pred x)))
 (self   A expr) -- self type (singleton type) (forall x in A where (eq? x expr))
  
 -- combined and indexed type
