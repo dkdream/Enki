@@ -47,23 +47,23 @@ struct rule {
     Constant xxx, yyy, zzz;
 };
 
-extern Constant opaque_s;    // the sort of opaque types
-extern Constant zero_s;      // the sort of values
+extern Constant void_s;      // the sort with no types
+extern Constant zero_s;      // the sort of all base types (including t_nil)
+extern Constant opaque_s;    // the sort of opaque types (used by external stuff)
 
-extern Constant boolean_s;   // the sort with true and false values
-extern Constant undefined_s; // the sort with all possible values (including the void and nil)
-extern Constant unit_s;      // the sort with the unit value
-extern Constant void_s;      // the sort with no values
-
+// zero_s
 extern Constant t_ASTree;  // the type of an Abstract Syntax Tree
 extern Constant t_nil;     // the type of the value nil
+extern Constant t_assert;  // the type of the value true
 extern Constant t_integer; // the type of integer values
 extern Constant t_pair;    // the union of all pairs types
 extern Constant t_symbol;  // the union of all symbol types
 extern Constant t_text;    // the union of all text types
 extern Constant t_tuple;   // the union of all tuple types
 extern Constant t_arrow;   // the union of all arrow types
+extern Constant t_unknown; // the type of the void value
 
+// opaque_s
 extern Constant t_buffer;       // the type of a c-text-buffer
 extern Constant t_closed;       // the type of a closed object
 extern Constant t_continuation; // the type of an escape
@@ -92,7 +92,8 @@ extern bool compute_Type(Node value, Target result);
  * any(any(a,b),c) == any(a,any(b,c))
  */
 
-/* Tuples := index(i,a) | tuple(a,b) where a,b in Tuple
+/* Tuples := index(i,a) where i in Count and a in Type
+ *        |  tuple(a,b) where a,b in Tuple
  *
  * tuple(index(i,a),index(i,b)) == index(i,any(a,b))
  * tuple(index(i,a),index(i,a)) == index(i,a)
@@ -100,7 +101,8 @@ extern bool compute_Type(Node value, Target result);
  * tuple(a,tuple(b,c)) == tuple(tuple(a,b),c)
  */
 
-/* Record := label(i,a) | record(a,b) where a,b in Record
+/* Record := label(i,a)  where i in Symbol and a in Type
+ *        |  record(a,b) where a,b in Record
  *
  * record(label(i,a),label(i,b)) == label(i,any(a,b))
  * record(label(i,a),label(i,a)) == label(i,a)

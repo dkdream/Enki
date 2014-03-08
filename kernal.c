@@ -49,11 +49,9 @@ unsigned __scan_cycle;
 
 Node        enki_globals = NIL; // nt_pair(nil, alist)
 Node              true_v = NIL;
-Node             false_v = NIL;
-Node              unit_v = NIL;
 Node              void_v = NIL;
 Node          fixed_bind = NIL;
-Node          fixed_set  = NIL;
+Node           fixed_set = NIL;
 Primitive  p_encode_args = 0;
 Primitive p_apply_lambda = 0;
 Primitive   p_apply_form = 0;
@@ -2403,15 +2401,11 @@ void startEnkiLibrary() {
     VM_DEBUG(1, "startEnkiLibrary init type table");
     init_global_typetable(roots);
 
-    true_v  = (Node)init_atom(&enki_true, 0);
-    false_v = (Node)init_atom(&enki_false, 0);
-    unit_v  = (Node)init_atom(&enki_unit, 0);
-    void_v  = (Node)init_atom(&enki_void, 0);
+    true_v = (Node)init_atom(&enki_true, 0);
+    void_v = (Node)init_atom(&enki_void, 0);
 
-    setType(true_v,  boolean_s);
-    setType(false_v, boolean_s);
-    setType(unit_v,  unit_s);
-    setType(void_v,  undefined_s);
+    setType(true_v, t_assert);
+    setType(void_v, t_unknown);
 
     pair_Create(NIL,NIL, &enki_globals.pair);
 
@@ -2419,8 +2413,6 @@ void startEnkiLibrary() {
 
     MK_CONST(nil,NIL);
     MK_CONST(void,void_v);
-    MK_CONST(unit,unit_v);
-    MK_CONST(false,false_v);
     MK_CONST(true,true_v);
 
     MK_CONST(integer,t_integer);
@@ -2430,11 +2422,9 @@ void startEnkiLibrary() {
     MK_CONST(tuple,t_tuple);
     MK_CONST(arrow,t_arrow);
 
+    MK_CONST(Void,void_s);
     MK_CONST(Zero,zero_s);
     MK_CONST(Opaque,opaque_s);
-    MK_CONST(Boolean,boolean_s);
-    MK_CONST(Unit,unit_s);
-    MK_CONST(Undefined,undefined_s);
 
     MK_FXD(define,encode_define);
     MK_FXD(lambda,encode_lambda);
