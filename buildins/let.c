@@ -129,7 +129,7 @@ extern SUBR(encode_let)
     }
 
     if (isSymbol(marker)) {
-        alist_Add(lenv.pair, marker, NIL, undefined_s, &(lenv.pair));
+        alist_Add(lenv.pair, marker, NIL, opaque_s, &(lenv.pair));
     }
 
 body:

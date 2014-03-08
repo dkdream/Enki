@@ -35,24 +35,19 @@ static Node external_references;
 static struct _internal_Table *_global_typetable = 0;
 
 Constant void_s = 0;
-
 Constant opaque_s = 0;
 Constant zero_s   = 0;
 
-Constant boolean_s = 0;
-Constant undefined_s = 0;
-Constant unit_s = 0;
-
 Constant t_ASTree = 0;
-
 Constant t_nil = 0;
-
+Constant t_assert = 0;
 Constant t_integer = 0;
 Constant t_pair = 0;
 Constant t_symbol = 0;
 Constant t_text = 0;
 Constant t_tuple = 0;
 Constant t_arrow = 0;
+Constant t_unknown = 0;
 
 Constant t_buffer = 0;
 Constant t_closed = 0;
@@ -99,25 +94,21 @@ extern void init_global_typetable(Clink *roots) {
 
     _global_typetable = result;
 
-    make_sort("Void", &void_s);
-
-    make_sort("Opaque", &opaque_s);
+    make_sort("Void",   &void_s);
     make_sort("Zero",   &zero_s);
-
-    make_sort("Boolean",   &boolean_s);
-    make_sort("Undefined", &undefined_s);
-    make_sort("Unit",      &unit_s);
+    make_sort("Opaque", &opaque_s);
 
     MK_BTYPE(ASTree);
 
     MK_BTYPE(nil);
-
+    MK_BTYPE(assert);
     MK_BTYPE(integer);
     MK_BTYPE(pair);
     MK_BTYPE(symbol);
     MK_BTYPE(text);
     MK_BTYPE(tuple);
     MK_BTYPE(arrow);
+    MK_BTYPE(unknown);
 
     MK_OTYPE(buffer);
     MK_OTYPE(infile);
@@ -347,6 +338,7 @@ extern bool find_Rule(Symbol functor, Constant xxx, Constant yyy, Constant zzz) 
 // functors:
 //   Pi    - (xxx -> yyy):zzz (dependent function types)
 //   Sigma - (xxx, yyy):zzz   (dependent tuple types)
+//   Nabla - (xxx, yyy):zzz   (subset types)
 extern bool make_Rule(Symbol functor, Constant xxx, Constant yyy, Constant zzz) {
     if (!functor) return false;
     if (!xxx)     return false;
@@ -405,7 +397,7 @@ extern bool make_Rule(Symbol functor, Constant xxx, Constant yyy, Constant zzz) 
 extern bool type_Contains(const Constant type, const Node value) {
     if (!type) return false;
 
-    Kind kind = asKind(type);
+    Kind kind = asKind(value);
 
     if (!kind) return false;
 

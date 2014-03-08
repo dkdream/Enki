@@ -121,8 +121,6 @@ typedef union node_target Target;
 
 extern Node void_v;
 extern Node true_v;
-extern Node false_v;
-extern Node unit_v;
 
 #define ASSIGN(target, node) enki_assign(target, node)
 
