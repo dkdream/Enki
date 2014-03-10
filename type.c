@@ -34,10 +34,7 @@ static Node external_references;
 
 static struct _internal_Table *_global_typetable = 0;
 
-Constant void_s = 0;
-Constant opaque_s = 0;
-Constant zero_s   = 0;
-
+Constant zero_s = 0;
 Constant t_ASTree = 0;
 Constant t_nil = 0;
 Constant t_assert = 0;
@@ -48,7 +45,6 @@ Constant t_text = 0;
 Constant t_tuple = 0;
 Constant t_arrow = 0;
 Constant t_unknown = 0;
-
 Constant t_buffer = 0;
 Constant t_closed = 0;
 Constant t_continuation = 0;
@@ -72,7 +68,6 @@ static void make_basetype(const char* value, Constant sort, Constant* target) {
 }
 
 #define MK_BTYPE(x) make_basetype(#x, zero_s, &t_ ##x)
-#define MK_OTYPE(x) make_basetype(#x, opaque_s, &t_ ##x)
 
 extern void init_global_typetable(Clink *roots) {
     if (_global_typetable) return;
@@ -94,9 +89,7 @@ extern void init_global_typetable(Clink *roots) {
 
     _global_typetable = result;
 
-    make_sort("Void",   &void_s);
-    make_sort("Zero",   &zero_s);
-    make_sort("Opaque", &opaque_s);
+    make_sort("Zero", &zero_s);
 
     MK_BTYPE(ASTree);
 
@@ -110,11 +103,11 @@ extern void init_global_typetable(Clink *roots) {
     MK_BTYPE(arrow);
     MK_BTYPE(unknown);
 
-    MK_OTYPE(buffer);
-    MK_OTYPE(infile);
-    MK_OTYPE(outfile);
-    MK_OTYPE(continuation);
-    MK_OTYPE(closed);
+    MK_BTYPE(buffer);
+    MK_BTYPE(infile);
+    MK_BTYPE(outfile);
+    MK_BTYPE(continuation);
+    MK_BTYPE(closed);
 
     retype_global_symboltable();
 }
@@ -146,6 +139,8 @@ extern bool type_Create(Symbol symbol, Constant sort, Constant* target) {
     if (!symbol) return false;
     if (!sort)   return false;
 
+    if (sort->code != tc_sort) return false;
+
     const HashCode hashcode = symbol->hashcode;
 
     const int row   = hashcode % _global_typetable->size;
@@ -156,10 +151,10 @@ extern bool type_Create(Symbol symbol, Constant sort, Constant* target) {
 
         Constant test = (Constant) asReference(group);
 
-        if (test->code != tc_constant) continue;
+        if (test->code != tc_type) continue;
         if (test->name != symbol) continue;
 
-        make_Axiom(test, sort);
+        if (!make_Axiom(test, sort)) return false;
 
         ASSIGN(target, test);
 
@@ -177,7 +172,7 @@ extern bool type_Create(Symbol symbol, Constant sort, Constant* target) {
     Constant result = (Constant) asReference(entry);
 
     result->hashcode = hashcode;
-    result->code     = tc_constant;
+    result->code     = tc_type;
     result->name     = symbol;
 
     entry->after = _global_typetable->row[row].first;
@@ -236,7 +231,8 @@ extern bool find_Axiom(Constant element, Constant class) {
     if (!element) return false;
     if (!class)   return false;
 
-    if (class == void_s) return false;
+    if (element->code != tc_sort) return false;
+    if (class->code   != tc_sort) return false;
 
     HashCode hashcode = class->hashcode;
 
@@ -260,8 +256,9 @@ extern bool make_Axiom(Constant element, Constant class) {
     if (!element) return false;
     if (!class)   return false;
 
-    if (class == void_s) return false;
-
+    if (element->code != tc_sort) {
+        if (element->code != tc_type) return false;
+    }
     if (class->code != tc_sort) return false;
 
     HashCode hashcode = class->hashcode;
@@ -306,10 +303,6 @@ extern bool find_Rule(Symbol functor, Constant xxx, Constant yyy, Constant zzz) 
     if (!yyy)     return false;
     if (!zzz)     return false;
 
-    if (xxx == void_s) return false;
-    if (yyy == void_s) return false;
-    if (zzz == void_s) return false;
-
     if (xxx->code != tc_sort) return false;
     if (yyy->code != tc_sort) return false;
     if (zzz->code != tc_sort) return false;
@@ -344,10 +337,6 @@ extern bool make_Rule(Symbol functor, Constant xxx, Constant yyy, Constant zzz) 
     if (!xxx)     return false;
     if (!yyy)     return false;
     if (!zzz)     return false;
-
-    if (xxx == void_s) return false;
-    if (yyy == void_s) return false;
-    if (zzz == void_s) return false;
 
     if (xxx->code != tc_sort) return false;
     if (yyy->code != tc_sort) return false;
@@ -451,7 +440,7 @@ extern bool compute_Type(Node value, Target result) {
     if (isAType(value)) {
         Constant type = value.constant;
 
-        if (tc_constant == type->code) {
+        if (tc_type == type->code) {
             return find_Parent(type, 0, result);
         }
 

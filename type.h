@@ -20,10 +20,10 @@
 
 typedef enum {
     tc_undefined,
-    tc_constant, // type
-    tc_sort,     // sort
-    tc_axiom,    // axiom
-    tc_rule,     // rule
+    tc_type,  // type
+    tc_sort,  // sort
+    tc_axiom, // axiom
+    tc_rule,  // rule
 } type_code;
 
 // s_type is a type constant
@@ -36,20 +36,20 @@ struct constant {
 // s_axiom is a axiom pair (c:s)
 struct axiom {
     HashCode hashcode; type_code code;
-    Constant element;
-    Constant class;
+    Constant element; // type or sort
+    Constant class;   // sort
 };
 
 // s_rule is a rule  triple (in=s1,out=s2,kind=s3)
 struct rule {
     HashCode hashcode; type_code code;
     Symbol   functor;
-    Constant xxx, yyy, zzz;
+    Constant xxx; // sort
+    Constant yyy; // sort
+    Constant zzz; // sort
 };
 
-extern Constant void_s;      // the sort with no types
-extern Constant zero_s;      // the sort of all base types (including t_nil)
-extern Constant opaque_s;    // the sort of opaque types (used by external stuff)
+extern Constant zero_s;   // the sort of all base types (including t_nil)
 
 // zero_s
 extern Constant t_ASTree;  // the type of an Abstract Syntax Tree
@@ -63,7 +63,6 @@ extern Constant t_tuple;   // the union of all tuple types
 extern Constant t_arrow;   // the union of all arrow types
 extern Constant t_unknown; // the type of the void value
 
-// opaque_s
 extern Constant t_buffer;       // the type of a c-text-buffer
 extern Constant t_closed;       // the type of a closed object
 extern Constant t_continuation; // the type of an escape
@@ -137,8 +136,8 @@ extern inline bool sort_Contains(const Constant sort, const Constant type) __att
 extern inline bool sort_Contains(const Constant sort, const Constant type) {
     if (!type) return false;
     if (!sort) return false;
-    if (type->code == tc_constant) return find_Axiom((Constant)type, sort);
-    if (type->code == tc_sort)     return find_Axiom((Constant)type, sort);
+    if (type->code == tc_type) return find_Axiom((Constant)type, sort);
+    if (type->code == tc_sort) return find_Axiom((Constant)type, sort);
     return false;
 }
 
@@ -206,7 +205,7 @@ extern inline const char* sort_Name(Constant sort) {
 extern inline const char* type_ConstantName(Constant type) __attribute__((always_inline));
 extern inline const char* type_ConstantName(Constant type) {
     if (!type) return "";
-    if (type->code != tc_constant) return "";
+    if (type->code != tc_type) return "";
     return (const char*)(type->name->value);
 }
 

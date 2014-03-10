@@ -2422,9 +2422,7 @@ void startEnkiLibrary() {
     MK_CONST(tuple,t_tuple);
     MK_CONST(arrow,t_arrow);
 
-    MK_CONST(Void,void_s);
     MK_CONST(Zero,zero_s);
-    MK_CONST(Opaque,opaque_s);
 
     MK_FXD(define,encode_define);
     MK_FXD(lambda,encode_lambda);
