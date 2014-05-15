@@ -34,6 +34,102 @@ Sorts are collections of types
 
   o. 'power'
 
+--------------------------------------------------------------
+
+--- CBPV-types --------------------------------------------------
+
+   value-types        -- A := U[B] | Sigma[I](A.i) | 1 | A x A
+   computation-types  -- B := F[A] | Pi[I](B.i)    | A -> B
+   tag-sets           -- I := ...
+   
+   where each set I is finite
+   
+   * a value of type U[B] is a thunk of a computaion of type B
+   * a value of type Sigma[I](A.i) is a pair (i,V)
+       where i is a member of I
+         and V is a value of type A.i
+   * a value of type 1 is the empty tuple.
+   * a value of type A.1 x A.2 is a pair (V.1,V.2)
+       where V.1 is a value of type A.1
+         and V.2 is a value of type A.2
+
+   * a computation of type F[A] produces a value of type A
+   * a computation of type Pi[I](B.i) 
+         pops a tag i a member of I (from the stack)
+         and the behaves as a computation of type B.i
+   * a computation of type A -> B 
+         pops a value of type A (from the stack)
+         and the behaves as a computation of type B
+
+
+--- CBPV-grammer --------------------------------------------------
+
+  program = computation ( '.' computation )*
+
+  sequence = '(' program ')'
+
+  computation = 'let' value 'be' variable
+              | sequence 'to' variable
+              | 'case' value 'of' ( tag-cases | tuple-cases )
+              | 'lambda' ( variable | selector )
+              | 'push' ( tag | value )
+              | 'return' value
+              | 'force' value
+
+  tag-cases = '{' ( tag-case )* '}'
+  tag-case  = '(' tag ',' variable ')' program
+
+  tuple-cases = '(' variable ',' variable ')'
+
+  selector   = '{' ( tag-action )* '}'
+  tag-action = tag program
+
+  value = 'thunk' sequence
+        | '(' ( tag | value ) ',' value ')'
+        | variable
+
+  variable = !keyword /[a-zA-Z_][-a-zA-Z_0-9]*/
+  tag      = /:[a-zA-Z_][-a-zA-Z_0-9]*/
+
+------------------------
+
+    value    : A    => 'return' value   : F[A]
+    sequence : B    => 'thunk' sequence : U[B]
+    value    : U[B] => 'force' value    : B
+
+--- Forth-machine -------------------------------------- 
+
+   inital-state: 
+      data-stack       = <empty>
+      return-stack     = <to result>.<exit>
+      enviroment-stack = <global>
+      program          = .....
+
+   program='(' M ')' to var.N // return-stack=K      -> program=M // return-stack=<to var>.N::K
+
+   program=return V.L // return-stack=<to var>.N::K  -> program=N // env[var] = V // return-stack=K
+   
+   program=push V.M // data-stack=K                  -> program=M // data-stack=V::K
+   program=lambda var.M // data-stack=V::K           -> program=M // env[var]=V // data-stack=K
+
+   program=push tag.M // data-stack=K                  -> program=M   // data-stack=tag::K
+   program=lambda {.. tag.M ..}.N // data-stack=tag::K -> program=M.N // data-stack=K
+
+   program=case V (var1,var2).M // V=(V1,V2)           -> program=M   // evn[var1]=V1, evn[var2]=var2
+   program=case V {.. (tag,var).M ..}.N // V=(tag,Vi)  -> program=M.N // env[var]=Vi
+
+   program=let V be var.M                            -> program=M // env[var]=V
+   program=force V.N // V=thunk '(' M ')'            -> program=M.N
+
+   program=push var.M // env[var]=V                  -> program=push V.M
+   program=let var1 be var2.M // env[var1]=V         -> program=let V be var2.M 
+   program=force var.M // env[var]=V                 -> program=force V.M
+   program=case var (var1,var2).M //  env[var]=V     -> program=case V (var1,var2).M
+   program=case var {...}.M //  env[var]=V           -> program=case V {...}.M
+   program=return var.M // env[var]=V                -> program=return V.M
+   program=force var.M // env[var]=V                 -> program=force V.M
+
+
 --- Type Predicates ------------------------------------------
 
 --------------------------------------------------------------
