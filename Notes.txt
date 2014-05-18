@@ -94,7 +94,6 @@ Sorts are collections of types
    Nat  := rec[X](Sigma[h,t](1.h,X.t))
            ## zero := fold (#h,()) ## succ V := fold (#t,V)
    
-
 --- CBPV-grammer --------------------------------------------------
 
   program = computation ( '.' computation )*
@@ -118,7 +117,8 @@ Sorts are collections of types
   tag-action = tag program
 
   value = 'thunk' sequence
-        | '(' ( tag | value ) ',' value ')'
+        | '(' value ',' value ')' # tuple-type
+        | '[' tag   ',' value ']' # Sigma-type
         | variable
 
   variable = !keyword /[a-zA-Z_][-a-zA-Z_0-9]*/
@@ -128,12 +128,15 @@ Sorts are collections of types
 
   (see: polygramegalop.pdf, polynorm.pdf, thesisproposal.pdf)
 
-  case-extended = 'case' value 'of' ( tag-cases | tuple-cases | one-case | fold-case | var-case )
+  case-extended = 'case' value 'of' ( tag-cases | tuple-cases | 
+                                      zero-case |  one-case | fold-case | var-case )
 
-  value-extended = '(' ')'
+  value-extended = '(' ')' # type 1
+                 | '[' ']' # type 0
                  | 'fold' value
                  | '(' value-type ',' value ')'
 
+  zero-case = '[' ']'
   one-case  = '(' ')'  
   fold-case = 'fold' variable
   var-case  = '(' vtype-variable ',' variable ')'
