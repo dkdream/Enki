@@ -509,12 +509,10 @@ static bool readTuple(InputBuffer fp, Symbol ctor, int delim, Target result)
         if (!setType(next->car, t_ASTree))    goto failure;
     }
 
- eof:
     if (!tuple_Convert(list, result.tuple))         goto failure;
     if (!setConstructor(*(result.reference), ctor)) goto failure;
     if (!setType(*(result.reference), t_ASTree))    goto failure;
 
- done:
     GC_End();
     return true;
 
