@@ -1,4 +1,4 @@
-
+(println "Begin")
 (define foo (delay (let () (println "forced") 3)))
 (println (type-of foo))
 (println (+ foo 4))

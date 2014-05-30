@@ -89,6 +89,9 @@ depends : $(DEPENDS)
 
 $(RUNS) : | enki.vm
 
+clear ::
+	rm -rf .run
+
 clean ::
 	rm -fr .depends .objects .assembly .run .dumps
 	rm -f enki.vm libEnki.a libEnki_32.a libEnki_64.a
