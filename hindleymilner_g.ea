@@ -1,0 +1,130 @@
+(require "boot.ea")
+
+#{
+    BType := Int | Bool | String | ...
+    Type  := var | BType | (type -> type)
+    PType := (forall varset type)
+}#
+
+(define (forall vars type)
+   (tree :forall vars type))
+
+(define (freevars type)
+   (cond ((is :forall type) (diff (freevars (two type)) (one type)))
+         ((is xxx) ...)))
+
+(define (generalize monoset type) 
+   (let ((vars (diff (freevars type) monoset)))
+      (forall vars type)))
+
+(define (mgu typeA typeB) 
+   # return most general unifier S
+   #   suchthat (equal-tree (S A) (S B)) if possible
+   # or return the type-error sustitution
+   ...)
+
+(define (fresh vars) # return a sustitution that replaces all vars with new ones
+   ...)
+
+(define (instantiate ptype) # return a new instance of the ptype
+   (let ((vars (one ptype)))
+      ((fresh vars) (two ptype))))
+
+(define (instanceOf type ptype) # return true or false 
+   # type A is an instance of ptype (forall set B)
+   # iff there exists a sustitution S 
+   #    where (S v) == v  forall v in (freevars (forall set B))
+   #    and (equal-tree A (S B))
+   ...)
+
+#{
+Constraint := (equal    type.A type.B) 
+           |  (explicit type.A ptype.B)
+           |  (implicit type.A type.B typeSet)
+
+equal    := unifiy type.A and type.B
+explicit := make type.A and instance of ptype.B (explicitly)
+implicit := make type.A and instance of type.B where typeSet is the monotype variable set.
+}#
+
+(define (activevars constrant)
+   (cond ((is :equal constrant)    (union (freevars (one constrant))
+                                          (freevars (two constrant))))
+         ((is :implicit constrant) (union (freevars (one constrant))
+                                          (intersection (freevars (three constrant))
+                                                        (freevars (two constrant)))))
+         ((is :explicit constrant) (union (freevars (one constrant))
+                                          (freevars (two constrant))))))
+
+
+#{
+Assumption := var:type // a variable is assumed to have type
+}#
+
+#{
+--- BottomUp type inferecne rules ---
+form: AssumptionSet,ConstraintSet |- expression:type
+
+a value variable may appear more then once in an AssumptionSet
+a type variable may appear more then once in a ConstraintSet 
+
+A\x is the AssumptionSet without any value variables 'x'
+
+Rules:
+   0.
+      ---------------
+      {},{} |- c:tc
+
+   1. t is fresh
+      ---------------
+      {x:t},{} |- x:t 
+
+   2. A1,C1 |- e1:t1 and A2,C2 |- e2:t2 and t3 is fresh
+      -------------------------------------------------
+      A1+A2,C1+C2+(equal t1 (t2 -> t3)) |- (e1 e2):t3
+
+   3. A,C |- e:ty and (x:ti in A) and tx is fresh
+      ----------------------------------------------
+      A\x,C+(equal tx ti) |- (lambda x e):(tx -> ty)
+
+   4. A1,C1 |- e1:t1 and A2,C2 |- e2:t2 and (x:ti in A2) and M 
+      -----------------------------------------------------------
+      A1+(A2\x),C1+C2+(implicit ti t1 M) |- (let x = e1 in e2):t2
+
+
+0. Constant rule
+1. Variable rule
+2. Application rule
+3. Abstraction rule
+4. Let rule
+
+the monotype set (M) is computed top-down for each node in the syntax tree.
+}#
+
+#{
+the solution to a set of type constraints is a sustitution S.
+
+S satisfies (equal A B)       is defined by (equal-tree (S A) (S B))
+S satisfies (implicit A B M)  is defined by (instanceOf (S A) (generalize (S M) (S B)))
+S satisfies (explicit A B)    is defined by (instanceOf (S A) (S B))
+
+
+S satisfies (equal A B)      iff S satisfies (explicit A B)
+S satisfies (equal A B)      iff S satisfies (implicit A B (freevars B))
+S satisfies (implicit A B M) iff S satisfies (explicit A (generalize (S M) (S B)))
+
+}#
+
+#{
+   Solve :: Constraints -> Substitution
+  
+   Solve({})                 is []
+
+   Solve((equal A B)+C)      is (let ((S (mgu A B))) (compose S Solve((S C))))
+ (compose Solve(C) (mgu A B))
+
+   Solve((explicit A B)+C)   is Solve((equal A (instantiate B))+C)
+
+   Solve((implicit A B M)+C) is Solve((explicit A (generalize M B)) + C) 
+     when (intersection (activevars C) (diff (freevars B) M)) == empty
+}#
