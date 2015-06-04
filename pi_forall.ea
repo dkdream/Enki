@@ -1,0 +1,51 @@
+(require "boot.ea")
+
+#{
+ the AST
+   file  = (file definition*)
+
+   definition = (define (name term) term)
+                   
+   term = type                         -- type of types
+        | empty                        -- the empty type       (bottom)  (no values)
+        | unit                         -- the unit type        (only one value)
+        | boolean                      -- the boolean type     (only two values)
+        | any                          -- the universal type   (top) (all values)
+        | (iso term term)              -- Equality type
+        | void                         -- member of unit type  (void of meaning)
+        | true                         -- true value
+        | false                        -- false value
+        | reflection                   -- Equality proof
+        | (val name)                   -- value of name
+        | (lambda name term)           -- abstraction
+        | (apply term term)            -- application
+        | (pi name term term)          -- function type, term[0]=in term[1]=out
+        | (sigma name term term)       -- sigma type, term[0]=car term[1]=cdr
+        | (tuple term term)            -- introduction for sigmas
+        | (if term term term)          -- conditional
+        | (case term (name name) term) -- elimination for sigmas
+        | (let name term term)         -- local scope (recursive binding)
+        | (annotate term term)         -- annotate check term[1] for type term[0]
+        | (erase term)                 -- remove from runtime (if possible)
+        | (location reference term)    -- marks where the term came from 
+  
+   reference = (name offset offset)
+
+the Token values
+   name   = [a-zA-Z]+
+   offset = [0-9]+
+}#
+
+
+#{
+   Env { ctx, hints, locations }
+   ctx        : declared  list (elaborated term and datatype declarations)
+   hints      : hint      list (uncheck term and datatype declarations)
+   locactions : reference list
+
+
+(define (new-env) ...)
+(define (make-hint name term) ...)
+(define (make-
+
+}#
