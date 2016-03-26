@@ -41,9 +41,9 @@ RUNFLAGS :=
 
 XCFLAGS  := -mregparm=3
 INCFLAGS := -I. $(COPPER_INC)
-DBFLAGS  := -Wall -mtune=i686 -rdynamic -fPIC
+DBFLAGS  := -Wall -rdynamic -fPIC
 CFLAGS   := $(DBFLAGS) $(INCFLAG) $(TAILFLAGS)
-SFLAGS   := -mtune=i686 -rdynamic -fdelete-null-pointer-checks -ggdb
+SFLAGS   := -rdynamic -fdelete-null-pointer-checks -ggdb
 ASFLAGS  := -Qy
 LIBFLAGS := $(COPPER_LIB)
 ARFLAGS  := rcu
@@ -55,8 +55,8 @@ H_SOURCES  := $(filter-out enki.h, $(notdir $(wildcard *.h)))
 ATOMS      := $(wildcard ./atoms/*.c)
 C_BUILDINS := $(notdir $(wildcard ./buildins/*.c))
 
-OBJS := $(C_SOURCES:%.c=.objects/%_32.o)
-OBJS += $(C_BUILDINS:%.c=.objects/%_buildin_32.o)
+OBJS := $(C_SOURCES:%.c=.objects/%_atom.o)
+OBJS += $(C_BUILDINS:%.c=.objects/%_buildin_atom.o)
 TSTS := $(notdir $(wildcard test_*.ea))
 RUNS := $(TSTS:test_%.ea=.run/test_%.log)
 
@@ -68,9 +68,9 @@ UNIT_TESTS := $(notdir $(wildcard test_*.gcc))
 
 all   :: enki test asm
 enki  :: enki.vm | lib
-lib   :: libEnki_32.a
+lib   :: libEnki_atom.a
 test  :: $(RUNS)
-asm   :: $(FOOS:%.c=.dumps/%_32.s)
+asm   :: $(FOOS:%.c=.dumps/%_atom.s)
 units :: $(UNIT_TESTS:%.gcc=%.x)
 	@ls -l $(UNIT_TESTS:%.gcc=%.x)
 
@@ -81,7 +81,7 @@ install : install.bin install.inc install.lib
 
 install.bin :: $(BINDIR)/enki
 install.inc :: $(H_SOURCES:%=$(INCDIR)/%)
-install.lib :: $(LIBDIR)/libEnki.a
+install.lib :: $(LIBDIR)/libEnki_atom.a
 
 checkpoint : ; git checkpoint
 
@@ -94,7 +94,7 @@ clear ::
 
 clean ::
 	rm -fr .depends .objects .assembly .run .dumps
-	rm -f enki.vm libEnki.a libEnki_32.a libEnki_64.a
+	rm -f enki.vm libEnki.a libEnki_32.a libEnki_atom.a
 	rm -f *~ ./#* *.x *.s *.o buildins/SUBR.lst
 	rm -f test.*.out test.out
 
@@ -102,30 +102,30 @@ scrub ::
 	@make clean
 	@rm -rf .depends
 
-enki.vm : .objects/enki_main_32.o libEnki_32.a 
-	$(GCC) $(CFLAGS) -m32 -o $@ $^ $(LIBFLAGS)
+enki.vm : .objects/enki_main_atom.o libEnki_atom.a 
+	$(GCC) $(CFLAGS) -o $@ $^ $(LIBFLAGS)
 
 test :: link_main.x
 	./link_main.x
 
-test :: $(FOOS:%.c=.dumps/%_32.s)
+test :: $(FOOS:%.c=.dumps/%.s)
 
-link_main.x : .objects/link_main_32.o .objects/foo_32.o libEnki_32.a
-	$(GCC) $(CFLAGS) -m32 -o $@ .objects/link_main_32.o .objects/foo_32.o -L. -lEnki_32
+link_main.x : .objects/link_main_atom.o .objects/foo_atom.o libEnki_atom.a
+	$(GCC) $(CFLAGS) -o $@ .objects/link_main_atom.o .objects/foo_atom.o -L. -lEnki_atom
 
-foo_32.s : foo.ea compiler.ea | enki.vm
-	./enki.vm ./foo.ea >foo_32.s
+foo_atom.s : foo.ea compiler.ea | enki.vm
+	./enki.vm ./foo.ea >foo_atom.s
 
-$(UNIT_TESTS:%.gcc=%.x) : libEnki_32.a
+$(UNIT_TESTS:%.gcc=%.x) : libEnki_atom.a
 
-libEnki_32.a : $(OBJS:%_n.o=%_32.o)
+libEnki_atom.a : $(OBJS:%_n.o=%_atom.o)
 	-$(RM) $@
-	$(AR) $(ARFLAGS) $@ $(OBJS:%_n.o=%_32.o)
+	$(AR) $(ARFLAGS) $@ $(OBJS:%_n.o=%_atom.o)
 	$(RANLIB) $@
 	@touch $@
 
 obj :: $(OBJS)
-obj :: $(MAINS:%.c=.objects/%_32.o)
+obj :: $(MAINS:%.c=.objects/%_atom.o)
 
 $(BINDIR) : ; [ -d $@ ] || mkdir -p $@
 $(INCDIR) : ; [ -d $@ ] || mkdir -p $@
@@ -202,26 +202,44 @@ echo_begin :: ; @echo begin atoms
 .objects/%_32.o : %_32.s | .objects
 	$(AS) $(ASFLAGS) --32 -o $@ $< 
 
+.assembly/kernal_32.s : buildins/SUBR.lst
+
 ## ## ## ##
 
 .PRECIOUS :: .dumps/%_atom.s .objects/%_atom.o .assembly/%_atom.s
+
+%_atom.x : .objects/%_atom.o
+	$(GCC) $(CFLAGS) -o $@ $+ libEnki.a
 
 .dumps/%_atom.s : .objects/%_atom.o | .dumps
 	@objdump --disassemble-all -x $< >$@
 
 .objects/%_atom.o : .assembly/%_atom.s | .objects
-	@$(AS) $(ASFLAGS) --32 -o $@ $< 	
+	@$(AS) $(ASFLAGS) -o $@ $<
 
-.assembly/%_atom.s : ./atoms/%.c | .assembly
-	$(GCC) $(SFLAGS) -S -m32 -fverbose-asm -o $@ $<
+.assembly/%_atom.s : %.c | .assembly
+	$(GCC) $(SFLAGS) -S -fverbose-asm -o $@ $<
+
+.assembly/%_buildin_atom.s : ./buildins/%.c | .assembly
+	$(GCC) $(SFLAGS) -I. -S -fverbose-asm -o $@ $<
+
+.objects/%_atom.o : %_atom.s | .objects
+	$(AS) $(ASFLAGS) -o $@ $< 
+
+.assembly/kernal_atom.s : buildins/SUBR.lst
+
+## ## ## ##
+
+.assembly/%_atoms.s : ./atoms/%.c | .assembly
+	$(GCC) $(SFLAGS) -S -fverbose-asm -o $@ $<
 
 ## ## ## ##
 
 .objects/%_gcc.o : %.gcc
-	$(GCC) $(CFLAGS) -m32 -x c -c -o $@ $<
+	$(GCC) $(CFLAGS) -x c -c -o $@ $<
 
 test_%.x : .objects/test_%_gcc.o
-	$(GCC) $(CFLAGS) -m32 -o $@ $< -L. -lEnki_32
+	$(GCC) $(CFLAGS) -o $@ $< -L. -lEnki_32
 
 ## ## ## ##
 
@@ -232,8 +250,6 @@ test_%.x : .objects/test_%_gcc.o
 	@$(GCC) $(CFLAGS) -MM -MP -MG -MF $@ $<
 
 ## ## ## ##
-
-.assembly/kernal_32.s : buildins/SUBR.lst
 
 buildins/SUBR.lst : $(C_BUILDINS:%.c=./buildins/%.c)
 	@./mk_subr.sh
