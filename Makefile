@@ -105,10 +105,10 @@ scrub ::
 enki.vm : .objects/enki_main_atom.o libEnki_atom.a 
 	$(GCC) $(CFLAGS) -o $@ $^ $(LIBFLAGS)
 
-test :: link_main.x
-	./link_main.x
+#test :: link_main.x
+#	./link_main.x
 
-test :: $(FOOS:%.c=.dumps/%.s)
+#test :: $(FOOS:%.c=.dumps/%.s)
 
 link_main.x : .objects/link_main_atom.o .objects/foo_atom.o libEnki_atom.a
 	$(GCC) $(CFLAGS) -o $@ .objects/link_main_atom.o .objects/foo_atom.o -L. -lEnki_atom
