@@ -7,19 +7,20 @@
 
 void enki_test(void* atom, void* type, void* size) {
     void* holding = 0;
-
-    asm("movl %1,%%eax\n\t"
-        "movl %2,%%ebx\n\t"
-        "movl %3,%%ecx\n\t"
-        "movl %%eax,-8(%%esp)\n\t"  //atom
-        "movl %%ebx,-12(%%esp)\n\t" //size
-        "movl %%ecx,-16(%%esp)\n\t" //type
-        "lea -16(%%esp),%%eax\n\t"
+#if 0
+    asm("movq %1,%%rax\n\t"
+        "movq %2,%%rbx\n\t"
+        "movq %3,%%rcx\n\t"
+        "movq %%rax,-8(%%rsp)\n\t"  //atom
+        "movq %%rbx,-16(%%rsp)\n\t" //size
+        "movq %%rcx,-24(%%rsp)\n\t" //type
+        "lea -24(%%rsp),%%rax\n\t"
         "call alloc_gc\n\t"
-        "movl %%eax,%0"
+        "movq %%rax,%0"
         : "=m" (holding)
         : "m" (atom), "m" (size), "m" (type)
-        : "%eax", "%ebx", "%ecx", "%esi", "edi");
+        : "%rax", "%rbx", "%rcx", "%rsi", "rdi");
+#endif
 
     printf("results %p count %u type %p space %p\n",
            holding,
@@ -27,6 +28,8 @@ void enki_test(void* atom, void* type, void* size) {
            getType(holding).reference,
            getSpace(holding));
 }
+
+
 
 int main(int argc, char** argv) {
     ea_global_debug = 0;

@@ -105,16 +105,19 @@ scrub ::
 enki.vm : .objects/enki_main.o libEnki.a 
 	$(GCC) $(CFLAGS) -o $@ $^ $(LIBFLAGS)
 
-#test :: link_main.x
-#	./link_main.x
+test :: link_main.x
+	./link_main.x
 
-#test :: $(FOOS:%.c=.dumps/%.s)
+test :: $(FOOS:%.c=.dumps/%.s)
 
-link_main.x : .objects/link_main.o .objects/foo.o libEnki.a
-	$(GCC) $(CFLAGS) -o $@ .objects/link_main.o .objects/foo.o -L. -lEnki
+.assembly/link_main.s : link_main.c | .assembly
+	$(GCC) -rdynamic  -O -m64 -S -fverbose-asm -o $@ $<
 
-foo_atom.s : foo.ea compiler.ea | enki.vm
-	./enki.vm ./foo.ea >foo_atom.s
+link_main.x : .objects/link_main.o .objects/foo_alloc.o libEnki.a
+	$(GCC) $(CFLAGS) -o $@ .objects/link_main.o .objects/foo_alloc.o -L. -lEnki
+
+foo.s : foo.ea compiler.ea | enki.vm
+	./enki.vm ./foo.ea >foo.s
 
 $(UNIT_TESTS:%.gcc=%.x) : libEnki.a
 
@@ -199,11 +202,17 @@ echo_begin :: ; @echo begin atoms
 .assembly/%_buildin.s : ./buildins/%.c | .assembly
 	$(GCC) $(SFLAGS) -I. -S -fverbose-asm -o $@ $<
 
+$(FOOS:%.c=.assembly/%.s) : .assembly/foo_%.s : foo_%.c  | .assembly
+	$(GCC) -rdynamic  -O -m64 -S -fverbose-asm -o $@ $<
+
 .dumps/%.s : .objects/%.o | .dumps
 	@objdump --disassemble-all -x $< >$@
 
 .dumps/%_atom.s : ./atoms/%.c | .dumps
 	$(GCC) -rdynamic -O -m64 -S -fverbose-asm -o $@ $<
+
+$(FOOS:%.c=.dumps/%.s) : .dumps/foo_%.s : foo_%.c  | .dumps
+	$(GCC) -rdynamic  -O -m64 -S -fverbose-asm -o $@ $<
 
 .depends/%.d : %.c | .depends
 	@$(GCC) $(CFLAGS) -MM -MP -MG -MF $@ $<

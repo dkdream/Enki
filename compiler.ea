@@ -153,10 +153,10 @@
 (define (restore)    (insn "popa"))  ## pop all registers
 
 ## Registers:
-(define eax "%eax") ## scratch    (bottom-of-frame|return-value)
-(define ebx "%ebx") ## scratch                             (gcc-callee-saved)
-(define ecx "%ecx") ## scratch
-(define edx "%edx") ## scratch
+(define eax "%rax") ## scratch    (bottom-of-frame|return-value)
+(define ebx "%rbx") ## scratch                             (gcc-callee-saved)
+(define ecx "%rcx") ## scratch
+(define edx "%rdx") ## scratch
 (define ebp "%ebp") ## frame-pointer   (enki-callee-saved) (gcc-callee-saved)
 (define esp "%esp") ## top of stack    (enki-callee-saved) (gcc-callee-saved)
 (define esi "%esi") ## bottom of stack (enki-callee-saved) (gcc-callee-saved)
