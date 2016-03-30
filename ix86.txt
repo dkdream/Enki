@@ -24,8 +24,12 @@ Segment registers:
     FS
     GS
 --------------------------
+https://cseweb.ucsd.edu/classes/sp10/cse141/pdf/02/S01_x86_64.key.pdf
+http://www.x86-64.org/documentation/assembly.html
 http://en.wikibooks.org/wiki/X86_Assembly/GAS_Syntax
 http://en.wikibooks.org/wiki/X86_Assembly
+http://stackoverflow.com/questions/25455447/x86-64-registers-rax-eax-ax-al-overwriting-full-register-contents
+https://sourceforge.net/projects/bochs/files/bochs/ Bochs x86 PC emulator
 --------------------------
 address operand syntax : 
    <disp>(<r1>, <r2>, <scale>)
