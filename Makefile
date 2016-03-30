@@ -4,6 +4,7 @@ INCDIR  = $(PREFIX)/include
 LIBDIR  = $(PREFIX)/lib
 
 TIME := $(shell date +T=%s.%N)
+ARCH := $(uname  --machine)
 
 ENKI      := enki.vm
 ENKI.test := enki.vm
@@ -19,9 +20,7 @@ DIFF   := diff
 AR     := ar
 RANLIB := ranlib
 
-TAILFLAGS := -O
-TAILFLAGS := -ggdb
-TAILFLAGS += -fexpensive-optimizations
+TAILFLAGS := -fexpensive-optimizations
 TAILFLAGS += -finline-functions
 TAILFLAGS += -foptimize-sibling-calls
 TAILFLAGS += -ftracer
@@ -33,8 +32,9 @@ TAILFLAGS += -fcrossjumping
 TAILFLAGS += -fif-conversion
 TAILFLAGS += -fif-conversion2
 TAILFLAGS += -fdelete-null-pointer-checks
-TAILFLAGS += -Wformat-security
+TAILFLAGS += -fdelete-null-pointer-checks
 
+#TAILFLAGS += -Wformat-security
 ##TAILFLAGS += -fconserve-stack
 
 RUNFLAGS := 
@@ -43,8 +43,8 @@ XCFLAGS  := -mregparm=3
 INCFLAGS := -I. $(COPPER_INC)
 DBFLAGS  := -Wall -rdynamic -fPIC
 CFLAGS   := $(DBFLAGS) $(INCFLAG) $(TAILFLAGS)
-SFLAGS   := -rdynamic -fdelete-null-pointer-checks -ggdb
-ASFLAGS  := -Qy
+SFLAGS   := -rdynamic -O -m64 $(TAILFLAGS)
+ASFLAGS  := -Qy --64
 LIBFLAGS := $(COPPER_LIB)
 ARFLAGS  := rcu
 
@@ -55,8 +55,8 @@ H_SOURCES  := $(filter-out enki.h, $(notdir $(wildcard *.h)))
 ATOMS      := $(wildcard ./atoms/*.c)
 C_BUILDINS := $(notdir $(wildcard ./buildins/*.c))
 
-OBJS := $(C_SOURCES:%.c=.objects/%_atom.o)
-OBJS += $(C_BUILDINS:%.c=.objects/%_buildin_atom.o)
+OBJS := $(C_SOURCES:%.c=.objects/%.o)
+OBJS += $(C_BUILDINS:%.c=.objects/%_buildin.o)
 TSTS := $(notdir $(wildcard test_*.ea))
 RUNS := $(TSTS:test_%.ea=.run/test_%.log)
 
@@ -68,20 +68,20 @@ UNIT_TESTS := $(notdir $(wildcard test_*.gcc))
 
 all   :: enki test asm
 enki  :: enki.vm | lib
-lib   :: libEnki_atom.a
+lib   :: libEnki.a
 test  :: $(RUNS)
-asm   :: $(FOOS:%.c=.dumps/%_atom.s)
+asm   :: $(FOOS:%.c=.dumps/%.s)
 units :: $(UNIT_TESTS:%.gcc=%.x)
 	@ls -l $(UNIT_TESTS:%.gcc=%.x)
 
-atoms :: $(ATOMS:./atoms/%.c=.dumps/%_atom.s)
+atoms ::  $(ATOMS:./atoms/%.c=.dumps/%_atom.s)
 	@echo finished atoms
 
 install : install.bin install.inc install.lib
 
 install.bin :: $(BINDIR)/enki
 install.inc :: $(H_SOURCES:%=$(INCDIR)/%)
-install.lib :: $(LIBDIR)/libEnki_atom.a
+install.lib :: $(LIBDIR)/libEnki.a
 
 checkpoint : ; git checkpoint
 
@@ -94,7 +94,7 @@ clear ::
 
 clean ::
 	rm -fr .depends .objects .assembly .run .dumps
-	rm -f enki.vm libEnki.a libEnki_32.a libEnki_atom.a
+	rm -f enki.vm libEnki.a libEnki_32.a libEnki.a
 	rm -f *~ ./#* *.x *.s *.o buildins/SUBR.lst
 	rm -f test.*.out test.out
 
@@ -102,7 +102,7 @@ scrub ::
 	@make clean
 	@rm -rf .depends
 
-enki.vm : .objects/enki_main_atom.o libEnki_atom.a 
+enki.vm : .objects/enki_main.o libEnki.a 
 	$(GCC) $(CFLAGS) -o $@ $^ $(LIBFLAGS)
 
 #test :: link_main.x
@@ -110,22 +110,22 @@ enki.vm : .objects/enki_main_atom.o libEnki_atom.a
 
 #test :: $(FOOS:%.c=.dumps/%.s)
 
-link_main.x : .objects/link_main_atom.o .objects/foo_atom.o libEnki_atom.a
-	$(GCC) $(CFLAGS) -o $@ .objects/link_main_atom.o .objects/foo_atom.o -L. -lEnki_atom
+link_main.x : .objects/link_main.o .objects/foo.o libEnki.a
+	$(GCC) $(CFLAGS) -o $@ .objects/link_main.o .objects/foo.o -L. -lEnki
 
 foo_atom.s : foo.ea compiler.ea | enki.vm
 	./enki.vm ./foo.ea >foo_atom.s
 
-$(UNIT_TESTS:%.gcc=%.x) : libEnki_atom.a
+$(UNIT_TESTS:%.gcc=%.x) : libEnki.a
 
-libEnki_atom.a : $(OBJS:%_n.o=%_atom.o)
+libEnki.a : $(OBJS:%_n.o=%.o)
 	-$(RM) $@
-	$(AR) $(ARFLAGS) $@ $(OBJS:%_n.o=%_atom.o)
+	$(AR) $(ARFLAGS) $@ $(OBJS:%_n.o=%.o)
 	$(RANLIB) $@
 	@touch $@
 
 obj :: $(OBJS)
-obj :: $(MAINS:%.c=.objects/%_atom.o)
+obj :: $(MAINS:%.c=.objects/%.o)
 
 $(BINDIR) : ; [ -d $@ ] || mkdir -p $@
 $(INCDIR) : ; [ -d $@ ] || mkdir -p $@
@@ -180,68 +180,30 @@ echo_begin :: ; @echo begin atoms
 .run/%.log : %.ea | .run
 	@./run.it $(ENKI.test) "$(RUNFLAGS)" $< $@
 
-## === m32 c-compile ===
-
-.PRECIOUS :: .dumps/%_32.s .objects/%_32.o .assembly/%_32.s
-
-%_32.x : .objects/%_32.o
-	$(GCC) $(CFLAGS) -m32 -o $@ $+ libEnki_32.a
-
-.dumps/%_32.s : .objects/%_32.o | .dumps 
-	@objdump --disassemble-all -x $< >$@
-
-.objects/%_32.o : .assembly/%_32.s | .objects
-	@$(AS) $(ASFLAGS) --32 -o $@ $< 
-
-.assembly/%_32.s : %.c | .assembly
-	$(GCC) $(SFLAGS) -S -m32 -fverbose-asm -o $@ $<
-
-.assembly/%_buildin_32.s : ./buildins/%.c | .assembly
-	$(GCC) $(SFLAGS) -I. -S -m32 -fverbose-asm -o $@ $<
-
-.objects/%_32.o : %_32.s | .objects
-	$(AS) $(ASFLAGS) --32 -o $@ $< 
-
-.assembly/kernal_32.s : buildins/SUBR.lst
-
 ## ## ## ##
 
-.PRECIOUS :: .dumps/%_atom.s .objects/%_atom.o .assembly/%_atom.s
+.PRECIOUS :: .dumps/%.s .objects/%.o .assembly/%.s
 
-%_atom.x : .objects/%_atom.o
+%.x : .objects/%.o
 	$(GCC) $(CFLAGS) -o $@ $+ libEnki.a
 
-.dumps/%_atom.s : .objects/%_atom.o | .dumps
-	@objdump --disassemble-all -x $< >$@
-
-.objects/%_atom.o : .assembly/%_atom.s | .objects
+.objects/%.o : .assembly/%.s | .objects
 	@$(AS) $(ASFLAGS) -o $@ $<
 
-.assembly/%_atom.s : %.c | .assembly
-	$(GCC) $(SFLAGS) -S -fverbose-asm -o $@ $<
-
-.assembly/%_buildin_atom.s : ./buildins/%.c | .assembly
-	$(GCC) $(SFLAGS) -I. -S -fverbose-asm -o $@ $<
-
-.objects/%_atom.o : %_atom.s | .objects
+.objects/%.o : %.s | .objects
 	$(AS) $(ASFLAGS) -o $@ $< 
 
-.assembly/kernal_atom.s : buildins/SUBR.lst
-
-## ## ## ##
-
-.assembly/%_atoms.s : ./atoms/%.c | .assembly
+.assembly/%.s : %.c | .assembly
 	$(GCC) $(SFLAGS) -S -fverbose-asm -o $@ $<
 
-## ## ## ##
+.assembly/%_buildin.s : ./buildins/%.c | .assembly
+	$(GCC) $(SFLAGS) -I. -S -fverbose-asm -o $@ $<
 
-.objects/%_gcc.o : %.gcc
-	$(GCC) $(CFLAGS) -x c -c -o $@ $<
+.dumps/%.s : .objects/%.o | .dumps
+	@objdump --disassemble-all -x $< >$@
 
-test_%.x : .objects/test_%_gcc.o
-	$(GCC) $(CFLAGS) -o $@ $< -L. -lEnki_32
-
-## ## ## ##
+.dumps/%_atom.s : ./atoms/%.c | .dumps
+	$(GCC) -rdynamic -O -m64 -S -fverbose-asm -o $@ $<
 
 .depends/%.d : %.c | .depends
 	@$(GCC) $(CFLAGS) -MM -MP -MG -MF $@ $<
@@ -250,6 +212,8 @@ test_%.x : .objects/test_%_gcc.o
 	@$(GCC) $(CFLAGS) -MM -MP -MG -MF $@ $<
 
 ## ## ## ##
+
+.assembly/kernal.s : buildins/SUBR.lst
 
 buildins/SUBR.lst : $(C_BUILDINS:%.c=./buildins/%.c)
 	@./mk_subr.sh
