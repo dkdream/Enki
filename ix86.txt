@@ -23,6 +23,58 @@ Segment registers:
     ES: Extra
     FS
     GS
+--------------------------------------------------------------
+
+32-bit 64-bit General Purpose (overlapping) --
+EAX    RAX - Accumulator
+EBX    RBX - Base index
+ECX    RCX - Counter
+EDX    RDX - Data
+EBP    RBP - Base Pointer (frame pointer)
+ESI    RSI - Source Index
+EDI    RDI - Destination index
+ESP    RSP - Stack Pointer
+       R8
+       R9
+       R10
+       R11
+       R12
+       R13
+       R14
+       R15
+
+32-bit 64-bit
+       RIP    - instruction pointer
+EFLAG  RFLAG  - instruction control flags (carry, parity, adjust, zero, overflow, direction,..)
+
+64-bit 80-bit floating point --
+FPR0   MMX0 
+FPR1   MMX1
+FPR2   MMX2
+FPR3   MMX3
+FPR4   MMX4
+FPR5   MMX5
+FPR6   MMX6
+FPR7   MMX7
+
+128-bit XMM --
+XMM0
+XMM1
+XMM2
+XMM3
+XMM4
+XMM5
+XMM6
+XMM7
+XMM8
+XMM9
+XMM10
+XMM11
+XMM12
+XMM13
+XMM14
+XMM15
+
 --------------------------
 https://cseweb.ucsd.edu/classes/sp10/cse141/pdf/02/S01_x86_64.key.pdf
 http://www.x86-64.org/documentation/assembly.html
@@ -35,6 +87,44 @@ http://en.wikibooks.org/wiki/X86_Assembly
 http://stackoverflow.com/questions/25455447/x86-64-registers-rax-eax-ax-al-overwriting-full-register-contents
 https://sourceforge.net/projects/bochs/files/bochs/ Bochs x86 PC emulator
 --------------------------
+
+instruction = opcode size from ( from )? to
+
+opcode = "mov" | ...
+
+size   = "b" # byte  8-bit
+       | "s" # short 16-bits
+       | "w" # word  16-bits
+       | "l" # long  32-bits
+       | "q" # quad  64-bits
+
+to   = space ( register | memory )
+from = space ( value | register | memory )
+
+register = '%' ( rname )
+value    = '$' ( label | number )
+memory   = ( offset )? '(' register ( ',' register ',' scall )? ) ')'
+
+--------------------------
+
+movb $0x05, %al     ==> Reg[al] = Ox05
+movl %eax, -4(%ebp) ==> Mem[Reg[ebp] - 4] = Reg[eax] 
+movl -4(%ebp), %eax ==> Reg[eax] = Mem[Reg[ebp] - 4]
+movl $LCO, (%esp)   ==> Mem[Reg[esp]] = Addr(LCO)
+subl $0x05, %eax    ==> Reg[eax] = Reg[eax] - 0x05
+cmpl %eax, %ebx     ==> Reg[eax] - Reg[ebx] and set flags register
+
+pushl %eax == subl $4,%esp 
+              movl %eax, (%esp)
+
+popl %eax == movl (%esp), %eax
+             addl $4,%esp
+
+leave == movl %ebp, %esp
+         pop %ebp
+
+--------------------------
+
 address operand syntax : 
    <disp>(<r1>, <r2>, <scale>)
 =

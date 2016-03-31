@@ -84,6 +84,8 @@ install.inc :: $(H_SOURCES:%=$(INCDIR)/%)
 install.lib :: $(LIBDIR)/libEnki.a
 
 checkpoint : ; git checkpoint
+pull       : ; git pull
+push       : ; git push
 
 depends : $(DEPENDS)
 
