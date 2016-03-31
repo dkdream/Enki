@@ -1,0 +1,124 @@
+
+atom := constant '(' term ( ',' term )* ')'
+
+term := constant | variable
+
+rule := atom ':-' ( atom ( ',' atom )* )? '.'
+
+fact := atom '.'
+
+query := ( atom ( ',' atom )* )? '?'
+
+--------------------------------------
+https://www.youtube.com/watch?v=EZJs6w2YFRM
+--------------------------------------
+And Or Graph (tree) used in backward chaining
+--------------------------------------
+An Interpretation of a Knowledge Base is an assignment to each constant a value true or false.
+A Model of a Knowledge Base is an Interpretation of that Knowledge Base in with all the clauses are true
+--------------------------------------
+
+The Least Herbrand models
+  1) Herbrand means constants interpreted as themselves
+  2) Least    means contained by all other models
+  3) Model    means ...
+
+Substitutions
+  1) mapping from variables to terms
+  2) ground: all the terms in the range ard constants
+
+Given:
+  forall substitutions H and G
+     (H o G)(x) = G(H(X))
+
+
+Unifier is a substitution
+
+Given two atom A and B.
+   H is a Unifier iff  H(A) == H(B)
+   H is a most general unifier (mgu) 
+     if forall G unifying A and B there exists a G' such that G = (H o G') i.e. ( G(x) = G'(H(x)) )
+
+define compose(X,Y) -- compose substitutions X and Y => (X o Y)(x) == Y(X(x))
+   #- apply Y to all expressions of X
+   result = X.map do |var,exp|
+      { var : apply(Y, exp) }
+   end
+   #- add maps not in X
+   Y.each do |var,exp|
+      unless result.member(var)
+        result.add(var,exp)
+      end
+   end
+   #- remove assignment self assignments
+   result.remove do |var,exp|
+     var == exp
+   end
+
+   return result
+end
+
+X = { x : a, y : f(u), z : v }
+Y = { u : d, v : e, z : g }
+
+e = q(x,y)
+X(e) => q(a,f(u))
+Y(e) => q(x,y) == e
+
+X(Y(e)) = X(e) = q(a,f(u))
+Y(X(e)) = Y(q(a,f(u))) = q(a,f(d))
+
+define mgu(A,B,S) -- most general unifier of expressions A and B and substitution S
+   case A.kind
+   when 'atom'
+      return false unless B.atom?
+      var t,r1 = mgu(A.predicate, B.predictate, S)
+      return false unless t
+      return mpu(A.args, B.args, r1)
+
+   when 'constant'
+      case B.kind
+      when 'atom'
+         return false
+      when 'constant'
+         return false unless A == B
+         return true, S
+      when 'list'
+         return false
+      when 'variable'
+         var b = apply(S,B)
+         return mgu(b,A,S)
+      end
+
+   when 'list'
+      case B.kind
+      when 'atom'
+         return false
+      when 'constant'
+         return false
+      when 'list'
+         var t,r1 = mgu(A.first,B.first,S)
+         return false unless t
+         return mgu(A.rest,B.rest,r1)
+      when 'variable'
+         return false
+      end
+
+   when 'variable'
+      if S.includes?(A)
+        return mpu(apply(S,A),B,S)
+      else
+         case B.kind
+         when 'atom'
+           return false if B.contains?(A)
+           return true, compose(S, { A : B })
+         when 'constant'
+           return true, compose(S, { A : B })
+         when 'list'
+           return false
+         when 'variable'
+           return true, compose(S, { A : B })
+         end
+     end
+   end
+end
