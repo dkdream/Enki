@@ -42,7 +42,7 @@
             (if (integer? stuff)
                   (bprint buf (format "@{s}" stuff))
                (dumpln stuff)
-               (errore 'flattening "xx"))))))
+               (error 'flattening "xx"))))))
 
 
 ## Assembly Optimization Tips http://mark.masmcode.com/
@@ -79,21 +79,21 @@
    (lambda (rand)
       (insn mnemonic " " rand)))
 
-(define mov     (twoarg "movl"))   ## move 32bit->32bit
-(define movb    (twoarg "movb"))   ## move  8bit-> 8bit
-(define movzbl  (twoarg "movzbl")) ## move  8bit->32bit (zero-extended)
-(define lea     (twoarg "lea"))    ## compute address of
-(define add     (twoarg "add"))    ## arth-add    (AF CF OF PF SF ZF)
-(define adc     (twoarg "adc"))    ## arth-add+CF (AF CF OF PF SF ZF)
-(define sub     (twoarg "sub"))    ## arth-sub    (AF CF OF PF SF ZF)
-(define sub     (twoarg "sbb"))    ## arth-sub-CF (AF CF OF PF SF ZF)
+## (opcode source target)
+(define mov     (twoarg "movq"))   ## move 64bit->64bit
+(define movzb   (twoarg "movzbq")) ## move  8bit->64bit (zero-extended)
+(define lea     (twoarg "leaq"))   ## compute address of
+(define add     (twoarg "addq"))   ## arth-add    (AF CF OF PF SF ZF)
+(define adc     (twoarg "adcq"))   ## arth-add+CF (AF CF OF PF SF ZF)
+(define sub     (twoarg "subq"))   ## arth-sub    (AF CF OF PF SF ZF)
+(define sub     (twoarg "sbbq"))   ## arth-sub-CF (AF CF OF PF SF ZF)
 (define xchg    (twoarg "xchg"))   ## exchange
 (define asm-and (twoarg "and"))    ## bitwize and (CF OF PF SF ZF)
 (define xor     (twoarg "xor"))    ## bitwize or  (CF OF PF SF ZF)
 (define imul    (twoarg "imul"))
 
-(define push (onearg "push"))
-(define pop  (onearg "pop"))
+(define push (onearg "pushq"))
+(define pop  (onearg "popq"))
 
 (define test (twoarg "test"))
 # tmp = (argS & argD)
@@ -152,25 +152,34 @@
 (define (save)       (insn "pusha")) ## push all registers 
 (define (restore)    (insn "popa"))  ## pop all registers
 
-## Registers:
-(define eax "%rax") ## scratch    (bottom-of-frame|return-value)
-(define ebx "%rbx") ## scratch                             (gcc-callee-saved)
-(define ecx "%rcx") ## scratch
-(define edx "%rdx") ## scratch
-(define ebp "%ebp") ## frame-pointer   (enki-callee-saved) (gcc-callee-saved)
-(define esp "%esp") ## top of stack    (enki-callee-saved) (gcc-callee-saved)
-(define esi "%esi") ## bottom of stack (enki-callee-saved) (gcc-callee-saved)
-(define edi "%edi") ## scratch                             (gcc-callee-saved)
-(define al  "%al")  ## low-byte of eax
+
+(define al  "%al")  ## low-byte of rax
 
 ## edx:eax = long-long accumulater
 ## ebx:ecx = long-long argument
 ## edi     = 
+##
+## eip / rip == instruction pointer
 
-(define frame ebp)
-(define bos   esi)
-(define tos   esp)
-(define scr   edi)
+(define frame "%rbp")  ## frame-pointer   (enki-callee-saved) (gcc-callee-saved)
+(define rval  "%rax")  ## return-value
+(define bos   "%rsi")  ## bottom-of-stack (enki-callee-saved) (gcc-callee-saved)
+(define tos   "%rsp")  ## top-of-stack    (enki-callee-saved) (gcc-callee-saved)
+
+## Registers:
+
+(define scr0  "%rbx") ## scratch    (gcc-callee-saved)
+(define scr1  "%rcx") ## scratch
+(define scr2  "%rdx") ## scratch
+(define scr3  "%rdi") ## scratch
+(define scr4  "%rd8")
+(define scr5  "%rd9")
+(define scr6  "%rd10")
+(define scr7  "%rd11")
+(define scr8  "%rd12")
+(define scr9  "%rd13")
+(define scr10 "%rd14")
+(define scr11 "%rd15")
 
 ## x86 addressing modes:
 (define (const x)         (new-list "$" x))
@@ -239,22 +248,28 @@
 (define (compile-apply      nargs)) 
 (define (compile-tail-apply nargs))
 
+(define (compile-function-prologue-x)
+   (mov  tos rval)   ## hold top-of-stack
+   (push frame)      ## push old frame
+   (push bos)        ## push old bottom-of-stack
+   (mov  rval frame) ## set new frame
+   (mov  tos bos))   ## set new  bottom-of-stack
+
 (define (compile-function-prologue)
-   (xchg eax tos)  ## exchange top-of-stack and bottom-of-frame
-   (push frame)    ## push old frame
-   (push bos)      ## push old bottom-of-stack
-   (mov eax frame) ## set new frame
-   (mov tos bos))  ## set new  bottom-of-stack
+   (push frame)      ## push old frame
+   (push bos)        ## push old bottom-of-stack
+   (mov  tos frame)  ## set new frame
+   (mov  tos bos))   ## set new  bottom-of-stack
 
 (define (compile-tail label count))
 (define (compile-call label count))
 
 (define (compile-function-epilogue)
-   (mov frame scr)  ## mov the frame(old-tos) to scr
+   (mov frame scr3) ## mov the frame(old-tos) to scr
    (mov bos tos)    ## clear stack/locals
    (pop bos)        ## pop the old bottom-of-stack
    (pop frame)      ## pop the old frame
-   (mov scr tos)    ## set old top-of-stack
+   (mov scr3 tos)   ## set old top-of-stack
    (ret))
 
 (define (compile-function bodylabel nargs nlcls body)
@@ -285,43 +300,43 @@
          (call function))))
 
 (define (compile-load-acc node)
-   (lea node edi)
-   (mov (indirect edi) eax)
-   (mov (offset edi 4) edx))
+   (lea node scr3)
+   (mov (indirect scr3) rval)
+   (mov (offset scr3 4) scr2))
 
 (define (compile-add-acc node)
-   (lea node edi)
-   (mov (indirect edi) ecx)
-   (mov (offset edi 4) ebx)
-   (add ecx eax)
-   (adc ebx edx))
+   (lea node scr3)
+   (mov (indirect scr3) scr1)
+   (mov (offset scr3 4) scr0)
+   (add scr1 rval)
+   (adc scr0 scr2))
 
 (define (compile-sub-acc node)
-   (lea node edi)
-   (mov (indirect edi) ecx)
-   (mov (offset edi 4) ebx)
-   (sub ecx eax)
-   (sbb ebx edx))
+   (lea node scr3)
+   (mov (indirect scr3) scr1)
+   (mov (offset scr3 4) scr0)
+   (sub scr1 rval)
+   (sbb scr0 scr2))
 
 (define (compile-mul-acc node)
-   (lea node edi)
-   (mov (indirect edi) ecx)
-   (mov (offset edi 4) ebx)
+   (lea node scr3)
+   (mov (indirect scr3) scr1)
+   (mov (offset scr3 4) scr0)
    (push bos)
-   (mov  ebx esi)
-   (imul eax esi) ## high-l * low-r
-   (mov  edx edi)
-   (imul ecx edi) ## low-l * high-r
-   (add  edi esi)
-   (mul  ecx)
-   (add  edi esi)
-   (mov  esi edx)
+   (mov  scr0 bos)
+   (imul rval bos) ## high-l * low-r
+   (mov  scr2 scr3)
+   (imul scr1 scr3) ## low-l * high-r
+   (add  scr3 bos)
+   (mul  scr1)
+   (add  scr3 bos)
+   (mov  bos scr2)
    (pop bos))
 
 (define (compile-store-acc node)
-   (lea node edi)
-   (mov eax (indirect edi))
-   (mov ebx (offset edi 4)))
+   (lea node scr3)
+   (mov rval (indirect scr3))
+   (mov scr0 (offset scr3 4)))
 
 ##
 ##
@@ -359,7 +374,7 @@
 (define (label-iseq name)
    (make-iseq nil nil `((label \name))))
 
-(define (caller-save) '(ebx ecx edx edi))
+(define (caller-save) '(scr0 scr1 scr2 scr3))
 
 (define (call-label name)
    (make-iseq (caller-save) nil `((call \name))))

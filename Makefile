@@ -115,11 +115,14 @@ test :: $(FOOS:%.c=.dumps/%.s)
 .assembly/link_main.s : link_main.c | .assembly
 	$(GCC) -rdynamic  -O -m64 -S -fverbose-asm -o $@ $<
 
-link_main.x : .objects/link_main.o .objects/foo_alloc.o libEnki.a
+link_main.t : .objects/link_main.o .objects/foo_alloc.o libEnki.a
 	$(GCC) $(CFLAGS) -o $@ .objects/link_main.o .objects/foo_alloc.o -L. -lEnki
 
-foo.s : foo.ea compiler.ea | enki.vm
-	./enki.vm ./foo.ea >foo.s
+link_main.x : .objects/link_main.o .objects/foo.o libEnki.a
+	$(GCC) $(CFLAGS) -o $@ .objects/link_main.o .objects/foo.o -L. -lEnki
+
+.assembly/foo.s : foo.ea compiler.ea | enki.vm
+	./enki.vm ./foo.ea >$@
 
 $(UNIT_TESTS:%.gcc=%.x) : libEnki.a
 
@@ -194,9 +197,6 @@ echo_begin :: ; @echo begin atoms
 
 .objects/%.o : .assembly/%.s | .objects
 	@$(AS) $(ASFLAGS) -o $@ $<
-
-.objects/%.o : %.s | .objects
-	$(AS) $(ASFLAGS) -o $@ $< 
 
 .assembly/%.s : %.c | .assembly
 	$(GCC) $(SFLAGS) -S -fverbose-asm -o $@ $<

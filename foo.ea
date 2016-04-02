@@ -3,49 +3,27 @@
 
 ## (alloc_gc atom size type)
 
-(define (alloc_gc_1)
-   (compile-function "alloc_gc_old" 3 1
-                     (lambda () 
-                        (mov (const 0) (lcl 0)) ## init ret
-                        (lea (lcl 0) eax)       ## hold address of result
-                        (push eax)              ## push &ret
-                        (push (arg 1))          ## push size
-                        (push (arg 0))          ## push atom
-                        (push "_zero_space")    ## push _zero_space
-                        (call "node_Allocate")  ## call
-                        (drop 4)                ## clear stack
-                        (let ((pass (new-label))
-                              (exit (new-label)))
-                           (xor (const 1) eax)  ## mask result
-                           (test al al)         ## test result
-                           (jzero pass)         ##
-                           (mov (const 0) eax)
-                           (jmp exit)
-                           (label pass)
-                           (pop eax)
-                           (label exit)))))
-
 (define (alloc_gc_2)
    (compile-function "alloc_gc" 3 1
                      (lambda () 
                         (mov (const 0) (lcl 0)) ## init ret
-                        (lea (lcl 0) eax)       ## hold address of result
-                        (compile-c-call "node_Allocate"
+                        (lea (lcl 0) rval)       ## hold address of result
+                        (compile-c-call "node_Allocate_check"
                                         "_zero_space"
                                         (arg 0)
                                         (arg 1)
-                                        eax)
+                                        rval)
                         (let ((pass (new-label))
                               (exit (new-label)))
-                           (xor (const 1) eax)  ## mask result
+                           (xor (const 1) rval)  ## mask result
                            (test al al)         ## test result
                            (jzero pass)         ##
-                           (mov (const 0) eax)
+                           (mov (const 0) rval)
                            (jmp exit)
                            (label pass)
-                           (pop eax)
-                           (mov (arg 2) ebx)
-                           (mov ebx (offset eax -8))
+                           (pop rval)
+                           (mov (arg 2) rval)
+                           (mov scr0 (offset rval -8))
                            (label exit)))))
 
 

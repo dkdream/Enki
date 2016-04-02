@@ -12,7 +12,7 @@ extern bool node_Allocate(const Space space, bool atom, Size size_in_char, Targe
 extern void* alloc_gc(void* atom, void* size, void* type) {
     void* foo = 0;
 
-    bool hold = node_Allocate(_zero_space, (bool)atom, (Size)size, (Target) &foo);
+    bool hold = node_Allocate(_zero_space, atom, (Size)size, (Target) &foo);
 
     return foo;
 }
