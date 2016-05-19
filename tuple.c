@@ -10,6 +10,7 @@
 #include "treadmill.h"
 #include "type.h"
 #include "bit_array.h"
+#include "debug.h"
 
 #include <stdarg.h>
 

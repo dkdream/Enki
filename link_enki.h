@@ -42,51 +42,51 @@ typedef int bool;
 
 extern ptr enki_entry();
 
-extern inline bool isNil(ptr)  __attribute__((always_inline));
-extern inline bool isNil(ptr val) {
+static inline bool isNil(ptr)  __attribute__((always_inline));
+static inline bool isNil(ptr val) {
   return 0 == val;
 }
 
-extern inline bool isVoid(ptr)  __attribute__((always_inline));
-extern inline bool isVoid(ptr val) {
+static inline bool isVoid(ptr)  __attribute__((always_inline));
+static inline bool isVoid(ptr val) {
   return -1 == val;
 }
 
-extern inline bool isBoxed(ptr)  __attribute__((always_inline));
-extern inline bool isBoxed(ptr val) {
+static inline bool isBoxed(ptr)  __attribute__((always_inline));
+static inline bool isBoxed(ptr val) {
   return ((val & BOX_TAG_MASK) == BOX_TAG);
 }
 
-extern inline bool isFixed(ptr)  __attribute__((always_inline));
-extern inline bool isFixed(ptr val) {
+static inline bool isFixed(ptr)  __attribute__((always_inline));
+static inline bool isFixed(ptr val) {
   return ((val & FIX_TAG_MASK) == FIX_TAG);
 }
 
-extern inline bool isBool(ptr)  __attribute__((always_inline));
-extern inline bool isBool(ptr val) {
+static inline bool isBool(ptr)  __attribute__((always_inline));
+static inline bool isBool(ptr val) {
   if ((val & BOOL_TAG_MASK) == BOOL_TAG)
     return -1;
   else
     return 0;
 }
 
-extern inline int fromFixed(ptr)  __attribute__((always_inline));
-extern inline int fromFixed(ptr val) {
+static inline int fromFixed(ptr)  __attribute__((always_inline));
+static inline int fromFixed(ptr val) {
   return ((int)val) >> FIX_SHIFT;
 }
 
-extern inline ptr toFixed(int)  __attribute__((always_inline));
-extern inline ptr toFixed(int val) {
+static inline ptr toFixed(int)  __attribute__((always_inline));
+static inline ptr toFixed(int val) {
   return ((((ptr) val) << FIX_SHIFT) | FIX_TAG);
 }
 
-extern inline bool fromBool(ptr) __attribute__((always_inline));
-extern inline bool fromBool(ptr val) {
+static inline bool fromBool(ptr) __attribute__((always_inline));
+static inline bool fromBool(ptr val) {
   return ((val & BOOL_TRUE) == BOOL_TRUE);
 }
 
-extern inline ptr toBool(bool) __attribute__((always_inline));
-extern inline ptr toBool(bool val) {
+static inline ptr toBool(bool) __attribute__((always_inline));
+static inline ptr toBool(bool val) {
   if (val) return BOOL_TRUE;
   return BOOL_FALSE;
 }

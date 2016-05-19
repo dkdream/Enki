@@ -1,7 +1,7 @@
 PREFIX  = /tools/Enki
 BINDIR  = $(PREFIX)/bin
 INCDIR  = $(PREFIX)/include
-LIBDIR  = $(PREFIX)/lib
+LIBDIR  = $(PREFIX)/lib64
 
 TIME := $(shell date +T=%s.%N)
 ARCH := $(uname  --machine)
@@ -107,8 +107,8 @@ scrub ::
 enki.vm : .objects/enki_main.o libEnki.a 
 	$(GCC) $(CFLAGS) -o $@ $^ $(LIBFLAGS)
 
-test :: link_main.x
-	./link_main.x
+test_x :: link_main.x
+	./link_main.x || echo NO
 
 test :: $(FOOS:%.c=.dumps/%.s)
 

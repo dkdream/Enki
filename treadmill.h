@@ -197,27 +197,27 @@ extern void clink_Goto(void *label, const Node value) __attribute__ ((noreturn))
 #define GC_End() \
     clink_Final((Clink*)(& __LOCAL_GC))
 
-extern inline bool boxed_Tag(const Node node) __attribute__((always_inline));
-extern inline bool boxed_Tag(const Node node) {
+static inline bool boxed_Tag(const Node node) __attribute__((always_inline));
+static inline bool boxed_Tag(const Node node) {
     return (BOX_TAG == (node.value & BOX_TAG_MASK));
 }
 
-extern inline bool fixed_Tag(const Node node) __attribute__((always_inline));
-extern inline bool fixed_Tag(const Node node) {
+static inline bool fixed_Tag(const Node node) __attribute__((always_inline));
+static inline bool fixed_Tag(const Node node) {
     return (FIX_TAG == (node.value & FIX_TAG_MASK));
 }
-extern inline long fixed_Value(const Node node) __attribute__((always_inline));
-extern inline long fixed_Value(const Node node) {
+static inline long fixed_Value(const Node node) __attribute__((always_inline));
+static inline long fixed_Value(const Node node) {
     if (!fixed_Tag(node)) return 0;
     return (node.value >> FIX_SHIFT);
 }
 
-extern inline bool bool_Tag(const Node node) __attribute__((always_inline));
-extern inline bool bool_Tag(const Node node) {
+static inline bool bool_Tag(const Node node) __attribute__((always_inline));
+static inline bool bool_Tag(const Node node) {
     return (BOOL_TAG == (node.value & BOOL_TAG_MASK));
 }
-extern inline bool bool_Value(const Node node) __attribute__((always_inline));
-extern inline bool bool_Value(const Node node) {
+static inline bool bool_Value(const Node node) __attribute__((always_inline));
+static inline bool bool_Value(const Node node) {
     return (node.value == BOOL_TRUE);
 }
 
@@ -229,28 +229,28 @@ extern bool insert_After(const Header mark, const Header node);
 extern bool insert_Before(const Header mark, const Header node);
 extern bool extract_From(const Header mark);
 
-extern inline Reference asReference(Header header) __attribute__((always_inline));
-extern inline Reference asReference(Header header) {
+static inline Reference asReference(Header header) __attribute__((always_inline));
+static inline Reference asReference(Header header) {
     if (!header) return (Reference)0;
     return (Reference)(header + 1);
 }
 
-extern inline Header asHeader(const Node value) __attribute__((always_inline));
-extern inline Header asHeader(const Node value) {
+static inline Header asHeader(const Node value) __attribute__((always_inline));
+static inline Header asHeader(const Node value) {
     if (!boxed_Tag(value)) return (Header)0;
     if (!value.reference) return (Header)0;
     return (((Header)value.reference) - 1);
 }
 
-extern inline Kind asKind(const Node value) __attribute__((always_inline));
-extern inline Kind asKind(const Node value) {
+static inline Kind asKind(const Node value) __attribute__((always_inline));
+static inline Kind asKind(const Node value) {
     if (!boxed_Tag(value)) return (Kind)0;
     if (!value.reference) return (Kind)0;
     return (((Kind)value.reference) - 1);
 }
 
-extern inline bool setType(const Node value, const Node type) __attribute__((always_inline));
-extern inline bool setType(const Node value, const Node type) {
+static inline bool setType(const Node value, const Node type) __attribute__((always_inline));
+static inline bool setType(const Node value, const Node type) {
     Kind kind = asKind(value);
     if (!kind) return false;
     if (kind->constant) return false;
@@ -258,8 +258,8 @@ extern inline bool setType(const Node value, const Node type) {
     return true;
 }
 
-extern inline bool setConstructor(const Node value, const Symbol constructor) __attribute__((always_inline));
-extern inline bool setConstructor(const Node value, const Symbol constructor) {
+static inline bool setConstructor(const Node value, const Symbol constructor) __attribute__((always_inline));
+static inline bool setConstructor(const Node value, const Symbol constructor) {
     if (!constructor) return false;
     Kind kind = asKind(value);
     if (!kind) return false;
@@ -267,8 +267,8 @@ extern inline bool setConstructor(const Node value, const Symbol constructor) {
     return true;
 }
 
-extern inline bool setConstant(const Node value) __attribute__((always_inline));
-extern inline bool setConstant(const Node value) {
+static inline bool setConstant(const Node value) __attribute__((always_inline));
+static inline bool setConstant(const Node value) {
     Kind kind = asKind(value);
     if (!kind) return false;
     if (kind->constant) return false;
@@ -276,80 +276,80 @@ extern inline bool setConstant(const Node value) {
     return true;
 }
 
-extern inline Node getType(const Node value) __attribute__((always_inline));
-extern inline Node getType(const Node value) {
+static inline Node getType(const Node value) __attribute__((always_inline));
+static inline Node getType(const Node value) {
     Kind kind = asKind(value);
     if (!kind) return NIL;
     return kind->type;
 }
 
-extern inline Symbol getConstructor(const Node value) __attribute__((always_inline));
-extern inline Symbol getConstructor(const Node value) {
+static inline Symbol getConstructor(const Node value) __attribute__((always_inline));
+static inline Symbol getConstructor(const Node value) {
     Kind kind = asKind(value);
     if (!kind) return s_nil;
     if (kind->constructor) return kind->constructor;
     return s_nil;
 }
 
-extern inline bool isAtomic(const Node value) __attribute__((always_inline));
-extern inline bool isAtomic(const Node value) {
+static inline bool isAtomic(const Node value) __attribute__((always_inline));
+static inline bool isAtomic(const Node value) {
     Kind kind = asKind(value);
     if (!kind) return true;
     if (kind->atom) return true;
     return false;
 }
 
-extern inline bool isInside(const Node value) __attribute__((always_inline));
-extern inline bool isInside(const Node value) {
+static inline bool isInside(const Node value) __attribute__((always_inline));
+static inline bool isInside(const Node value) {
     Kind kind = asKind(value);
     if (!kind) return false;
     if (kind->inside) return true;
     return false;
 }
 
-extern inline bool isConstant(const Node value) __attribute__((always_inline));
-extern inline bool isConstant(const Node value) {
+static inline bool isConstant(const Node value) __attribute__((always_inline));
+static inline bool isConstant(const Node value) {
     Kind kind = asKind(value);
     if (!kind) return true;
     if (kind->constant) return true;
     return false;
 }
 
-extern inline unsigned long getCount(const Node value) __attribute__((always_inline));
-extern inline unsigned long getCount(const Node value) {
+static inline unsigned long getCount(const Node value) __attribute__((always_inline));
+static inline unsigned long getCount(const Node value) {
     Kind kind = asKind(value);
     if (!kind) return 0;
     return (unsigned long)(kind->count);
 }
 
-extern inline Space getSpace(const Node value) __attribute__((always_inline));
-extern inline Space getSpace(const Node value) {
+static inline Space getSpace(const Node value) __attribute__((always_inline));
+static inline Space getSpace(const Node value) {
     if (!isInside(value)) return 0;
     Header header = asHeader(value);
     if (!header) return 0;
     return header->space;
 }
 
-extern inline unsigned long asSize(unsigned base_sizeof, unsigned extend_sizeof)  __attribute__((always_inline));
-extern inline unsigned long asSize(unsigned base_sizeof, unsigned extend_sizeof) {
+static inline unsigned long asSize(unsigned base_sizeof, unsigned extend_sizeof)  __attribute__((always_inline));
+static inline unsigned long asSize(unsigned base_sizeof, unsigned extend_sizeof) {
     return base_sizeof + extend_sizeof;
 }
 
-extern inline unsigned long toCount(unsigned long size_in_chars) __attribute__((always_inline));
-extern inline unsigned long toCount(unsigned long size_in_chars) {
+static inline unsigned long toCount(unsigned long size_in_chars) __attribute__((always_inline));
+static inline unsigned long toCount(unsigned long size_in_chars) {
     unsigned long fullcount = size_in_chars;
     fullcount += (POINTER_SIZE - 1);
     fullcount /= POINTER_SIZE;
     return fullcount;
 }
 
-extern inline unsigned long toSize(unsigned long size_in_pointers) __attribute__((always_inline));
-extern inline unsigned long toSize(unsigned long size_in_pointers) {
+static inline unsigned long toSize(unsigned long size_in_pointers) __attribute__((always_inline));
+static inline unsigned long toSize(unsigned long size_in_pointers) {
     return size_in_pointers * POINTER_SIZE;
 }
 
-extern inline Reference init_atom(Header, unsigned long) __attribute__((nonnull always_inline));
-extern inline Reference init_atom(Header header, unsigned long size_in_chars)
+static inline Reference init_atom(Header, unsigned long) __attribute__((nonnull always_inline));
+static inline Reference init_atom(Header header, unsigned long size_in_chars)
 {
     unsigned long fullcount = toCount(size_in_chars);
     memset(header, 0, sizeof(struct gc_header));
@@ -362,8 +362,8 @@ extern inline Reference init_atom(Header header, unsigned long size_in_chars)
     return asReference(header);
 }
 
-extern inline Reference init_tuple(Header, unsigned long) __attribute__((nonnull always_inline));
-extern inline Reference init_tuple(Header header, unsigned long size_in_pointers)
+static inline Reference init_tuple(Header, unsigned long) __attribute__((nonnull always_inline));
+static inline Reference init_tuple(Header header, unsigned long size_in_pointers)
 {
     unsigned long fullcount = size_in_pointers;
 
@@ -377,8 +377,8 @@ extern inline Reference init_tuple(Header header, unsigned long size_in_pointers
     return asReference(header);
 }
 
-extern inline Header fresh_atom(bool, unsigned long) __attribute__((always_inline));
-extern inline Header fresh_atom(bool inside, unsigned long size_in_chars) {
+static inline Header fresh_atom(bool, unsigned long) __attribute__((always_inline));
+static inline Header fresh_atom(bool inside, unsigned long size_in_chars) {
     unsigned long fullcount = toCount(size_in_chars);
     unsigned long fullsize  = toSize(fullcount);
     fullsize += sizeof(struct gc_header);
@@ -396,8 +396,8 @@ extern inline Header fresh_atom(bool inside, unsigned long size_in_chars) {
     return header;
 }
 
-extern inline Header fresh_tuple(bool, unsigned long) __attribute__((always_inline));
-extern inline Header fresh_tuple(bool inside, unsigned long size_in_chars)
+static inline Header fresh_tuple(bool, unsigned long) __attribute__((always_inline));
+static inline Header fresh_tuple(bool inside, unsigned long size_in_chars)
 {
     unsigned long fullcount = toCount(size_in_chars);
     unsigned long fullsize  = toSize(fullcount);
@@ -415,8 +415,8 @@ extern inline Header fresh_tuple(bool inside, unsigned long size_in_chars)
     return header;
 }
 
-extern inline bool space_CanFlip(const Space space) __attribute__((always_inline));
-extern inline bool space_CanFlip(const Space space) {
+static inline bool space_CanFlip(const Space space) __attribute__((always_inline));
+static inline bool space_CanFlip(const Space space) {
     const Header scan = space->scan;
     const Header top  = &(space->top);
     return (scan == top);

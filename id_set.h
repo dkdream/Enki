@@ -27,8 +27,8 @@ struct id_set_set {
 #define SET_INITIALISER { 0, 0, 0 }
 #define SET_COLUMNS     210
 
-extern inline void set_reset(ID_set *set) __attribute__((always_inline nonnull(1)));
-extern inline void set_reset(ID_set *set) {
+static inline void set_reset(ID_set *set) __attribute__((always_inline nonnull(1)));
+static inline void set_reset(ID_set *set) {
     long inx = set->size;
 
     for (; 0 < inx-- ;) {
@@ -52,8 +52,8 @@ extern inline void set_reset(ID_set *set) {
     }
 }
 
-extern inline void set_init(ID_set *set, long size) __attribute__((always_inline nonnull(1)));
-extern inline void set_init(ID_set *set, long size) {
+static inline void set_init(ID_set *set, long size) __attribute__((always_inline nonnull(1)));
+static inline void set_init(ID_set *set, long size) {
     set->size    = 0;
     set->free    = 0;
     set->columns = 0;
@@ -71,8 +71,8 @@ extern inline void set_init(ID_set *set, long size) {
     memset(set->columns, 0, fullsize);
 }
 
-extern inline int set_add(ID_set *set, ID id) __attribute__((always_inline nonnull(1)));
-extern inline int set_add(ID_set *set, ID id) {
+static inline int set_add(ID_set *set, ID id) __attribute__((always_inline nonnull(1)));
+static inline int set_add(ID_set *set, ID id) {
     if (!set->columns) return -1;
 
     const long inx = (id % set->size);
@@ -99,8 +99,8 @@ extern inline int set_add(ID_set *set, ID id) {
     return 1;
 }
 
-extern inline bool set_find(ID_set *set, ID id) __attribute__((always_inline nonnull(1)));
-extern inline bool set_find(ID_set *set, ID id) {
+static inline bool set_find(ID_set *set, ID id) __attribute__((always_inline nonnull(1)));
+static inline bool set_find(ID_set *set, ID id) {
     if (0 >= set->size) return false;
 
     const long inx = (id % set->size);
@@ -117,8 +117,8 @@ extern inline bool set_find(ID_set *set, ID id) {
     return false;
 }
 
-extern inline bool set_remove(ID_set *set, ID id) __attribute__((always_inline nonnull(1)));
-extern inline bool set_remove(ID_set *set, ID id) {
+static inline bool set_remove(ID_set *set, ID id) __attribute__((always_inline nonnull(1)));
+static inline bool set_remove(ID_set *set, ID id) {
     if (0 >= set->size) return false;
 
     const long inx = (id % set->size);

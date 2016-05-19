@@ -96,8 +96,8 @@ extern void init_global_symboltable(Clink *roots);
   inline functions
  ******************/
 
-extern inline const char* symbol_Text(Symbol) __attribute__((always_inline nonnull(1)));
-extern inline const char* symbol_Text(Symbol symbol) {
+static inline const char* symbol_Text(Symbol) __attribute__((always_inline nonnull(1)));
+static inline const char* symbol_Text(Symbol symbol) {
     if (!symbol) return "";
     return (const char*)(symbol->value);
 }

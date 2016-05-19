@@ -132,8 +132,8 @@ extern void check_TypeTable__(const char* filename, unsigned line);
   inline functions
  ******************/
 
-extern inline bool sort_Contains(const Constant sort, const Constant type) __attribute__((always_inline));
-extern inline bool sort_Contains(const Constant sort, const Constant type) {
+static inline bool sort_Contains(const Constant sort, const Constant type) __attribute__((always_inline));
+static inline bool sort_Contains(const Constant sort, const Constant type) {
     if (!type) return false;
     if (!sort) return false;
     if (type->code == tc_type) return find_Axiom((Constant)type, sort);
@@ -141,8 +141,8 @@ extern inline bool sort_Contains(const Constant sort, const Constant type) {
     return false;
 }
 
-extern inline bool isATypeObj(const Node node) __attribute__((always_inline));
-extern inline bool isATypeObj(const Node node) {
+static inline bool isATypeObj(const Node node) __attribute__((always_inline));
+static inline bool isATypeObj(const Node node) {
     if (isNil(node)) return false;
     const Symbol ctor = getConstructor(node);
     if (!s_sort) return false; // symbols are constructed before types
@@ -153,8 +153,8 @@ extern inline bool isATypeObj(const Node node) {
     return false;
 }
 
-extern inline bool isAType(const Node type) __attribute__((always_inline));
-extern inline bool isAType(const Node type) {
+static inline bool isAType(const Node type) __attribute__((always_inline));
+static inline bool isAType(const Node type) {
     Kind kind = asKind(type);
     if (!kind)   return false;
     if (!s_type) return false; // symbols are constructed before types
@@ -163,16 +163,16 @@ extern inline bool isAType(const Node type) {
     return false;
 }
 
-extern inline bool isASort(const Node sort) __attribute__((always_inline));
-extern inline bool isASort(const Node sort) {
+static inline bool isASort(const Node sort) __attribute__((always_inline));
+static inline bool isASort(const Node sort) {
     Kind kind = asKind(sort);
     if (!kind)   return false;
     if (!s_sort) return false; // symbols are constructed before sorts
     return (kind->type.symbol == s_sort);
 }
 
-extern inline bool inType(const Node value, const Node type) __attribute__((always_inline));
-extern inline bool inType(const Node value, const Node type) {
+static inline bool inType(const Node value, const Node type) __attribute__((always_inline));
+static inline bool inType(const Node value, const Node type) {
     Kind kind = asKind(value);
     if (!kind) return false;
     if (kind->type.reference == type.reference) return true;
@@ -180,117 +180,117 @@ extern inline bool inType(const Node value, const Node type) {
     return type_Contains(type.constant, value);
 }
 
-extern inline bool inSort(const Node value, const Node sort) __attribute__((always_inline));
-extern inline bool inSort(const Node value, const Node sort) {
+static inline bool inSort(const Node value, const Node sort) __attribute__((always_inline));
+static inline bool inSort(const Node value, const Node sort) {
     Kind kind = asKind(value);
     if (!kind) return false;
     if (!isASort(sort)) return false;
     return sort_Contains(sort.constant, kind->type.constant);
 }
 
-extern inline bool fromCtor(const Node value, const Node ctor) __attribute__((always_inline));
-extern inline bool fromCtor(const Node value, const Node ctor) {
+static inline bool fromCtor(const Node value, const Node ctor) __attribute__((always_inline));
+static inline bool fromCtor(const Node value, const Node ctor) {
     if (isNil(ctor)) return false;
     Kind kind = asKind(value);
     if (!kind) return false;
     return (kind->constructor == ctor.symbol);
 }
 
-extern inline const char* sort_Name(Constant sort) __attribute__((always_inline));
-extern inline const char* sort_Name(Constant sort) {
+static inline const char* sort_Name(Constant sort) __attribute__((always_inline));
+static inline const char* sort_Name(Constant sort) {
     if (!sort) return "";
     return (const char*)(sort->name->value);
 }
 
-extern inline const char* type_ConstantName(Constant type) __attribute__((always_inline));
-extern inline const char* type_ConstantName(Constant type) {
+static inline const char* type_ConstantName(Constant type) __attribute__((always_inline));
+static inline const char* type_ConstantName(Constant type) {
     if (!type) return "";
     if (type->code != tc_type) return "";
     return (const char*)(type->name->value);
 }
 
-extern inline bool isPair(const Node value) __attribute__((always_inline));
-extern inline bool isPair(const Node value) {
+static inline bool isPair(const Node value) __attribute__((always_inline));
+static inline bool isPair(const Node value) {
     return fromCtor(value, s_pair);
 }
 
-extern inline bool isTuple(const Node value) __attribute__((always_inline));
-extern inline bool isTuple(const Node value) {
+static inline bool isTuple(const Node value) __attribute__((always_inline));
+static inline bool isTuple(const Node value) {
     return fromCtor(value, s_tuple);
 }
 
-extern inline bool isText(const Node value) __attribute__((always_inline));
-extern inline bool isText(const Node value) {
+static inline bool isText(const Node value) __attribute__((always_inline));
+static inline bool isText(const Node value) {
     return fromCtor(value, s_text);
 }
 
-extern inline bool isInteger(const Node value) __attribute__((always_inline));
-extern inline bool isInteger(const Node value) {
+static inline bool isInteger(const Node value) __attribute__((always_inline));
+static inline bool isInteger(const Node value) {
     return fromCtor(value, s_integer);
 }
 
-extern inline bool isForm(const Node value) __attribute__((always_inline));
-extern inline bool isForm(const Node value) {
+static inline bool isForm(const Node value) __attribute__((always_inline));
+static inline bool isForm(const Node value) {
     return fromCtor(value, s_form);
 }
 
-extern inline bool isLambda(const Node value) __attribute__((always_inline));
-extern inline bool isLambda(const Node value) {
+static inline bool isLambda(const Node value) __attribute__((always_inline));
+static inline bool isLambda(const Node value) {
     return fromCtor(value, s_lambda);
 }
 
-extern inline bool isPrimitive(const Node value) __attribute__((always_inline));
-extern inline bool isPrimitive(const Node value) {
+static inline bool isPrimitive(const Node value) __attribute__((always_inline));
+static inline bool isPrimitive(const Node value) {
     return fromCtor(value, s_primitive);
 }
 
-extern inline bool isDelayed(const Node value) __attribute__((always_inline));
-extern inline bool isDelayed(const Node value) {
+static inline bool isDelayed(const Node value) __attribute__((always_inline));
+static inline bool isDelayed(const Node value) {
     return fromCtor(value, s_delay);
 }
 
-extern inline bool isBoxed(const Node value) __attribute__((always_inline));
-extern inline bool isBoxed(const Node value) {
+static inline bool isBoxed(const Node value) __attribute__((always_inline));
+static inline bool isBoxed(const Node value) {
     return fromCtor(value, s_box);
 }
 
-extern inline bool isForced(const Node value) __attribute__((always_inline));
-extern inline bool isForced(const Node value) {
+static inline bool isForced(const Node value) __attribute__((always_inline));
+static inline bool isForced(const Node value) {
     return fromCtor(value, s_forced);
 }
 
-extern inline bool isFixed(const Node value) __attribute__((always_inline));
-extern inline bool isFixed(const Node value) {
+static inline bool isFixed(const Node value) __attribute__((always_inline));
+static inline bool isFixed(const Node value) {
     return fromCtor(value, s_fixed);
 }
 
-extern inline bool isSymbol(const Node value) __attribute__((always_inline));
-extern inline bool isSymbol(const Node value) {
+static inline bool isSymbol(const Node value) __attribute__((always_inline));
+static inline bool isSymbol(const Node value) {
     return fromCtor(value, s_symbol);
 }
 
-extern inline bool isBlock(const Node value) __attribute__((always_inline));
-extern inline bool isBlock(const Node value) {
+static inline bool isBlock(const Node value) __attribute__((always_inline));
+static inline bool isBlock(const Node value) {
     return fromCtor(value, s_block);
 }
 
-extern inline bool isQuote(const Node value) __attribute__((always_inline));
-extern inline bool isQuote(const Node value) {
+static inline bool isQuote(const Node value) __attribute__((always_inline));
+static inline bool isQuote(const Node value) {
     return fromCtor(value, s_quote);
 }
 
-extern inline bool isVariable(const Node value) __attribute__((always_inline));
-extern inline bool isVariable(const Node value) {
+static inline bool isVariable(const Node value) __attribute__((always_inline));
+static inline bool isVariable(const Node value) {
     return fromCtor(value, s_variable);
 }
 
-extern inline bool isEscape(const Node value) __attribute__((always_inline));
-extern inline bool isEscape(const Node value) {
+static inline bool isEscape(const Node value) __attribute__((always_inline));
+static inline bool isEscape(const Node value) {
     return fromCtor(value, s_escape);
 }
 
-extern inline bool isComposite(const Node value) __attribute__((always_inline));
-extern inline bool isComposite(const Node value) {
+static inline bool isComposite(const Node value) __attribute__((always_inline));
+static inline bool isComposite(const Node value) {
     return fromCtor(value, s_composite);
 }
 

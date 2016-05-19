@@ -124,21 +124,21 @@ extern Node true_v;
 
 #define ASSIGN(target, node) enki_assign(target, node)
 
-extern inline void enki_assign(Target var, const Node value)  __attribute__((always_inline));
-extern inline void enki_assign(Target var, const Node value) {
+static inline void enki_assign(Target var, const Node value)  __attribute__((always_inline));
+static inline void enki_assign(Target var, const Node value) {
   var.reference[0] = value.reference;
 }
 
-extern inline void enki_noop() __attribute__((always_inline));
-extern inline void enki_noop() { }
+static inline void enki_noop() __attribute__((always_inline));
+static inline void enki_noop() { }
 
-extern inline bool isNil(Node node) __attribute__((always_inline));
-extern inline bool isNil(Node node) {
+static inline bool isNil(Node node) __attribute__((always_inline));
+static inline bool isNil(Node node) {
     return 0 == node.reference;
 }
 
-extern inline bool isIdentical(const Node left, const Node right)  __attribute__((always_inline));
-extern inline bool isIdentical(const Node left, const Node right) {
+static inline bool isIdentical(const Node left, const Node right)  __attribute__((always_inline));
+static inline bool isIdentical(const Node left, const Node right) {
     return (left.reference == right.reference);
 }
 

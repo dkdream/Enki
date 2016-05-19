@@ -32,6 +32,7 @@
 #define APPLY(NAME,ARGS,ENV,RESULT) opr_##NAME(ARGS,ENV,RESULT)
 
 /* */
+extern SUBR(encode_define);
 /* */
 
 static void environ_Pattern(Node local, Node env, Target result)

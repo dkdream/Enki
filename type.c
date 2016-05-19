@@ -10,6 +10,7 @@
 #include "treadmill.h"
 #include "debug.h"
 #include "dump.h"
+#include "pair.h"
 
 /* */
 #include <stdlib.h>

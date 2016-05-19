@@ -31,9 +31,9 @@
 #define SUBR(NAME) void opr_##NAME(Node args, Node env, Target result)
 #define APPLY(NAME,ARGS,ENV,RESULT) opr_##NAME(ARGS,ENV,RESULT)
 
-extern Node fixed_bind;
-
 /* */
+extern Node fixed_bind;
+extern SUBR(encode_define);
 /* */
 
 static void variable_Fix(Node local, Node env, Target result)

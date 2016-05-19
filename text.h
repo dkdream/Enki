@@ -21,8 +21,8 @@ struct text {
 extern bool text_Create(TextBuffer value, Text*);
 
 /* macros */
-extern inline const char* text_Text(Text) __attribute__((always_inline nonnull(1)));
-extern inline const char* text_Text(Text text) {
+static inline const char* text_Text(Text) __attribute__((always_inline nonnull(1)));
+static inline const char* text_Text(Text text) {
     if (!text) return "";
     return (const char*)(text->value);
 }

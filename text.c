@@ -51,6 +51,7 @@ static inline HashCode hash_ajust(unsigned int size, HashCode hash) {
     return output.hash;
 }
 
+#if 0
 static inline HashCode hash_full(TextBuffer value) {
     HashCode result = 5381;
 
@@ -64,6 +65,7 @@ static inline HashCode hash_full(TextBuffer value) {
 
     return result;
 }
+#endif
 
 extern bool text_Create(TextBuffer value, Text *target) {
     const unsigned     size = value.position;

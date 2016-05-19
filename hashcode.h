@@ -11,8 +11,8 @@
 typedef unsigned long long HashCode;
 
 
-extern inline HashCode hash_full(TextBuffer value) __attribute__((always_inline));
-extern inline HashCode hash_full(TextBuffer value) {
+static inline HashCode hash_full(TextBuffer value) __attribute__((always_inline));
+static inline HashCode hash_full(TextBuffer value) {
     HashCode result = 5381;
 
     unsigned int length = value.position;
@@ -30,8 +30,8 @@ extern inline HashCode hash_full(TextBuffer value) {
 /* hash_merge: commutative, associative */
 /* Forall a, b    where a:HashCode, b:HashCode            then hash_merge(a,b) = hash_merge(b,a) */
 /* Forall a, b, c where a:HashCode, b:HashCode c:HashCode then hash_merge(hash_merge(a,b),c) = hash_merge(a,hash_merge(b,c)) */
-extern inline HashCode hash_merge(HashCode left, HashCode right) __attribute__((always_inline));
-extern inline HashCode hash_merge(HashCode left, HashCode right) {
+static inline HashCode hash_merge(HashCode left, HashCode right) __attribute__((always_inline));
+static inline HashCode hash_merge(HashCode left, HashCode right) {
     return (left ^ right);
 }
 
