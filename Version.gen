@@ -14,7 +14,7 @@ TagPattern=$5
 
 ( [ ! -z "$Tag"        ]                       ) || Tag=$(basename $(pwd) | sed -e 's/$/_version/')
 ( [ ! -z "$Width"      ] && [ 2 -lt "$Width" ] ) || Width=3
-( [ ! -z "$Default"    ]                       ) || Default="pre_release"
+( [ ! -z "$Default"    ]                       ) || Default="0.0.1"
 ( [ ! -z "$TagPattern" ]                       ) || TagPattern="v[0-9]*"
 
 Version=""
