@@ -76,6 +76,13 @@ XMM14
 XMM15
 
 --------------------------
+https://github.com/yasm/yasm/wiki/GasSyntax
+http://www.x86-64.org/documentation/assembly.html (gas-syntax)
+http://www.x86-64.org/documentation_folder/abi-0.99.pdf (gas-syntax)
+https://github.com/yasm/yasm/wiki/Amd64
+https://github.com/yasm/yasm/wiki/Nasmsyntax
+http://www.scs.stanford.edu/05au-cs240c/lab/amd64/AMD64-3.pdf
+--------------------------
 https://cseweb.ucsd.edu/classes/sp10/cse141/pdf/02/S01_x86_64.key.pdf
 http://www.x86-64.org/documentation/assembly.html
 https://msdn.microsoft.com/en-us/library/windows/hardware/ff561499(v=vs.85).aspx
@@ -101,9 +108,17 @@ size   = "b" # byte  8-bit
 to   = space ( register | memory )
 from = space ( value | register | memory )
 
-register = '%' ( rname )
+register = '%' rname
+         | '%' ename ( width )?
 value    = '$' ( label | number )
 memory   = ( offset )? '(' register ( ',' register ',' scall )? ) ')'
+
+rname = ( 'r' | 'e' )? ( 'ax' | 'bx' | 'cx' | 'dx' | 'si' | 'di' | 'bp' | 'sp' | 'ip' )
+ename = 'r' ( '8' | '9' | '1' [0-5] )
+
+width = 'b' # byte  8-bit
+      | 'w' # word  16-bits
+      | 'd' # word  32-bits
 
 --------------------------
 

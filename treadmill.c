@@ -541,8 +541,8 @@ extern void check_Node(const Node node) {
      }
 }
 
-extern inline void scan_Node(const Header header) __attribute__((always_inline));
-extern inline void scan_Node(const Header header) {
+static inline void scan_Node(const Header header) __attribute__((always_inline));
+static inline void scan_Node(const Header header) {
     if (!header) return;
 
     VM_DEBUG(5, "scan header %p(%s,%s,%s,%s)[%u] begin ",

@@ -27,8 +27,8 @@ extern void boom();
 #define VM_DEBUG(level, args...) ({ typeof (level) hold__ = (level); if (hold__ <= ea_global_debug) debug_Message(__FILE__,  __LINE__, true, args); })
 #define VM_ON_DEBUG(level, arg) ({ typeof (level) hold__ = (level); if (hold__ <= ea_global_debug) arg; })
 #else
-#define VM_DEBUG(level, args...) enki_noop()
-#define VM_ON_DEBUG(level, args...) enki_noop()
+#define VM_DEBUG(level, args...)    ({ 0; })
+#define VM_ON_DEBUG(level, args...) ({ 0; })
 #endif
 
 #undef debug_THIS
