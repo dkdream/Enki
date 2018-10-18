@@ -21,14 +21,14 @@ typedef struct bit_array BitArray;
 
 #define BITS_INITIALISER { 0, 0, 0 }
 
-static inline void bits_init(BitArray *array) __attribute__((always_inline nonnull));
+static inline void bits_init(BitArray *array) __attribute__((always_inline, nonnull));
 static inline void bits_init(BitArray *array) {
     array->buffer = 0;
     array->size   = 0;
     array->marker = 0;
 }
 
-static inline void bits_reset(BitArray *array) __attribute__((always_inline nonnull));
+static inline void bits_reset(BitArray *array) __attribute__((always_inline, nonnull));
 static inline void bits_reset(BitArray *array) {
     array->marker = 0;
 
@@ -39,23 +39,23 @@ static inline void bits_reset(BitArray *array) {
     }
 }
 
-static inline unsigned bits_marker(const BitArray *array) __attribute__((always_inline nonnull));
+static inline unsigned bits_marker(const BitArray *array) __attribute__((always_inline, nonnull));
 static inline unsigned bits_marker(const BitArray *array) {
     return array->marker;
 }
 
-static inline unsigned bits_size(const BitArray *array) __attribute__((always_inline nonnull));
+static inline unsigned bits_size(const BitArray *array) __attribute__((always_inline, nonnull));
 static inline unsigned bits_size(const BitArray *array) {
     return array->size;
 }
 
-static inline unsigned long bits_count(const BitArray *array) __attribute__((always_inline nonnull));
+static inline unsigned long bits_count(const BitArray *array) __attribute__((always_inline, nonnull));
 static inline unsigned long bits_count(const BitArray *array) {
     unsigned long count = array->size;
     return count * CHAR_BIT;
 }
 
-static inline void bits_extendTo(BitArray *array, const unsigned count) __attribute__((always_inline nonnull));
+static inline void bits_extendTo(BitArray *array, const unsigned count) __attribute__((always_inline, nonnull));
 static inline void bits_extendTo(BitArray *array, const unsigned count)
 {
     while (count >= array->size) {
@@ -73,7 +73,7 @@ static inline void bits_extendTo(BitArray *array, const unsigned count)
     array->marker = count + 1;
 }
 
-static inline bool bits_get(const BitArray *array, const unsigned index) __attribute__((always_inline nonnull));
+static inline bool bits_get(const BitArray *array, const unsigned index) __attribute__((always_inline, nonnull));
 static inline bool bits_get(const BitArray *array, const unsigned index)
 {
     const unsigned offset = index / CHAR_BIT;
@@ -88,7 +88,7 @@ static inline bool bits_get(const BitArray *array, const unsigned index)
     return false;
 }
 
-static inline void bits_set(BitArray *array, const unsigned index, const bool value) __attribute__((always_inline nonnull));
+static inline void bits_set(BitArray *array, const unsigned index, const bool value) __attribute__((always_inline, nonnull));
 static inline void bits_set(BitArray *array, const unsigned index, const bool value)
 {
     const unsigned offset = index / CHAR_BIT;
@@ -108,7 +108,7 @@ static inline void bits_set(BitArray *array, const unsigned index, const bool va
     }
 }
 
-static inline void bits_normalize(BitArray *array) __attribute__((always_inline nonnull));
+static inline void bits_normalize(BitArray *array) __attribute__((always_inline, nonnull));
 static inline void bits_normalize(BitArray *array) {
     unsigned offset = array->marker;
     for (; 0 < offset ;) {
@@ -121,7 +121,7 @@ static inline void bits_normalize(BitArray *array) {
     array->marker = 0;
 }
 
-static inline bool bits_empty(BitArray *array) __attribute__((always_inline nonnull));
+static inline bool bits_empty(BitArray *array) __attribute__((always_inline, nonnull));
 static inline bool bits_empty(BitArray *array) {
     unsigned offset = array->marker;
     for (; 0 < offset ;) {
@@ -135,7 +135,7 @@ static inline bool bits_empty(BitArray *array) {
     return true;
 }
 
-static inline void bits_or(BitArray *target, BitArray *source) __attribute__((always_inline nonnull));
+static inline void bits_or(BitArray *target, BitArray *source) __attribute__((always_inline, nonnull));
 static inline void bits_or(BitArray *target, BitArray *source) {
     unsigned boundry = source->marker;
     unsigned offset  = 0;
@@ -150,7 +150,7 @@ static inline void bits_or(BitArray *target, BitArray *source) {
     }
 }
 
-static inline void bits_xor(BitArray *target, BitArray *source) __attribute__((always_inline nonnull));
+static inline void bits_xor(BitArray *target, BitArray *source) __attribute__((always_inline, nonnull));
 static inline void bits_xor(BitArray *target, BitArray *source) {
     unsigned boundry = source->marker;
     unsigned offset  = 0;
@@ -167,7 +167,7 @@ static inline void bits_xor(BitArray *target, BitArray *source) {
     bits_normalize(target);
 }
 
-static inline void bits_and(BitArray *target, BitArray *source) __attribute__((always_inline nonnull));
+static inline void bits_and(BitArray *target, BitArray *source) __attribute__((always_inline, nonnull));
 static inline void bits_and(BitArray *target, BitArray *source) {
     unsigned offset  = (target->marker < source->marker ? target->marker : source->marker);
 
@@ -195,7 +195,7 @@ static inline void bits_and(BitArray *target, BitArray *source) {
     }
 }
 
-static inline void bits_section(BitArray *array, const unsigned bottom, const unsigned top, const bool value) __attribute__((always_inline nonnull));
+static inline void bits_section(BitArray *array, const unsigned bottom, const unsigned top, const bool value) __attribute__((always_inline, nonnull));
 static inline void bits_section(BitArray *array, const unsigned bottom, const unsigned top, const bool value)
 {
     if (bottom >= top) return;
@@ -275,7 +275,7 @@ static inline void bits_section(BitArray *array, const unsigned bottom, const un
     }
 }
 
-static inline unsigned long bits_found(const BitArray *array) __attribute__((always_inline nonnull));
+static inline unsigned long bits_found(const BitArray *array) __attribute__((always_inline, nonnull));
 static inline unsigned long bits_found(const BitArray *array)
 {
     const unsigned boundry = 1 << CHAR_BIT;
@@ -298,7 +298,7 @@ static inline unsigned long bits_found(const BitArray *array)
     }
 }
 
-static inline int bits_ascend(const BitArray *array, const int last) __attribute__((always_inline nonnull));
+static inline int bits_ascend(const BitArray *array, const int last) __attribute__((always_inline, nonnull));
 static inline int bits_ascend(const BitArray *array, const int last)
 {
     int index = (0 > last) ? 0 : (last + 1);
@@ -321,7 +321,7 @@ static inline int bits_ascend(const BitArray *array, const int last)
     }
 }
 
-static inline int bits_descend(const BitArray *array, const int last) __attribute__((always_inline nonnull));
+static inline int bits_descend(const BitArray *array, const int last) __attribute__((always_inline, nonnull));
 static inline int bits_descend(const BitArray *array, const int last)
 {
     if (1 > array->marker) return -1;
@@ -359,7 +359,7 @@ static inline int bits_descend(const BitArray *array, const int last)
     }
 }
 
-static inline void bits_free(BitArray *array)  __attribute__((always_inline nonnull));
+static inline void bits_free(BitArray *array)  __attribute__((always_inline, nonnull));
 static inline void bits_free(BitArray *array) {
     if (array->buffer) {
         free(array->buffer);

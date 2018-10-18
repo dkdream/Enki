@@ -108,7 +108,7 @@ extern bool darken_Node(const Node node);
  ******************/
 
 // find the value for label
-static inline bool alist_Get(Pair pair, const Symbol label, Target value)  __attribute__((always_inline nonnull));
+static inline bool alist_Get(Pair pair, const Symbol label, Target value)  __attribute__((always_inline, nonnull));
 static inline bool alist_Get(Pair pair, const Symbol label, Target value) {
     Variable variable;
 
@@ -120,7 +120,7 @@ static inline bool alist_Get(Pair pair, const Symbol label, Target value) {
 }
 
 // set the value for label
-static inline bool alist_Set(Pair pair, const Symbol label, const Node value) __attribute__((always_inline nonnull));
+static inline bool alist_Set(Pair pair, const Symbol label, const Node value) __attribute__((always_inline, nonnull));
 static inline bool alist_Set(Pair pair, const Symbol label, const Node value) {
     Variable variable;
 
@@ -134,7 +134,7 @@ static inline bool alist_Set(Pair pair, const Symbol label, const Node value) {
 }
 
 // prepend the entry(label,void,type) to list
-static inline bool alist_Declare(Pair pair, const Symbol label, const Node type, Pair* target) __attribute__((always_inline nonnull));
+static inline bool alist_Declare(Pair pair, const Symbol label, const Node type, Pair* target) __attribute__((always_inline, nonnull));
 static inline bool alist_Declare(Pair pair, const Symbol label, const Constant type, Pair* target) {
     return alist_Add(pair, label, void_v, type, target);
 }

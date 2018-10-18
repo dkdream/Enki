@@ -20,25 +20,25 @@ typedef struct text_buffer TextBuffer;
 
 #define BUFFER_INITIALISER { 0, 0, 0 }
 
-static inline void buffer_init(TextBuffer *tbuf) __attribute__((always_inline nonnull(1)));
+static inline void buffer_init(TextBuffer *tbuf) __attribute__((always_inline, nonnull(1)));
 static inline void buffer_init(TextBuffer *tbuf) {
     tbuf->buffer   = 0;
     tbuf->size     = 0;
     tbuf->position = 0;
 }
 
-static inline void buffer_reset(TextBuffer *tbuf) __attribute__((always_inline nonnull(1)));
+static inline void buffer_reset(TextBuffer *tbuf) __attribute__((always_inline, nonnull(1)));
 static inline void buffer_reset(TextBuffer *tbuf) {
     tbuf->position = 0;
 }
 
-static inline unsigned buffer_marker(TextBuffer *tbuf) __attribute__((always_inline nonnull(1)));
+static inline unsigned buffer_marker(TextBuffer *tbuf) __attribute__((always_inline, nonnull(1)));
 static inline unsigned buffer_marker(TextBuffer *tbuf) {
     if (0 > tbuf->position) return 0;
     return tbuf->position;
 }
 
-static inline void buffer_extendBy(TextBuffer *tbuf, unsigned count) __attribute__((always_inline nonnull(1)));
+static inline void buffer_extendBy(TextBuffer *tbuf, unsigned count) __attribute__((always_inline, nonnull(1)));
 static inline void buffer_extendBy(TextBuffer *tbuf, unsigned count) {
 
     while ((tbuf->position + count + 2) > tbuf->size) {
@@ -51,7 +51,7 @@ static inline void buffer_extendBy(TextBuffer *tbuf, unsigned count) {
 }
 
 
-static inline void buffer_append(TextBuffer *tbuf, int chr) __attribute__((always_inline nonnull(1)));
+static inline void buffer_append(TextBuffer *tbuf, int chr) __attribute__((always_inline, nonnull(1)));
 static inline void buffer_append(TextBuffer *tbuf, int chr)
 {
     buffer_extendBy(tbuf, 1);
@@ -59,7 +59,7 @@ static inline void buffer_append(TextBuffer *tbuf, int chr)
     tbuf->buffer[tbuf->position++] = chr;
 }
 
-static inline void buffer_join(TextBuffer *tbuf, TextBuffer *data) __attribute__((always_inline nonnull(1)));
+static inline void buffer_join(TextBuffer *tbuf, TextBuffer *data) __attribute__((always_inline, nonnull(1)));
 static inline void buffer_join(TextBuffer *tbuf, TextBuffer *data)
 {
     if (!data) return;
@@ -77,7 +77,7 @@ static inline void buffer_join(TextBuffer *tbuf, TextBuffer *data)
     }
 }
 
-static inline void buffer_add(TextBuffer *tbuf, const char *string) __attribute__((always_inline nonnull(1)));
+static inline void buffer_add(TextBuffer *tbuf, const char *string) __attribute__((always_inline, nonnull(1)));
 static inline void buffer_add(TextBuffer *tbuf, const char *string)
 {
     if (!string) return;
@@ -94,7 +94,7 @@ static inline void buffer_add(TextBuffer *tbuf, const char *string)
     }
 }
 
-static inline const char *buffer_contents(TextBuffer *tbuf) __attribute__((always_inline nonnull(1)));
+static inline const char *buffer_contents(TextBuffer *tbuf) __attribute__((always_inline, nonnull(1)));
 static inline const char *buffer_contents(TextBuffer *tbuf)
 {
     buffer_append(tbuf, 0);
@@ -102,7 +102,7 @@ static inline const char *buffer_contents(TextBuffer *tbuf)
     return tbuf->buffer;
 }
 
-static inline void buffer_free(TextBuffer *tbuf) __attribute__((always_inline nonnull(1)));
+static inline void buffer_free(TextBuffer *tbuf) __attribute__((always_inline, nonnull(1)));
 static inline void buffer_free(TextBuffer *tbuf)
 {
     if (tbuf->buffer) {

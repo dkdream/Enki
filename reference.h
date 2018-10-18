@@ -59,7 +59,7 @@ typedef struct constant      *Constant;
 typedef struct variable      *Variable;
 /*    */
 
-union  __attribute__ ((__transparent_union__ __packed__))
+union
 node {
     long      value;
     /**/
@@ -82,11 +82,11 @@ node {
     /**/
     Variable  variable;
     /**/
-};
+}   __attribute__ ((__transparent_union__, __packed__));
 
 typedef union node Node;
 
-union __attribute__ ((__transparent_union__ __packed__))
+union
 node_target {
     long      *value;
     /**/
@@ -112,7 +112,7 @@ node_target {
     /**/
     Node      *node;
     /**/
-};
+}  __attribute__ ((__transparent_union__, __packed__));
 
 typedef union node_target Target;
 

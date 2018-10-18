@@ -27,7 +27,7 @@ struct id_set_set {
 #define SET_INITIALISER { 0, 0, 0 }
 #define SET_COLUMNS     210
 
-static inline void set_reset(ID_set *set) __attribute__((always_inline nonnull(1)));
+static inline void set_reset(ID_set *set) __attribute__((always_inline, nonnull(1)));
 static inline void set_reset(ID_set *set) {
     long inx = set->size;
 
@@ -52,7 +52,7 @@ static inline void set_reset(ID_set *set) {
     }
 }
 
-static inline void set_init(ID_set *set, long size) __attribute__((always_inline nonnull(1)));
+static inline void set_init(ID_set *set, long size) __attribute__((always_inline, nonnull(1)));
 static inline void set_init(ID_set *set, long size) {
     set->size    = 0;
     set->free    = 0;
@@ -71,7 +71,7 @@ static inline void set_init(ID_set *set, long size) {
     memset(set->columns, 0, fullsize);
 }
 
-static inline int set_add(ID_set *set, ID id) __attribute__((always_inline nonnull(1)));
+static inline int set_add(ID_set *set, ID id) __attribute__((always_inline, nonnull(1)));
 static inline int set_add(ID_set *set, ID id) {
     if (!set->columns) return -1;
 
@@ -99,7 +99,7 @@ static inline int set_add(ID_set *set, ID id) {
     return 1;
 }
 
-static inline bool set_find(ID_set *set, ID id) __attribute__((always_inline nonnull(1)));
+static inline bool set_find(ID_set *set, ID id) __attribute__((always_inline, nonnull(1)));
 static inline bool set_find(ID_set *set, ID id) {
     if (0 >= set->size) return false;
 
@@ -117,7 +117,7 @@ static inline bool set_find(ID_set *set, ID id) {
     return false;
 }
 
-static inline bool set_remove(ID_set *set, ID id) __attribute__((always_inline nonnull(1)));
+static inline bool set_remove(ID_set *set, ID id) __attribute__((always_inline, nonnull(1)));
 static inline bool set_remove(ID_set *set, ID id) {
     if (0 >= set->size) return false;
 

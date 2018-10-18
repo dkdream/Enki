@@ -10,8 +10,8 @@
 extern unsigned int ea_global_debug;
 extern unsigned int ea_global_trace;
 extern void debug_Message(const char *filename, unsigned int linenum, bool newline, const char *format, ...) __attribute__ ((format (printf, 4, 5)));
-extern void error_Message(const char *filename, unsigned int linenum, const char *format, ...) __attribute__ ((noreturn format (printf, 3, 4)));
-extern void fatal(const char *reason, ...) __attribute__ ((noreturn format (printf, 1, 2)));
+extern void error_Message(const char *filename, unsigned int linenum, const char *format, ...) __attribute__ ((noreturn, format (printf, 3, 4)));
+extern void fatal(const char *reason, ...) __attribute__ ((noreturn, format (printf, 1, 2)));
 extern void boom();
 
 #undef VM_ERROR

@@ -348,7 +348,7 @@ static inline unsigned long toSize(unsigned long size_in_pointers) {
     return size_in_pointers * POINTER_SIZE;
 }
 
-static inline Reference init_atom(Header, unsigned long) __attribute__((nonnull always_inline));
+static inline Reference init_atom(Header, unsigned long) __attribute__((nonnull, always_inline));
 static inline Reference init_atom(Header header, unsigned long size_in_chars)
 {
     unsigned long fullcount = toCount(size_in_chars);
@@ -362,7 +362,7 @@ static inline Reference init_atom(Header header, unsigned long size_in_chars)
     return asReference(header);
 }
 
-static inline Reference init_tuple(Header, unsigned long) __attribute__((nonnull always_inline));
+static inline Reference init_tuple(Header, unsigned long) __attribute__((nonnull, always_inline));
 static inline Reference init_tuple(Header header, unsigned long size_in_pointers)
 {
     unsigned long fullcount = size_in_pointers;
