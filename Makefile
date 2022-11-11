@@ -1,4 +1,4 @@
-PREFIX  = /tools/Enki
+PREFIX  = /tools
 BINDIR  = $(PREFIX)/bin
 INCDIR  = $(PREFIX)/include
 LIBDIR  = $(PREFIX)/lib64
@@ -37,7 +37,7 @@ TAILFLAGS += -fdelete-null-pointer-checks
 #TAILFLAGS += -Wformat-security
 ##TAILFLAGS += -fconserve-stack
 
-RUNFLAGS := 
+RUNFLAGS :=
 
 XCFLAGS  := -mregparm=3
 INCFLAGS := -I. $(COPPER_INC)
@@ -100,11 +100,11 @@ clean ::
 	rm -f *~ ./#* *.x *.s *.o buildins/SUBR.lst
 	rm -f test.*.out test.out
 
-scrub :: 
+scrub ::
 	@make clean
 	@rm -rf .depends
 
-enki.vm : .objects/enki_main.o libEnki.a 
+enki.vm : .objects/enki_main.o libEnki.a
 	$(GCC) $(CFLAGS) -o $@ $^ $(LIBFLAGS)
 
 test_x :: link_main.x
@@ -232,5 +232,3 @@ buildins/SUBR.lst : $(C_BUILDINS:%.c=./buildins/%.c)
 ## ## ## ##
 
 -include $(DEPENDS)
-
-
