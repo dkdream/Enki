@@ -73,7 +73,7 @@ extern void defineValue(const Symbol symbol, const Node value) {
     GC_End();
 }
 
-extern void bindValueDebug(Pair env, Symbol symbol, const Node value, Pair* result) {
+extern void bindValueDebug(Pair env, Symbol symbol, const Node value, Target result) {
     fprintf(stderr, "binding name %s = ", symbol_Text(symbol));
     dump(stderr, value);
     fprintf(stderr, "\n");
@@ -85,7 +85,7 @@ extern void bindValueDebug(Pair env, Symbol symbol, const Node value, Pair* resu
     }
 }
 
-extern void bindValue(Pair env, Symbol symbol, const Node value, Pair* result) {
+extern void bindValue(Pair env, Symbol symbol, const Node value, Target result) {
     if (!isNil(value)) {
         alist_Add(env, symbol, value, getType(value).constant, result);
     } else {

@@ -122,7 +122,7 @@ extern void expand(const Node expr, const Node env, Target result)
 
  list_begin:
     // first expand all user defined forms
-    list_Map(tail.pair, expand, env, &(tail.pair));
+    list_Map(tail.pair, expand, env, (Pair*) &(tail.pair));
 
  list_done:
     pair_Create(head, tail, result.pair);
@@ -620,4 +620,3 @@ extern void eval_block(const Symbol escape, const Constant type, Node body, Node
 /*****************
  ** end of file **
  *****************/
-

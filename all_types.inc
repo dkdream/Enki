@@ -23,7 +23,7 @@
 extern void forceArg(Node arg, Target result);
 extern unsigned checkArgs(Node args, const char* name, unsigned min, ...);
 extern int forceArgs(Node args, ...);
-extern void bindValue(Pair env, Symbol symbol, const Node value, Pair* result);
+extern void bindValue(Pair env, Symbol symbol, const Node value, Target result);
 /* */
 /***************************
  ** end of file

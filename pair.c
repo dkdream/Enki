@@ -13,14 +13,14 @@
 #include "tuple.h"
 #include <stdarg.h>
 
-extern bool pair_Create(const Node car, const Node cdr, Pair* target) {
+extern bool pair_Create(const Node car, const Node cdr, Target target) {
     if (!node_Allocate(_zero_space,
                        false,
                        sizeof(struct pair),
                        target))
         return false;
 
-    Pair result = (*target);
+    Pair result = *(target.pair);
 
     darken_Node(car);
     darken_Node(cdr);
@@ -1006,6 +1006,3 @@ extern bool list_SplitLast(Pair pair, Predicate func, const Node env, Pair* targ
 
     return true;
 }
-
-
-

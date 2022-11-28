@@ -87,7 +87,7 @@ extern SUBR(encode_lambda)
 
     encode(body, lenv, &(body.pair));
 
-    pair_Create(formals, body, result.pair);
+    pair_Create(formals, body, result);
 
     GC_End();
 }
@@ -111,7 +111,7 @@ extern SUBR(lambda)
     **    the expr.i needs to be evaluated in the current context to get the type (constraints)
     */
 
-    pair_Create(args, env, result.pair);
+    pair_Create(args, env, result);
     setConstructor(*result.reference, s_lambda);
 }
 

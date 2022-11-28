@@ -22,7 +22,7 @@ struct variable {
     Constant type;
 };
 
-extern bool pair_Create(const Node car, const Node cdr, Pair* target);
+extern bool pair_Create(const Node car, const Node cdr, Target target);
 extern bool pair_SetCar(Pair pair, const Node car);
 extern bool pair_SetCdr(Pair pair, const Node cdr);
 extern bool pair_GetCar(Pair pair, Target car);
@@ -58,28 +58,28 @@ extern bool list_Convert(Tuple tuple, Pair* target);
 extern bool variable_Create(const Symbol label, const Node value, const Constant type, Variable* target);
 
 // find the entry=(label,value,type) for label
-extern bool alist_Entry(Pair pair, const Symbol label, Variable* entry);
+extern bool alist_Entry(Pair pair, const Symbol label, Target entry);
 
 // prepend the entry(label,value,type) to list
-extern bool alist_Add(Pair pair, const Symbol label, const Node value, const Constant type, Pair* target);
+extern bool alist_Add(Pair pair, const Symbol label, const Node value, const Constant type, Target target);
 
 //  create a new list then map input to output by func
-extern bool list_Map(Pair pair, const Operator func, const Node env, Pair* target);
+extern bool list_Map(Pair pair, const Operator func, const Node env, Target target);
 
 // create a new list from the selected parts of an old list
-extern bool list_Filter(Pair pair, const Predicate func, const Node env, Pair* target);
+extern bool list_Filter(Pair pair, const Predicate func, const Node env, Target target);
 
 // return the left fold of a list using the folder
 extern bool list_FoldLeft(Pair pair, const Node init, const Folder func, const Node env, Target target);
 
 // return a new (proper) list that is the reverse of an old (proper) list
-extern bool list_Reverse(Pair pair, Pair* target);
+extern bool list_Reverse(Pair pair, Target target);
 
 // fill the bit array based on what elements the predicate selected from the (proper) list
 extern bool list_Find(Pair pair, const Predicate func, const Node env, BitArray *array);
 
 // create a new list from elements of an old (proper) list
-extern bool list_Select(Pair pair, BitArray *array, Pair* target);
+extern bool list_Select(Pair pair, BitArray *array, Target target);
 
 // update select parts of the current (proper) list (update all when array==null)
 extern bool list_Update(Pair pair, const Operator func, const Node env, BitArray *array);
@@ -95,10 +95,10 @@ extern bool list_Curry(Tuple typle, const Operator func, const Node env, BitArra
 // exit f
 
 // split the list in two at the first tail with a head that is selected by predicate
-extern bool list_SplitFirst(Pair pair, const Predicate func, const Node env, Pair* target);
+extern bool list_SplitFirst(Pair pair, const Predicate func, const Node env, Target target);
 
 // split the list in two at the last tail with a head that is selected by predicate
-extern bool list_SplitLast(Pair pair, const Predicate func, const Node env, Pair* target);
+extern bool list_SplitLast(Pair pair, const Predicate func, const Node env, Target target);
 
 // forwarded from treadmill.h
 extern bool darken_Node(const Node node);
@@ -134,8 +134,8 @@ static inline bool alist_Set(Pair pair, const Symbol label, const Node value) {
 }
 
 // prepend the entry(label,void,type) to list
-static inline bool alist_Declare(Pair pair, const Symbol label, const Node type, Pair* target) __attribute__((always_inline, nonnull));
-static inline bool alist_Declare(Pair pair, const Symbol label, const Constant type, Pair* target) {
+static inline bool alist_Declare(Pair pair, const Symbol label, const Node type, Target target) __attribute__((always_inline, nonnull));
+static inline bool alist_Declare(Pair pair, const Symbol label, const Constant type, Target target) {
     return alist_Add(pair, label, void_v, type, target);
 }
 

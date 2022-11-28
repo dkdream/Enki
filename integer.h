@@ -11,7 +11,7 @@
 struct integer {
     long long value;
 };
-extern bool integer_Create(long long value, Integer*);
+extern bool integer_Create(long long value, Target);
 
 /***************************
  ** end of file

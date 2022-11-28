@@ -56,7 +56,7 @@ static void environ_Pattern(Node local, Node env, Target result)
         }
     }
 
-    pair_Create(symbol, NIL, result.pair);
+    pair_Create(symbol, NIL, result);
 }
 
 static void encode_Pattern(Node pattern, Node env, Target result)
@@ -180,7 +180,7 @@ extern SUBR(encode_case)
     GC_End();
 }
 
-static void binding_Pattern(Node names, Node object, Node env, Pair* result)
+static void binding_Pattern(Node names, Node object, Node env, Target result)
 {
     /*
     ** names = <binding>...

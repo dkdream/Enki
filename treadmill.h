@@ -144,10 +144,8 @@ struct gc_treadmill {
     struct gc_header top;
     struct gc_header bottom;
     struct gc_header root;
-    struct {
-        Clink  start_clinks;
-        Target array[ROOT_COUNT];
-    } __attribute__((__packed__));
+    Clink  start_clinks;
+    Target array[ROOT_COUNT];
 };
 
 extern Space    _zero_space;
